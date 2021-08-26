@@ -44,8 +44,16 @@ bool GCCapability::can_gc() const
     const GCCapability *cur = this;
 
     do {
-        if (!cur->m_can_gc) {
+        switch (cur->m_can_gc) {
+          case IS_ROOT:
+            assert(!cur->m_parent);
+            // If this is the root, then we cannot GC because we cannot call
+            // trace() on this GCCapability.
+            return this != cur;
+          case CANNOT_GC:
             return false;
+          case CAN_GC:
+            break;
         }
         cur = cur->m_parent;
     } while (cur);
@@ -58,6 +66,12 @@ static void abort_oom(size_t size_bytes)
     fprintf(
         stderr, "Out of memory, tried to allocate %lu bytes.\n", size_bytes);
     abort();
+}
+
+void GCCapability::trace_parent(HeapMarkState * state) const {
+    if (m_parent && m_parent->can_gc()) {
+        m_parent->tracer().do_trace(state);
+    }
 }
 
 void GCThreadHandle::oom(size_t size_bytes)
@@ -75,6 +89,8 @@ void GCTracer::do_trace(HeapMarkState * state) const
     for (void * root : m_roots) {
         state->mark_root(*(void **)root);
     }
+
+    trace_parent(state);
 }
 
 void GCTracer::add_root(void * root)
@@ -90,7 +106,7 @@ void GCTracer::remove_root(void * root)
 }
 
 NoGCScope::NoGCScope(GCCapability & gc_cap)
-    : GCCapability(gc_cap, false)
+    : GCCapability(gc_cap, CANNOT_GC)
 #ifdef PZ_DEV
     , m_needs_check(true)
 #endif

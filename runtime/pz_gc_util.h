@@ -24,6 +24,13 @@ class AbstractGCTracer;
  */
 class GCCapability
 {
+   public:
+    enum CanGC {
+        IS_ROOT,
+        CAN_GC,
+        CANNOT_GC
+    };
+
    private:
     Heap               &m_heap;
 #ifdef PZ_DEV
@@ -31,18 +38,18 @@ class GCCapability
 #else
     const GCCapability *m_parent;
 #endif
-    const bool          m_can_gc;
+    const CanGC         m_can_gc;
 #ifdef PZ_DEV
     bool                m_is_top = true;
 #endif
 
    protected:
-    GCCapability(Heap & heap, bool can_gc)
+    GCCapability(Heap & heap, CanGC can_gc)
         : m_heap(heap)
         , m_parent(nullptr)
         , m_can_gc(can_gc) {}
     // TODO: Check heirachy.
-    GCCapability(GCCapability & gc_cap, bool can_gc)
+    GCCapability(GCCapability & gc_cap, CanGC can_gc)
         : m_heap(gc_cap.heap())
         , m_parent(&gc_cap)
         , m_can_gc(can_gc)
@@ -82,12 +89,15 @@ class GCCapability
      * return true.
      */
     const AbstractGCTracer & tracer() const;
+
+   protected:
+    void trace_parent(HeapMarkState *) const;
 };
 
 // Each thread gets one of these.  Do not create more than one per thread.
 class GCThreadHandle : public GCCapability {
   public:
-    GCThreadHandle(Heap & heap) : GCCapability(heap, true) {}
+    GCThreadHandle(Heap & heap) : GCCapability(heap, IS_ROOT) {}
 
     virtual void oom(size_t size_bytes);
 };
@@ -102,7 +112,7 @@ class GCThreadHandle : public GCCapability {
 class AbstractGCTracer : public GCCapability
 {
    public:
-    AbstractGCTracer(GCCapability & gc) : GCCapability(gc, true) {}
+    AbstractGCTracer(GCCapability & gc) : GCCapability(gc, CAN_GC) {}
 
     virtual void oom(size_t size);
     virtual void do_trace(HeapMarkState *) const = 0;
@@ -112,7 +122,7 @@ class AbstractGCTracer : public GCCapability
      * A work-around for PZ
      */
     AbstractGCTracer() = default;
-    AbstractGCTracer(Heap & heap) : GCCapability(heap, true) { }
+    AbstractGCTracer(Heap & heap) : GCCapability(heap, CAN_GC) { }
     friend class PZ;
 };
 
