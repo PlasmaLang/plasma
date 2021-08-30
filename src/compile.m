@@ -228,9 +228,8 @@ setup_env_and_core(ModuleName, ImportEnv, Env, !:Core) :-
     core::in, core::out) is det.
 
 init_builtins_and_env(BuiltinMap, Env, !Core) :-
-    setup_builtins(BuiltinMap, BoolTrue, BoolFalse, ListType,
-        ListNil, ListCons, !Core),
-    Env = env.init(BoolTrue, BoolFalse, ListType, ListNil, ListCons).
+    setup_builtins(BuiltinMap, Operators, !Core),
+    Env = env.init(Operators).
 
 :- pred env_add_builtin((func(T) = q_name)::in, T::in, builtin_item::in,
     env::in, env::out) is det.

@@ -64,6 +64,8 @@
 :- import_module common_types.
 :- import_module core.
 :- import_module core.types.
+:- import_module pre.
+:- import_module pre.env.
 :- import_module pz.
 :- import_module pz.pz_ds.
 :- import_module q_name.
@@ -75,12 +77,10 @@
     ;       bi_type(type_id, arity)
     ;       bi_type_builtin(builtin_type).
 
-    % setup_builtins(Map, BoolTrue, BoolFalse, ListType,
-    %   ListNil, ListCons, !Core)
+    % setup_builtins(Map, Operators, !Core)
     %
 :- pred setup_builtins(map(nq_name, builtin_item)::out,
-    ctor_id::out, ctor_id::out, type_id::out, ctor_id::out, ctor_id::out,
-    core::in, core::out) is det.
+    operators::out, core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
 
@@ -165,15 +165,15 @@
 
 %-----------------------------------------------------------------------%
 
-setup_builtins(!:Map, BoolTrue, BoolFalse, ListType, ListNil, ListCons,
-        !Core) :-
+setup_builtins(!:Map, Operators, !Core) :-
     !:Map = init,
     setup_core_types(MaybeType, !Map, !Core),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
     setup_int_builtins(BoolType, !Map, !Core),
     setup_list_builtins(ListType, ListNil, ListCons, !Map, !Core),
     setup_string_builtins(BoolType, MaybeType, !Map, !Core),
-    setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core).
+    setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
+    Operators = operators(BoolTrue, BoolFalse, ListType, ListNil, ListCons).
 
 :- pred setup_core_types(type_id::out, map(nq_name, builtin_item)::in,
     map(nq_name, builtin_item)::out, core::in, core::out) is det.

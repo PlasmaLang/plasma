@@ -29,9 +29,29 @@
 
 :- type env.
 
-    % init(BoolTrue, BoolFalse, ListType, ListNil, ListCons) = Env.
+    % init(Operators) = Env.
     %
-:- func init(ctor_id, ctor_id, type_id, ctor_id, ctor_id) = env.
+:- func init(operators) = env.
+
+    % Sometimes we need to look up particular operators and constructors,
+    % when we do this we know exactly which constroctor and don't need to
+    % use the normal name resolution.
+    %
+:- type operators
+    --->    operators(
+                % We need to lookup bool constructors for generating ITE
+                % code.
+                o_bool_true     :: ctor_id,
+                o_bool_false    :: ctor_id,
+
+                % We need to lookup list constructors to handle built in
+                % list syntax.
+                o_list_type     :: type_id,
+                o_list_nil      :: ctor_id,
+                o_list_cons     :: ctor_id
+    ).
+
+:- func env_operators(env) = operators.
 
 %-----------------------------------------------------------------------%
 %
@@ -221,18 +241,6 @@
 :- pred env_lookup_lambda(env::in, string::in, func_id::out) is det.
 
 %-----------------------------------------------------------------------%
-%
-% Lookup very specific symbols.
-%
-
-:- func env_get_bool_true(env) = ctor_id.
-:- func env_get_bool_false(env) = ctor_id.
-
-:- func env_get_list_type(env) = type_id.
-:- func env_get_list_nil(env) = ctor_id.
-:- func env_get_list_cons(env) = ctor_id.
-
-%-----------------------------------------------------------------------%
 
 :- pred do_var_or_wildcard(pred(X, Y, A, A, B, B),
     var_or_wildcard(X), var_or_wildcard(Y), A, A, B, B).
@@ -273,29 +281,17 @@
                 e_letrec_vars   :: set(var),
 
                 % Uninitalised variables outside this closure.
-                e_inaccessible :: set(var),
+                e_inaccessible  :: set(var),
 
-                % Some times we need to look up particular constructors, whe
-                % we do this we know exactly which constroctor and don't
-                % need to use the normal name resolution.
-
-                % We need to lookup bool constructors for generating ITE
-                % code.
-                e_bool_true     :: ctor_id,
-                e_bool_false    :: ctor_id,
-
-                % We need to lookup list constructors to handle built in
-                % list syntax.
-                e_list_type     :: type_id,
-                e_list_nil      :: ctor_id,
-                e_list_cons     :: ctor_id
+                e_operators     :: operators
             ).
 
 %-----------------------------------------------------------------------%
 
-init(BoolTrue, BoolFalse, ListType, ListNil, ListCons) =
-    env(init, init, init, init, init, init, init, BoolTrue, BoolFalse,
-        ListType, ListNil, ListCons).
+init(Operators) =
+    env(init, init, init, init, init, init, init, Operators).
+
+env_operators(Env) = Env ^ e_operators.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -580,15 +576,6 @@ env_add_lambda(Name, FuncId, !Env) :-
 
 env_lookup_lambda(Env, Name, FuncId) :-
     lookup(Env ^ e_lambdas, Name, FuncId).
-
-%-----------------------------------------------------------------------%
-
-env_get_bool_true(Env) = Env ^ e_bool_true.
-env_get_bool_false(Env) = Env ^ e_bool_false.
-
-env_get_list_type(Env) = Env ^ e_list_type.
-env_get_list_nil(Env) = Env ^ e_list_nil.
-env_get_list_cons(Env) = Env ^ e_list_cons.
 
 %-----------------------------------------------------------------------%
 

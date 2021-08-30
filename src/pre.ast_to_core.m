@@ -373,7 +373,7 @@ gather_funcs_defn(Level, Name0,
                 expect(unify(Sharing, s_public), $file, $pred,
                     "entrypoints are always public"),
                 func_get_type_signature(Function, Params, Returns, _),
-                ListTypeId = env_get_list_type(!.Env),
+                ListTypeId = env_operators(!.Env) ^ o_list_type,
                 ( if
                     Returns = [builtin_type(int)],
                     ( Params = [],
