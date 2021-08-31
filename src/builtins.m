@@ -168,12 +168,22 @@
 setup_builtins(!:Map, Operators, !Core) :-
     !:Map = init,
     setup_core_types(MaybeType, !Map, !Core),
-    setup_bool_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
-    setup_int_builtins(BoolType, !Map, !Core),
+    setup_bool_builtins(BoolType, BoolTrue, BoolFalse, BoolAnd, BoolOr,
+        BoolNot, !Map, !Core),
+    setup_int_builtins(BoolType,
+        IntAdd, IntSub, IntMul, IntDiv, IntMod,
+        IntGt, IntLt, IntGtEq, IntLtEq, IntEq, IntNEq, IntMinus,
+        !Map, !Core),
     setup_list_builtins(ListType, ListNil, ListCons, !Map, !Core),
-    setup_string_builtins(BoolType, MaybeType, !Map, !Core),
+    setup_string_builtins(BoolType, MaybeType,
+        StringConcat, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
-    Operators = operators(BoolTrue, BoolFalse, ListType, ListNil, ListCons).
+    Operators = operators(
+        IntAdd, IntSub, IntMul, IntDiv, IntMod,
+        IntGt, IntLt, IntGtEq, IntLtEq, IntEq, IntNEq, IntMinus,
+        BoolTrue, BoolFalse, BoolAnd, BoolOr, BoolNot,
+        ListType, ListNil, ListCons,
+        StringConcat).
 
 :- pred setup_core_types(type_id::out, map(nq_name, builtin_item)::in,
     map(nq_name, builtin_item)::out, core::in, core::out) is det.
@@ -220,10 +230,11 @@ setup_core_types(MaybeType, !Map, !Core) :-
 %-----------------------------------------------------------------------%
 
 :- pred setup_bool_builtins(type_id::out, ctor_id::out, ctor_id::out,
+    func_id::out, func_id::out, func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
+setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     core_allocate_type_id(BoolId, !Core),
 
     FalseName = nq_name_det("False"),
@@ -257,18 +268,19 @@ setup_bool_builtins(BoolId, TrueId, FalseId, !Map, !Core) :-
         func_init_builtin_inline_pz(NotQName,
             [type_ref(BoolId, [])], [type_ref(BoolId, [])], init, init,
             [pzi_not(BoolWidth)]),
-        _, !Map, !Core),
+        NotId, !Map, !Core),
 
     register_bool_biop(BoolId, builtin_bool_and,
-        [pzi_and(BoolWidth)], !Map, !Core),
+        [pzi_and(BoolWidth)], AndId, !Map, !Core),
     register_bool_biop(BoolId, builtin_bool_or,
-        [pzi_or(BoolWidth)], !Map, !Core).
+        [pzi_or(BoolWidth)], OrId, !Map, !Core).
 
 :- pred register_bool_biop(type_id::in, nq_name::in, list(pz_instr)::in,
+    func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_bool_biop(BoolType, Name, Defn, !Map, !Core) :-
+register_bool_biop(BoolType, Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init_builtin_inline_pz(FName,
@@ -276,22 +288,28 @@ register_bool_biop(BoolType, Name, Defn, !Map, !Core) :-
             [type_ref(BoolType, [])],
             init, init,
             Defn),
-        _, !Map, !Core).
+        FuncId, !Map, !Core).
 
 %-----------------------------------------------------------------------%
 
 :- pred setup_int_builtins(type_id::in,
+    func_id::out, func_id::out, func_id::out, func_id::out, func_id::out,
+    func_id::out, func_id::out, func_id::out, func_id::out, func_id::out,
+    func_id::out, func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-setup_int_builtins(BoolType, !Map, !Core) :-
-    register_int_fn2(builtin_int_add, [pzi_add(pzw_fast)], !Map, !Core),
-    register_int_fn2(builtin_int_sub, [pzi_sub(pzw_fast)], !Map, !Core),
-    register_int_fn2(builtin_int_mul, [pzi_mul(pzw_fast)], !Map, !Core),
+setup_int_builtins(BoolType,
+        AddId, SubId, MulId, DivId, ModId,
+        GtId, LtId, GtEqId, LtEqId, EqId, NEqId, MinusId,
+        !Map, !Core) :-
+    register_int_fn2(builtin_int_add, [pzi_add(pzw_fast)], AddId, !Map, !Core),
+    register_int_fn2(builtin_int_sub, [pzi_sub(pzw_fast)], SubId, !Map, !Core),
+    register_int_fn2(builtin_int_mul, [pzi_mul(pzw_fast)], MulId, !Map, !Core),
     % Mod and div can maybe be combined into one operator, and optimised at
     % PZ load time.
-    register_int_fn2(builtin_int_div, [pzi_div(pzw_fast)], !Map, !Core),
-    register_int_fn2(builtin_int_mod, [pzi_mod(pzw_fast)], !Map, !Core),
+    register_int_fn2(builtin_int_div, [pzi_div(pzw_fast)], DivId, !Map, !Core),
+    register_int_fn2(builtin_int_mod, [pzi_mod(pzw_fast)], ModId, !Map, !Core),
 
     % TODO: remove the extend operation once we fix how booleans are
     % stored.
@@ -301,92 +319,93 @@ setup_int_builtins(BoolType, !Map, !Core) :-
     register_int_comp(BoolType, builtin_int_gt, [
             pzi_gt_s(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        GtId, !Map, !Core),
     register_int_comp(BoolType, builtin_int_lt, [
             pzi_lt_s(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        LtId, !Map, !Core),
     register_int_comp(BoolType, builtin_int_gteq, [
             pzi_lt_s(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        GtEqId, !Map, !Core),
     register_int_comp(BoolType, builtin_int_lteq, [
             pzi_gt_s(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        LtEqId, !Map, !Core),
     register_int_comp(BoolType, builtin_int_eq, [
             pzi_eq(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        EqId, !Map, !Core),
     register_int_comp(BoolType, builtin_int_neq, [
             pzi_eq(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        !Map, !Core),
+        NEqId, !Map, !Core),
 
     register_int_fn1(builtin_int_minus,
         [pzi_load_immediate(pzw_fast, im_i32(0i32)),
          pzi_roll(2),
          pzi_sub(pzw_fast)],
-        !Map, !Core),
+        MinusId, !Map, !Core),
 
     % Register the builtin bitwise functions..
     % TODO: make the number of bits to shift a single byte.
     register_int_fn2(builtin_int_lshift,
         [pzi_trunc(pzw_fast, pzw_8),
-         pzi_lshift(pzw_fast)], !Map, !Core),
+         pzi_lshift(pzw_fast)], _, !Map, !Core),
     register_int_fn2(builtin_int_rshift,
         [pzi_trunc(pzw_fast, pzw_8),
-         pzi_rshift(pzw_fast)], !Map, !Core),
-    register_int_fn2(builtin_int_and, [pzi_and(pzw_fast)], !Map, !Core),
-    register_int_fn2(builtin_int_or, [pzi_or(pzw_fast)], !Map, !Core),
+         pzi_rshift(pzw_fast)], _, !Map, !Core),
+    register_int_fn2(builtin_int_and, [pzi_and(pzw_fast)], _, !Map, !Core),
+    register_int_fn2(builtin_int_or, [pzi_or(pzw_fast)], _, !Map, !Core),
     register_int_fn2(builtin_int_xor,
-        [pzi_xor(pzw_fast)], !Map, !Core),
+        [pzi_xor(pzw_fast)], _, !Map, !Core),
     register_int_fn1(builtin_int_comp,
         [pzi_load_immediate(pzw_32, im_i32(-1i32)),
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
-        !Map, !Core).
+        _, !Map, !Core).
 
-:- pred register_int_fn1(nq_name::in, list(pz_instr)::in,
+:- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_fn1(Name, Defn, !Map, !Core) :-
+register_int_fn1(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int)], [builtin_type(int)],
             init, init, Defn),
-        _, !Map, !Core).
+        FuncId, !Map, !Core).
 
-:- pred register_int_fn2(nq_name::in, list(pz_instr)::in,
+:- pred register_int_fn2(nq_name::in, list(pz_instr)::in, func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_fn2(Name, Defn, !Map, !Core) :-
+register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
             init, init, Defn),
-        _, !Map, !Core).
+        FuncId, !Map, !Core).
 
 :- pred register_int_comp(type_id::in, nq_name::in, list(pz_instr)::in,
+    func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-register_int_comp(BoolType, Name, Defn, !Map, !Core) :-
+register_int_comp(BoolType, Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [type_ref(BoolType, [])],
             init, init, Defn),
-        _, !Map, !Core).
+        FuncId, !Map, !Core).
 
 :- pred setup_list_builtins(type_id::out, ctor_id::out, ctor_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
@@ -504,11 +523,11 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 %-----------------------------------------------------------------------%
 
 :- pred setup_string_builtins(type_id::in, type_id::in,
+    func_id::out,
     map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
     core::in, core::out) is det.
 
-setup_string_builtins(BoolType, MaybeType, !Map, !Core) :-
-
+setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     core_allocate_type_id(CharClassId, !Core),
 
     % TODO: Implement more character classes.
@@ -548,7 +567,7 @@ setup_string_builtins(BoolType, MaybeType, !Map, !Core) :-
             [builtin_type(string), builtin_type(string)],
             [builtin_type(string)],
             init, init),
-        _, !Map, !Core),
+        StringConcat, !Map, !Core),
 
     StrposForwardName = q_name_append(builtin_module_name,
         builtin_strpos_forward),

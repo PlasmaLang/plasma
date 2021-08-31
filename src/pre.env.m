@@ -39,16 +39,36 @@
     %
 :- type operators
     --->    operators(
+                o_int_add       :: func_id,
+                o_int_sub       :: func_id,
+                o_int_mul       :: func_id,
+                o_int_div       :: func_id,
+                o_int_mod       :: func_id,
+                o_int_gt        :: func_id,
+                o_int_lt        :: func_id,
+                o_int_gteq      :: func_id,
+                o_int_lteq      :: func_id,
+                o_int_eq        :: func_id,
+                o_int_neq       :: func_id,
+
+                % Unary minus
+                o_int_minus     :: func_id,
+
                 % We need to lookup bool constructors for generating ITE
                 % code.
                 o_bool_true     :: ctor_id,
                 o_bool_false    :: ctor_id,
+                o_bool_and      :: func_id,
+                o_bool_or       :: func_id,
+                o_bool_not      :: func_id,
 
                 % We need to lookup list constructors to handle built in
                 % list syntax.
                 o_list_type     :: type_id,
                 o_list_nil      :: ctor_id,
-                o_list_cons     :: ctor_id
+                o_list_cons     :: ctor_id,
+
+                o_string_concat :: func_id
     ).
 
 :- func env_operators(env) = operators.
@@ -211,8 +231,7 @@
 :- pred env_operator_entry(env, ast_bop, env_entry).
 :- mode env_operator_entry(in, in, out(env_entry_func_or_ctor)) is semidet.
 
-:- pred env_unary_operator_func(env::in, ast_uop::in, func_id::out)
-    is semidet.
+:- func env_unary_operator_func(env, ast_uop) = func_id.
 
 :- pred env_search_resource(env::in, q_name::in, resource_id::out)
     is semidet.
@@ -498,62 +517,48 @@ env_search_constructor(Env, QName, CtorId) :-
 %-----------------------------------------------------------------------%
 
 env_operator_entry(Env, Op, Entry) :-
-    env_operator_name(Op, Name),
-    env_search(Env, q_name(Name), ok(Entry)),
-    ( Entry = ee_func(_)
-    ; Entry = ee_constructor(_)
+    Ops = env_operators(Env),
+    (
+        ( Op = b_add,
+            Func = Ops ^ o_int_add
+        ; Op = b_sub,
+            Func = Ops ^ o_int_sub
+        ; Op = b_mul,
+            Func = Ops ^ o_int_mul
+        ; Op = b_div,
+            Func = Ops ^ o_int_div
+        ; Op = b_mod,
+            Func = Ops ^ o_int_mod
+        ; Op = b_gt,
+            Func = Ops ^ o_int_gt
+        ; Op = b_lt,
+            Func = Ops ^ o_int_lt
+        ; Op = b_gteq,
+            Func = Ops ^ o_int_gteq
+        ; Op = b_lteq,
+            Func = Ops ^ o_int_lteq
+        ; Op = b_eq,
+            Func = Ops ^ o_int_eq
+        ; Op = b_neq,
+            Func = Ops ^ o_int_neq
+        ; Op = b_logical_and,
+            Func = Ops ^ o_bool_and
+        ; Op = b_logical_or,
+            Func = Ops ^ o_bool_or
+        ; Op = b_concat,
+            Func = Ops ^ o_string_concat
+        ),
+        Entry = ee_func(Func)
+    ; Op = b_list_cons,
+        Entry = ee_constructor(make_singleton_set(Ops ^ o_list_cons))
     ).
 
-:- pred env_operator_name(ast_bop, nq_name).
-:- mode env_operator_name(in, out) is semidet.
-
-env_operator_name(b_add,            builtin_int_add).
-env_operator_name(b_sub,            builtin_int_sub).
-env_operator_name(b_mul,            builtin_int_mul).
-env_operator_name(b_div,            builtin_int_div).
-env_operator_name(b_mod,            builtin_int_mod).
-env_operator_name(b_gt,             builtin_int_gt).
-env_operator_name(b_lt,             builtin_int_lt).
-env_operator_name(b_gteq,           builtin_int_gteq).
-env_operator_name(b_lteq,           builtin_int_lteq).
-env_operator_name(b_eq,             builtin_int_eq).
-env_operator_name(b_neq,            builtin_int_neq).
-env_operator_name(b_logical_and,    builtin_bool_and).
-env_operator_name(b_logical_or,     builtin_bool_or).
-env_operator_name(b_concat,         builtin_string_concat).
-env_operator_name(b_list_cons,      builtin_list_cons).
-
-env_unary_operator_func(Env, UOp, FuncId) :-
-    env_unary_operator_name(UOp, Name),
-    get_builtin_func(Env, q_name(Name), FuncId).
-
-:- pred env_unary_operator_name(ast_uop, nq_name).
-:- mode env_unary_operator_name(in, out) is det.
-
-env_unary_operator_name(u_minus,    builtin_int_minus).
-env_unary_operator_name(u_not,      builtin_bool_not).
-
-:- pred get_builtin_func(env::in, q_name::in, func_id::out) is semidet.
-
-get_builtin_func(Env, Name, FuncId) :-
-    env_search(Env, Name, Result),
-    require_complete_switch [Result]
-    ( Result = ok(Entry),
-        require_complete_switch [Entry]
-        ( Entry = ee_var(_),
-            unexpected($file, $pred, "var")
-        ; Entry = ee_constructor(_),
-            unexpected($file, $pred, "constructor")
-        ; Entry = ee_func(FuncId)
-        )
-    ; Result = not_found,
-        false
-    ;
-        ( Result = not_initaliased
-        ; Result = inaccessible
-        ; Result = maybe_cyclic_retlec
-        ),
-        unexpected($file, $pred, "unexpected state")
+env_unary_operator_func(Env, UOp) = FuncId :-
+    Ops = env_operators(Env),
+    ( UOp = u_minus,
+        FuncId = Ops ^ o_int_minus
+    ; UOp = u_not,
+        FuncId = Ops ^ o_bool_not
     ).
 
 %-----------------------------------------------------------------------%
