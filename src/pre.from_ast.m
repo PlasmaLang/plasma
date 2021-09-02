@@ -597,15 +597,11 @@ ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change
-    ( if env_operator_entry(Env, Op, OpEntry) then
-        ( OpEntry = ee_func(OpFunc),
-            Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
-        ; OpEntry = ee_constructor(OpCtors),
-            Expr = e_construction(OpCtors, [ExprL, ExprR])
-        )
-    else
-        unexpected($file, $pred,
-            format("Operator implementation not found: %s", [s(string(Op))]))
+    env_operator_entry(Env, Op, OpEntry),
+    ( OpEntry = ee_func(OpFunc),
+        Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
+    ; OpEntry = ee_constructor(OpCtors),
+        Expr = e_construction(OpCtors, [ExprL, ExprR])
     ).
 ast_to_pre_expr_2(Context, Env, e_match(MatchExpr0, Cases0), Expr, Vars,
         !Varmap) :-

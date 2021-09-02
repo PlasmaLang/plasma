@@ -229,7 +229,7 @@
     % operator.
     %
 :- pred env_operator_entry(env, ast_bop, env_entry).
-:- mode env_operator_entry(in, in, out(env_entry_func_or_ctor)) is semidet.
+:- mode env_operator_entry(in, in, out(env_entry_func_or_ctor)) is det.
 
 :- func env_unary_operator_func(env, ast_uop) = func_id.
 
@@ -277,6 +277,8 @@
 :- import_module map.
 :- import_module maybe.
 :- import_module require.
+:- import_module util.
+:- import_module util.exception.
 
 :- import_module builtins.
 
@@ -551,6 +553,8 @@ env_operator_entry(Env, Op, Entry) :-
         Entry = ee_func(Func)
     ; Op = b_list_cons,
         Entry = ee_constructor(make_singleton_set(Ops ^ o_list_cons))
+    ; Op = b_array_subscript,
+        util.exception.sorry($file, $pred, "Array subscript")
     ).
 
 env_unary_operator_func(Env, UOp) = FuncId :-
