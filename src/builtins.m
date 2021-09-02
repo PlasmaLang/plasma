@@ -79,7 +79,12 @@
 
 :- type builtin_map --->
     builtin_map(
-        bm_map      :: map(nq_name, builtin_item)
+        % Items that should be avaiable without any module qualification.
+        bm_root_map         :: map(nq_name, builtin_item),
+
+        % Items that should be available under the builtin_module_name
+        % module.
+        bm_builtin_map      :: map(nq_name, builtin_item)
     ).
 
     % setup_builtins(Map, Operators, !Core)
@@ -149,7 +154,7 @@
 %-----------------------------------------------------------------------%
 
 setup_builtins(!:Map, Operators, !Core) :-
-    !:Map = builtin_map(init),
+    !:Map = builtin_map(init, init),
     setup_core_types(MaybeType, !Map, !Core),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, BoolAnd, BoolOr,
         BoolNot, !Map, !Core),
@@ -173,16 +178,16 @@ setup_builtins(!:Map, Operators, !Core) :-
 
 setup_core_types(MaybeType, !Map, !Core) :-
     builtin_type_name(int, IntName),
-    builtin_name(IntName, bi_type_builtin(int), !Map),
+    root_name(IntName, bi_type_builtin(int), !Map),
 
     builtin_type_name(char, CharName),
-    builtin_name(CharName, bi_type_builtin(char), !Map),
+    root_name(CharName, bi_type_builtin(char), !Map),
 
     builtin_type_name(string, StringName),
-    builtin_name(StringName, bi_type_builtin(string), !Map),
+    root_name(StringName, bi_type_builtin(string), !Map),
 
     builtin_type_name(string_pos, StringPosName),
-    builtin_name(StringPosName, bi_type_builtin(string_pos), !Map),
+    root_name(StringPosName, bi_type_builtin(string_pos), !Map),
 
     core_allocate_type_id(MaybeType, !Core),
     MaybeParamName = "v",
@@ -192,7 +197,7 @@ setup_core_types(MaybeType, !Map, !Core) :-
     core_allocate_ctor_id(NoneId, !Core),
     core_set_constructor(NoneId, NoneQName, MaybeType,
         constructor(NoneQName, [MaybeParamName], []), !Core),
-    builtin_name(NoneName, bi_ctor(NoneId), !Map),
+    root_name(NoneName, bi_ctor(NoneId), !Map),
 
     SomeName = nq_name_det("Some"),
     SomeQName = q_name_append(builtin_module_name, SomeName),
@@ -201,14 +206,14 @@ setup_core_types(MaybeType, !Map, !Core) :-
         constructor(SomeQName, [MaybeParamName], [
             type_field(q_name_append_str(builtin_module_name, "value"),
                 type_variable(MaybeParamName))]), !Core),
-    builtin_name(SomeName, bi_ctor(SomeId), !Map),
+    root_name(SomeName, bi_ctor(SomeId), !Map),
 
     MaybeName = nq_name_det("Maybe"),
     core_set_type(MaybeType,
         type_init(q_name_append(builtin_module_name, MaybeName),
             [MaybeParamName], [NoneId, SomeId], st_private),
         !Core),
-    builtin_name(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
+    root_name(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -224,14 +229,14 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     core_allocate_ctor_id(FalseId, !Core),
     core_set_constructor(FalseId, FalseQName, BoolId,
         constructor(FalseQName, [], []), !Core),
-    builtin_name(FalseName, bi_ctor(FalseId), !Map),
+    root_name(FalseName, bi_ctor(FalseId), !Map),
 
     TrueName = nq_name_det("True"),
     TrueQName = q_name_append(builtin_module_name, TrueName),
     core_allocate_ctor_id(TrueId, !Core),
     core_set_constructor(TrueId, TrueQName, BoolId,
         constructor(TrueQName, [], []), !Core),
-    builtin_name(TrueName, bi_ctor(TrueId), !Map),
+    root_name(TrueName, bi_ctor(TrueId), !Map),
 
     % NOTE: False is first so that it is allocated 0 for its tag, and true
     % will be allocated 1 for its tag, this will make interoperability
@@ -241,7 +246,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
         type_init(q_name_append(builtin_module_name, BoolName), [],
             [FalseId, TrueId], st_private),
         !Core),
-    builtin_name(BoolName, bi_type(BoolId, arity(0)), !Map),
+    root_name(BoolName, bi_type(BoolId, arity(0)), !Map),
 
     BoolWidth = bool_width,
     register_builtin_func(
@@ -345,7 +350,7 @@ setup_int_builtins(BoolType,
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
         IntComp, !Core),
-    builtin_name(builtin_int_comp, bi_func(IntComp), !Map).
+    root_name(builtin_int_comp, bi_func(IntComp), !Map).
 
 :- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
     core::in, core::out) is det.
@@ -421,7 +426,7 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
             [NilId, ConsId], st_private),
         !Core),
     % TODO: Add a constant for the List type name.
-    builtin_name(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
+    root_name(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -519,21 +524,21 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     core_allocate_ctor_id(WhitespaceId, !Core),
     core_set_constructor(WhitespaceId, WhitespaceQName, CharClassId,
         constructor(WhitespaceQName, [], []), !Core),
-    builtin_name(WhitespaceName, bi_ctor(WhitespaceId), !Map),
+    root_name(WhitespaceName, bi_ctor(WhitespaceId), !Map),
 
     OtherName = nq_name_det("Other"),
     OtherQName = q_name_append(builtin_module_name, OtherName),
     core_allocate_ctor_id(OtherId, !Core),
     core_set_constructor(OtherId, OtherQName, CharClassId,
         constructor(OtherQName, [], []), !Core),
-    builtin_name(OtherName, bi_ctor(OtherId), !Map),
+    root_name(OtherName, bi_ctor(OtherId), !Map),
 
     CharClassName = nq_name_det("CharClass"),
     core_set_type(CharClassId,
         type_init(q_name_append(builtin_module_name, CharClassName), [],
             [WhitespaceId, OtherId], st_private),
         !Core),
-    builtin_name(CharClassName, bi_type(CharClassId, arity(0)), !Map),
+    root_name(CharClassName, bi_type(CharClassId, arity(0)), !Map),
 
     CharClassFnName = q_name_append(builtin_module_name, builtin_char_class),
     register_builtin_func(builtin_char_class,
@@ -630,7 +635,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
 register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     register_builtin_func(Func, FuncId, !Core),
-    builtin_name(Name, bi_func(FuncId), !Map).
+    root_name(Name, bi_func(FuncId), !Map).
 
 :- pred register_builtin_func(function::in, func_id::out,
     core::in, core::out) is det.
@@ -646,7 +651,7 @@ register_builtin_func(Func, FuncId, !Core) :-
 register_builtin_resource(Name, Res, ResId, !Map, !Core) :-
     core_allocate_resource_id(ResId, !Core),
     core_set_resource(ResId, Res, !Core),
-    builtin_name(Name, bi_resource(ResId), !Map).
+    root_name(Name, bi_resource(ResId), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -669,12 +674,12 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred builtin_name(nq_name::in, builtin_item::in,
+:- pred root_name(nq_name::in, builtin_item::in,
     builtin_map::in, builtin_map::out) is det.
 
-builtin_name(Name, Item, !Map) :-
-    det_insert(Name, Item, !.Map ^ bm_map, Map),
-    !Map ^ bm_map := Map.
+root_name(Name, Item, !Map) :-
+    det_insert(Name, Item, !.Map ^ bm_root_map, Map),
+    !Map ^ bm_root_map := Map.
 
 %-----------------------------------------------------------------------%
 
