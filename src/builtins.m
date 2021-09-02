@@ -77,9 +77,14 @@
     ;       bi_type(type_id, arity)
     ;       bi_type_builtin(builtin_type).
 
+:- type builtin_map --->
+    builtin_map(
+        bm_map      :: map(nq_name, builtin_item)
+    ).
+
     % setup_builtins(Map, Operators, !Core)
     %
-:- pred setup_builtins(map(nq_name, builtin_item)::out,
+:- pred setup_builtins(builtin_map::out,
     operators::out, core::in, core::out) is det.
 
 :- func builtin_module_name = q_name.
@@ -144,7 +149,7 @@
 %-----------------------------------------------------------------------%
 
 setup_builtins(!:Map, Operators, !Core) :-
-    !:Map = init,
+    !:Map = builtin_map(init),
     setup_core_types(MaybeType, !Map, !Core),
     setup_bool_builtins(BoolType, BoolTrue, BoolFalse, BoolAnd, BoolOr,
         BoolNot, !Map, !Core),
@@ -163,21 +168,21 @@ setup_builtins(!:Map, Operators, !Core) :-
         ListType, ListNil, ListCons,
         StringConcat).
 
-:- pred setup_core_types(type_id::out, map(nq_name, builtin_item)::in,
-    map(nq_name, builtin_item)::out, core::in, core::out) is det.
+:- pred setup_core_types(type_id::out, builtin_map::in, builtin_map::out,
+    core::in, core::out) is det.
 
 setup_core_types(MaybeType, !Map, !Core) :-
     builtin_type_name(int, IntName),
-    det_insert(IntName, bi_type_builtin(int), !Map),
+    builtin_name(IntName, bi_type_builtin(int), !Map),
 
     builtin_type_name(char, CharName),
-    det_insert(CharName, bi_type_builtin(char), !Map),
+    builtin_name(CharName, bi_type_builtin(char), !Map),
 
     builtin_type_name(string, StringName),
-    det_insert(StringName, bi_type_builtin(string), !Map),
+    builtin_name(StringName, bi_type_builtin(string), !Map),
 
     builtin_type_name(string_pos, StringPosName),
-    det_insert(StringPosName, bi_type_builtin(string_pos), !Map),
+    builtin_name(StringPosName, bi_type_builtin(string_pos), !Map),
 
     core_allocate_type_id(MaybeType, !Core),
     MaybeParamName = "v",
@@ -187,7 +192,7 @@ setup_core_types(MaybeType, !Map, !Core) :-
     core_allocate_ctor_id(NoneId, !Core),
     core_set_constructor(NoneId, NoneQName, MaybeType,
         constructor(NoneQName, [MaybeParamName], []), !Core),
-    det_insert(NoneName, bi_ctor(NoneId), !Map),
+    builtin_name(NoneName, bi_ctor(NoneId), !Map),
 
     SomeName = nq_name_det("Some"),
     SomeQName = q_name_append(builtin_module_name, SomeName),
@@ -196,21 +201,20 @@ setup_core_types(MaybeType, !Map, !Core) :-
         constructor(SomeQName, [MaybeParamName], [
             type_field(q_name_append_str(builtin_module_name, "value"),
                 type_variable(MaybeParamName))]), !Core),
-    det_insert(SomeName, bi_ctor(SomeId), !Map),
+    builtin_name(SomeName, bi_ctor(SomeId), !Map),
 
     MaybeName = nq_name_det("Maybe"),
     core_set_type(MaybeType,
         type_init(q_name_append(builtin_module_name, MaybeName),
             [MaybeParamName], [NoneId, SomeId], st_private),
         !Core),
-    det_insert(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
+    builtin_name(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
 :- pred setup_bool_builtins(type_id::out, ctor_id::out, ctor_id::out,
     func_id::out, func_id::out, func_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     core_allocate_type_id(BoolId, !Core),
@@ -220,14 +224,14 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     core_allocate_ctor_id(FalseId, !Core),
     core_set_constructor(FalseId, FalseQName, BoolId,
         constructor(FalseQName, [], []), !Core),
-    det_insert(FalseName, bi_ctor(FalseId), !Map),
+    builtin_name(FalseName, bi_ctor(FalseId), !Map),
 
     TrueName = nq_name_det("True"),
     TrueQName = q_name_append(builtin_module_name, TrueName),
     core_allocate_ctor_id(TrueId, !Core),
     core_set_constructor(TrueId, TrueQName, BoolId,
         constructor(TrueQName, [], []), !Core),
-    det_insert(TrueName, bi_ctor(TrueId), !Map),
+    builtin_name(TrueName, bi_ctor(TrueId), !Map),
 
     % NOTE: False is first so that it is allocated 0 for its tag, and true
     % will be allocated 1 for its tag, this will make interoperability
@@ -237,7 +241,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
         type_init(q_name_append(builtin_module_name, BoolName), [],
             [FalseId, TrueId], st_private),
         !Core),
-    det_insert(BoolName, bi_type(BoolId, arity(0)), !Map),
+    builtin_name(BoolName, bi_type(BoolId, arity(0)), !Map),
 
     BoolWidth = bool_width,
     register_builtin_func(
@@ -271,8 +275,7 @@ register_bool_biop(BoolType, Name, Defn, FuncId, !Core) :-
     func_id::out, func_id::out, func_id::out, func_id::out, func_id::out,
     func_id::out, func_id::out, func_id::out, func_id::out, func_id::out,
     func_id::out, func_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_int_builtins(BoolType,
         AddId, SubId, MulId, DivId, ModId,
@@ -342,7 +345,7 @@ setup_int_builtins(BoolType,
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
         IntComp, !Core),
-    det_insert(builtin_int_comp, bi_func(IntComp), !Map).
+    builtin_name(builtin_int_comp, bi_func(IntComp), !Map).
 
 :- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
     core::in, core::out) is det.
@@ -356,8 +359,7 @@ register_int_fn1(Name, Defn, FuncId, !Core) :-
         FuncId, !Core).
 
 :- pred register_int_fn2(nq_name::in, list(pz_instr)::in, func_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
@@ -394,8 +396,7 @@ register_int_comp(BoolType, NameStr, Defn, FuncId, !Core) :-
         FuncId, !Core).
 
 :- pred setup_list_builtins(type_id::out, ctor_id::out, ctor_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
     core_allocate_type_id(ListId, !Core),
@@ -420,13 +421,12 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
             [NilId, ConsId], st_private),
         !Core),
     % TODO: Add a constant for the List type name.
-    det_insert(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
+    builtin_name(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%
 
 :- pred setup_misc_builtins(type_id::in, ctor_id::in, ctor_id::in,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_resource(nq_name_det("IO"), r_io, RIO, !Map, !Core),
@@ -508,8 +508,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
 :- pred setup_string_builtins(type_id::in, type_id::in,
     func_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     core_allocate_type_id(CharClassId, !Core),
@@ -520,21 +519,21 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     core_allocate_ctor_id(WhitespaceId, !Core),
     core_set_constructor(WhitespaceId, WhitespaceQName, CharClassId,
         constructor(WhitespaceQName, [], []), !Core),
-    det_insert(WhitespaceName, bi_ctor(WhitespaceId), !Map),
+    builtin_name(WhitespaceName, bi_ctor(WhitespaceId), !Map),
 
     OtherName = nq_name_det("Other"),
     OtherQName = q_name_append(builtin_module_name, OtherName),
     core_allocate_ctor_id(OtherId, !Core),
     core_set_constructor(OtherId, OtherQName, CharClassId,
         constructor(OtherQName, [], []), !Core),
-    det_insert(OtherName, bi_ctor(OtherId), !Map),
+    builtin_name(OtherName, bi_ctor(OtherId), !Map),
 
     CharClassName = nq_name_det("CharClass"),
     core_set_type(CharClassId,
         type_init(q_name_append(builtin_module_name, CharClassName), [],
             [WhitespaceId, OtherId], st_private),
         !Core),
-    det_insert(CharClassName, bi_type(CharClassId, arity(0)), !Map),
+    builtin_name(CharClassName, bi_type(CharClassId, arity(0)), !Map),
 
     CharClassFnName = q_name_append(builtin_module_name, builtin_char_class),
     register_builtin_func(builtin_char_class,
@@ -627,12 +626,11 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 %-----------------------------------------------------------------------%
 
 :- pred register_builtin_func(nq_name::in, function::in, func_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
     register_builtin_func(Func, FuncId, !Core),
-    det_insert(Name, bi_func(FuncId), !Map).
+    builtin_name(Name, bi_func(FuncId), !Map).
 
 :- pred register_builtin_func(function::in, func_id::out,
     core::in, core::out) is det.
@@ -643,13 +641,12 @@ register_builtin_func(Func, FuncId, !Core) :-
 
 :- pred register_builtin_resource(nq_name::in, resource::in,
     resource_id::out,
-    map(nq_name, builtin_item)::in, map(nq_name, builtin_item)::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 register_builtin_resource(Name, Res, ResId, !Map, !Core) :-
     core_allocate_resource_id(ResId, !Core),
     core_set_resource(ResId, Res, !Core),
-    det_insert(Name, bi_resource(ResId), !Map).
+    builtin_name(Name, bi_resource(ResId), !Map).
 
 %-----------------------------------------------------------------------%
 
@@ -669,6 +666,15 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
         Expr = expr(e_match(In, [TrueCase, FalseCase]), CI),
         func_set_body(!.Varmap, [In], [], Expr, !Func)
     ).
+
+%-----------------------------------------------------------------------%
+
+:- pred builtin_name(nq_name::in, builtin_item::in,
+    builtin_map::in, builtin_map::out) is det.
+
+builtin_name(Name, Item, !Map) :-
+    det_insert(Name, Item, !.Map ^ bm_map, Map),
+    !Map ^ bm_map := Map.
 
 %-----------------------------------------------------------------------%
 

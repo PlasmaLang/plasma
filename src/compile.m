@@ -217,14 +217,14 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
 setup_env_and_core(ModuleName, ImportEnv, Env, !:Core) :-
     !:Core = core.init(ModuleName),
     init_builtins_and_env(BuiltinMap, InitEnv, !Core),
-    map.foldl(env_add_builtin(q_name), BuiltinMap, InitEnv, Env),
+    map.foldl(env_add_builtin(q_name), BuiltinMap ^ bm_map, InitEnv, Env),
     % We create a second environment, this one is used only for reading
     % interface files.
     map.foldl(env_add_builtin(func(Name) =
             q_name_append(builtin_module_name, Name)
-        ), BuiltinMap, InitEnv, ImportEnv).
+        ), BuiltinMap ^ bm_map, InitEnv, ImportEnv).
 
-:- pred init_builtins_and_env(map(nq_name, builtin_item)::out, env::out,
+:- pred init_builtins_and_env(builtin_map::out, env::out,
     core::in, core::out) is det.
 
 init_builtins_and_env(BuiltinMap, Env, !Core) :-
