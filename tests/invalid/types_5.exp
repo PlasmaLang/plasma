@@ -1,2 +1,2 @@
-types_5.p:29: "MyList('a)" and "MyList('b)" are not the same, because "'a" and
-              "'b" are not the same
+types_5.p:29: "MyList('a)" and "MyList('b)" are not the same, because
+              "'a" and "'b" are not the same
