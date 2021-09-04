@@ -1475,9 +1475,11 @@ func write(Fd, ...) uses Fd
 These builtin operations are always available, they don't need to be
 imported from a module.
 
+// This documentation should be kept in-sync with tests/valid/builtin_01.p
+
 `type Maybe('v)`:: A maybe type, defined as:
 ----
-type Maybe('v) = Just('v)
+type Maybe('v) = Some('v)
                | None
 ----
 
