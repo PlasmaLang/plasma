@@ -390,7 +390,7 @@ pis_to_output_para(Opts, Indent, [Pi | Pis], !Output, !DidBreak) :-
             true
         )
     ; Pi = pi_nl,
-        output_para_linebreak(!Output)
+        output_para_linebreak_maybe(!Output)
     ; Pi = pi_start_comment,
         unexpected($file, $pred, "comment in paragraph")
     ; Pi = pi_nested(Type, Pretties),
@@ -738,13 +738,13 @@ output_newline(Indent, !Output) :-
         !Output ^ since_break := no
     ).
 
-    % There's a line break so move the stuff since the last linebreak into
-    % output.
+    % There's a potential line break so move the stuff since the last
+    % linebreak into output.
     %
-:- pred output_para_linebreak(output_builder::in, output_builder::out)
+:- pred output_para_linebreak_maybe(output_builder::in, output_builder::out)
     is det.
 
-output_para_linebreak(!Output) :-
+output_para_linebreak_maybe(!Output) :-
     SinceBreak = !.Output ^ since_break,
     ( SinceBreak = no,
         Since = init
@@ -757,7 +757,7 @@ output_para_linebreak(!Output) :-
 
 output_end_para(!Output) :-
     % Commit to the current line (same as if a linebreak is encountered).
-    output_para_linebreak(!Output),
+    output_para_linebreak_maybe(!Output),
     !Output ^ since_break := no.
 
 :- pred output_start_comment(indent::in, did_break::out,
