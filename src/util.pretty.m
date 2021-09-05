@@ -203,6 +203,7 @@ pretty_str(Pretties) = append_list(list(pretty(Pretties))).
 :- type print_instr
     --->    pi_cord(cord(string))
     ;       pi_nl
+    ;       pi_nl_hard
             % Start a comment without a newline
     ;       pi_start_comment
     ;       pi_nested(pretty_group_type, list(pretty))
@@ -260,8 +261,8 @@ pretty_to_pis(Break,    p_comment(Begin, Body)) =
         condense(map(pretty_to_pis(Break), Body)))].
 pretty_to_pis(_,        p_spc) = [pi_cord(singleton(" "))].
 pretty_to_pis(_,        p_empty) = [].
-pretty_to_pis(_,        p_nl_hard) = [pi_nl].
-pretty_to_pis(_,        p_nl_double) = [pi_nl, pi_nl].
+pretty_to_pis(_,        p_nl_hard) = [pi_nl_hard].
+pretty_to_pis(_,        p_nl_double) = [pi_nl_hard, pi_nl_hard].
 pretty_to_pis(break,    p_nl_soft) = [pi_nl].
 pretty_to_pis(no_break, p_nl_soft) = [].
 pretty_to_pis(_,        p_tabstop) = [].
@@ -315,6 +316,10 @@ pis_to_output(Opts, RoC, Indent, [Pi | Pis], !.Output, MaybeOutput,
         )
     ;
         ( Pi = pi_nl,
+            output_newline(Indent, !Output),
+            DidBreak = did_break
+        % Hard breaks are only used in paragraphs, they're equivilent here.
+        ; Pi = pi_nl_hard,
             output_newline(Indent, !Output),
             DidBreak = did_break
         ; Pi = pi_start_comment,
@@ -390,7 +395,10 @@ pis_to_output_para(Opts, Indent, [Pi | Pis], !Output, !DidBreak) :-
             true
         )
     ; Pi = pi_nl,
-        output_para_linebreak(!Output)
+        output_para_linebreak_maybe(!Output)
+    ; Pi = pi_nl_hard,
+        output_para_linebreak_maybe(!Output),
+        output_newline(Indent, !Output)
     ; Pi = pi_start_comment,
         unexpected($file, $pred, "comment in paragraph")
     ; Pi = pi_nested(Type, Pretties),
@@ -738,13 +746,13 @@ output_newline(Indent, !Output) :-
         !Output ^ since_break := no
     ).
 
-    % There's a line break so move the stuff since the last linebreak into
-    % output.
+    % There's a potential line break so move the stuff since the last
+    % linebreak into output.
     %
-:- pred output_para_linebreak(output_builder::in, output_builder::out)
+:- pred output_para_linebreak_maybe(output_builder::in, output_builder::out)
     is det.
 
-output_para_linebreak(!Output) :-
+output_para_linebreak_maybe(!Output) :-
     SinceBreak = !.Output ^ since_break,
     ( SinceBreak = no,
         Since = init
@@ -757,7 +765,7 @@ output_para_linebreak(!Output) :-
 
 output_end_para(!Output) :-
     % Commit to the current line (same as if a linebreak is encountered).
-    output_para_linebreak(!Output),
+    output_para_linebreak_maybe(!Output),
     !Output ^ since_break := no.
 
 :- pred output_start_comment(indent::in, did_break::out,

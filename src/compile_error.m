@@ -302,7 +302,7 @@ type_error_pretty(type_unification_failed(Type1, Type2, MaybeWhy)) = Error :-
         p_spc_nl ++ [p_quote("\"", Type2)] ++ p_spc_nl ++
         p_words("are not the same") ++ WhyError,
     ( MaybeWhy = yes(Why),
-        WhyError = p_words(", because") ++ p_spc_nl ++
+        WhyError = p_words(", because") ++ [p_nl_hard] ++
             type_error_pretty(Why)
     ; MaybeWhy = no,
         WhyError = []
