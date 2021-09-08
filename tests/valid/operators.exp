@@ -1,12 +1,56 @@
+27 + 3 = 30
+27 - 3 = 24
+3 - 27 = -24
+5 * 5 = 25
 37 / 5 = 7
+-37 / 5 = -7
+37 / -5 = -7
+-37 / -5 = 7
 37 % 5 = 2
+-37 % 5 = -2
+37 % -5 = 2
+-37 % -5 = -2
 -3 = -3
+12 + 3 * 4 = 24
+12 - (8 + 2) = 2
+6 + 6 == 3 * 4 = True
 5 < 3 = False
 5 > 3 = True
 5 <= 3 = False
 5 >= 3 = True
 5 == 3 = False
 5 != 3 = True
+5 < 4 = False
+5 > 4 = True
+5 <= 4 = False
+5 >= 4 = True
+5 == 4 = False
+5 != 4 = True
+5 < 5 = False
+5 > 5 = False
+5 <= 5 = True
+5 >= 5 = True
+5 == 5 = True
+5 != 5 = False
+5 < 6 = True
+5 > 6 = False
+5 <= 6 = True
+5 >= 6 = False
+5 == 6 = False
+5 != 6 = True
+5 < 7 = True
+5 > 7 = False
+5 <= 7 = True
+5 >= 7 = False
+5 == 7 = False
+5 != 7 = True
 not True = False
+not False = True
+False and False = False
+False and True = False
 True and False = False
+True and True = True
+False or False = False
+False or True = True
 True or False = True
+True or True = True
