@@ -368,7 +368,7 @@ register_int_fn1(Name, Defn, FuncId, !Core) :-
 
 register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(Name,
+    register_builtin_func_root(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
@@ -437,19 +437,19 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     register_builtin_resource(nq_name_det("IO"), r_io, RIO, !Map, !Core),
 
     PrintName = q_name_append_str(builtin_module_name, "print"),
-    register_builtin_func(nq_name_det("print"),
+    register_builtin_func_root(nq_name_det("print"),
         func_init_builtin_rts(PrintName,
             [builtin_type(string)], [], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     ReadlnName = q_name_append_str(builtin_module_name, "readline"),
-    register_builtin_func(nq_name_det("readline"),
+    register_builtin_func_root(nq_name_det("readline"),
         func_init_builtin_rts(ReadlnName,
             [], [builtin_type(string)], list_to_set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
-    register_builtin_func(nq_name_det("int_to_string"),
+    register_builtin_func_root(nq_name_det("int_to_string"),
         func_init_builtin_rts(IntToStringName,
             [builtin_type(int)], [builtin_type(string)], init, init),
         _, !Map, !Core),
@@ -458,11 +458,11 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     BoolToString0 = func_init_builtin_core(BoolToStringName,
         [type_ref(BoolType, [])], [builtin_type(string)], init, init),
     define_bool_to_string(BoolTrue, BoolFalse, BoolToString0, BoolToString),
-    register_builtin_func(nq_name_det("bool_to_string"), BoolToString,
+    register_builtin_func_root(nq_name_det("bool_to_string"), BoolToString,
         _, !Map, !Core),
 
     SetParameterName = q_name_append_str(builtin_module_name, "set_parameter"),
-    register_builtin_func(nq_name_det("set_parameter"),
+    register_builtin_func_root(nq_name_det("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
             [type_ref(BoolType, [])],
@@ -470,7 +470,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     GetParameterName = q_name_append_str(builtin_module_name, "get_parameter"),
-    register_builtin_func(nq_name_det("get_parameter"),
+    register_builtin_func_root(nq_name_det("get_parameter"),
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
             [type_ref(BoolType, []), builtin_type(int)],
@@ -483,7 +483,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         r_other(EnvironmentQName, RIO, s_private, i_imported, builtin_context),
         REnv, !Map, !Core),
     SetenvName = q_name_append_str(builtin_module_name, "setenv"),
-    register_builtin_func(nq_name_det("setenv"),
+    register_builtin_func_root(nq_name_det("setenv"),
         func_init_builtin_rts(SetenvName,
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])],
@@ -496,7 +496,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         r_other(TimeQName, RIO, s_private, i_imported, builtin_context),
         RTime, !Map, !Core),
     GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
-    register_builtin_func(nq_name_det("gettimeofday"),
+    register_builtin_func_root(nq_name_det("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
             init, list_to_set([RTime])),
@@ -504,7 +504,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     DieName = nq_name_det("die"),
     DieQName = q_name_append(builtin_module_name, DieName),
-    register_builtin_func(DieName,
+    register_builtin_func_root(DieName,
         func_init_builtin_rts(DieQName, [builtin_type(string)], [],
             init, init),
         _, !Map, !Core).
@@ -541,7 +541,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     root_name(CharClassName, bi_type(CharClassId, arity(0)), !Map),
 
     CharClassFnName = q_name_append(builtin_module_name, builtin_char_class),
-    register_builtin_func(builtin_char_class,
+    register_builtin_func_root(builtin_char_class,
         func_init_builtin_rts(CharClassFnName,
             [builtin_type(char)],
             [type_ref(CharClassId, [])],
@@ -558,7 +558,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StrposForwardName = q_name_append(builtin_module_name,
         builtin_strpos_forward),
-    register_builtin_func(builtin_strpos_forward,
+    register_builtin_func_root(builtin_strpos_forward,
         func_init_builtin_rts(StrposForwardName,
             [builtin_type(string_pos)],
             [builtin_type(string_pos)],
@@ -567,7 +567,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StrposBackwardName = q_name_append(builtin_module_name,
         builtin_strpos_backward),
-    register_builtin_func(builtin_strpos_backward,
+    register_builtin_func_root(builtin_strpos_backward,
         func_init_builtin_rts(StrposBackwardName,
             [builtin_type(string_pos)],
             [builtin_type(string_pos)],
@@ -576,7 +576,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StrposNextName = q_name_append(builtin_module_name,
         builtin_strpos_next),
-    register_builtin_func(builtin_strpos_next,
+    register_builtin_func_root(builtin_strpos_next,
         func_init_builtin_rts(StrposNextName,
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
@@ -585,7 +585,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StrposPrevName = q_name_append(builtin_module_name,
         builtin_strpos_prev),
-    register_builtin_func(builtin_strpos_prev,
+    register_builtin_func_root(builtin_strpos_prev,
         func_init_builtin_rts(StrposPrevName,
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
@@ -594,7 +594,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StringBeginName = q_name_append(builtin_module_name,
         builtin_string_begin),
-    register_builtin_func(builtin_string_begin,
+    register_builtin_func_root(builtin_string_begin,
         func_init_builtin_rts(StringBeginName,
             [builtin_type(string)],
             [builtin_type(string_pos)],
@@ -603,7 +603,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StringEndName = q_name_append(builtin_module_name,
         builtin_string_end),
-    register_builtin_func(builtin_string_end,
+    register_builtin_func_root(builtin_string_end,
         func_init_builtin_rts(StringEndName,
             [builtin_type(string)],
             [builtin_type(string_pos)],
@@ -612,7 +612,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     SubstringName = q_name_append(builtin_module_name,
         builtin_string_substring),
-    register_builtin_func(builtin_string_substring,
+    register_builtin_func_root(builtin_string_substring,
         func_init_builtin_rts(SubstringName,
             [builtin_type(string_pos), builtin_type(string_pos)],
             [builtin_type(string)],
@@ -621,7 +621,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
     StringEqualsName = q_name_append(builtin_module_name,
         builtin_string_equals),
-    register_builtin_func(builtin_string_equals,
+    register_builtin_func_root(builtin_string_equals,
         func_init_builtin_rts(StringEqualsName,
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])],
@@ -630,10 +630,12 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred register_builtin_func(nq_name::in, function::in, func_id::out,
+    % Register the builtin function with it's name in the root namespace.
+    %
+:- pred register_builtin_func_root(nq_name::in, function::in, func_id::out,
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
-register_builtin_func(Name, Func, FuncId, !Map, !Core) :-
+register_builtin_func_root(Name, Func, FuncId, !Map, !Core) :-
     register_builtin_func(Func, FuncId, !Core),
     root_name(Name, bi_func(FuncId), !Map).
 
