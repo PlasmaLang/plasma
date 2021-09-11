@@ -216,7 +216,8 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
 
 setup_env_and_core(ModuleName, ImportEnv, Env, !:Core) :-
     !:Core = core.init(ModuleName),
-    init_builtins_and_env(BuiltinMap, InitEnv0, !Core),
+    setup_builtins(BuiltinMap, Operators, !Core),
+    InitEnv0 = env.init(Operators),
 
     % Setup those builtins that are always module qualified:
     map.foldl(env_add_builtin(func(Name) =
@@ -230,13 +231,6 @@ setup_env_and_core(ModuleName, ImportEnv, Env, !:Core) :-
     map.foldl(env_add_builtin(func(Name) =
             q_name_append(builtin_module_name, Name)
         ), BuiltinMap ^ bm_root_map, InitEnv, ImportEnv).
-
-:- pred init_builtins_and_env(builtin_map::out, env::out,
-    core::in, core::out) is det.
-
-init_builtins_and_env(BuiltinMap, Env, !Core) :-
-    setup_builtins(BuiltinMap, Operators, !Core),
-    Env = env.init(Operators).
 
 :- pred env_add_builtin((func(T) = q_name)::in, T::in, builtin_item::in,
     env::in, env::out) is det.
