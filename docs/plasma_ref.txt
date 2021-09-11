@@ -1490,12 +1490,23 @@ type Maybe('v) = Some('v)
 implementation defined.
 
 `Int + Int -> Int`:: Addition
+  (also `func Builtin.int_add(a : Int, b : Int) -> Int`)
+
 `Int - Int -> Int`:: Subtraction
+  (also `func Builtin.int_sub(a : Int, b : Int) -> Int`)
+
 `Int * Int -> Int`:: Multiplication
+  (also `func Builtin.int_mul(a : Int, b : Int) -> Int`)
+
 `Int / Int -> Int`:: Division
+  (also `func Builtin.int_div(a : Int, b : Int) -> Int`)
+
 `Int % Int -> Int`:: Modulo/Remainder
   (link:https://github.com/PlasmaLang/plasma/issues/378[#378, which one?])
+  (also `func Builtin.int_mod(a : Int, b : Int) -> Int`)
+
 `- Int -> Int`:: Unary minus (prefix operator, takes only one argument).
+  (also `func Builtin.int_minus(a : Int) -> Int`)
 
 `func Builtin.int_lshift(a : Int, b : Int) -> Int`::
   Left shift `a` by `b` bits.
@@ -1537,11 +1548,23 @@ type Bool = False
 ----
 
 `Int > Int -> Bool`:: Greater than
+  (also `func Builtin.int_gt(a : Int, b : Int) -> Int`)
+
 `Int < Int -> Bool`:: Lesser than
+  (also `func Builtin.int_lt(a : Int, b : Int) -> Int`)
+
 `Int >= Int -> Bool`:: Greater than or equal to
+  (also `func Builtin.int_gteq(a : Int, b : Int) -> Int`)
+
 `Int <= Int -> Bool`:: Less than or equal to
+  (also `func Builtin.int_lteq(a : Int, b : Int) -> Int`)
+
 `Int == Int -> Bool`:: Equal
+  (also `func Builtin.int_eq(a : Int, b : Int) -> Int`)
+
 `Int != Int -> Bool`:: Not-equal
+  (also `func Builtin.int_neq(a : Int, b : Int) -> Int`)
+
 `Bool and Bool -> Bool`:: Logical add
 `Bool or Bool -> Bool`:: Logical or
 `not Bool -> Bool`:: Unary not (prefix operator, takes only one argument).

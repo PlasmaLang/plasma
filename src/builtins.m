@@ -286,13 +286,18 @@ setup_int_builtins(BoolType,
         AddId, SubId, MulId, DivId, ModId,
         GtId, LtId, GtEqId, LtEqId, EqId, NEqId, MinusId,
         !Map, !Core) :-
-    register_int_fn2(nq_name_det("int_add"), [pzi_add(pzw_fast)], AddId, !Core),
-    register_int_fn2(nq_name_det("int_sub"), [pzi_sub(pzw_fast)], SubId, !Core),
-    register_int_fn2(nq_name_det("int_mul"), [pzi_mul(pzw_fast)], MulId, !Core),
+    register_int_fn2(nq_name_det("int_add"), [pzi_add(pzw_fast)], AddId,
+        !Map, !Core),
+    register_int_fn2(nq_name_det("int_sub"), [pzi_sub(pzw_fast)], SubId,
+        !Map, !Core),
+    register_int_fn2(nq_name_det("int_mul"), [pzi_mul(pzw_fast)], MulId,
+        !Map, !Core),
     % Mod and div can maybe be combined into one operator, and optimised at
     % PZ load time.
-    register_int_fn2(nq_name_det("int_div"), [pzi_div(pzw_fast)], DivId, !Core),
-    register_int_fn2(nq_name_det("int_mod"), [pzi_mod(pzw_fast)], ModId, !Core),
+    register_int_fn2(nq_name_det("int_div"), [pzi_div(pzw_fast)], DivId,
+        !Map, !Core),
+    register_int_fn2(nq_name_det("int_mod"), [pzi_mod(pzw_fast)], ModId,
+        !Map, !Core),
 
     % TODO: remove the extend operation once we fix how booleans are
     % stored.
@@ -302,36 +307,36 @@ setup_int_builtins(BoolType,
     register_int_comp(BoolType, "int_gt", [
             pzi_gt_s(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        GtId, !Core),
+        GtId, !Map, !Core),
     register_int_comp(BoolType, "int_lt", [
             pzi_lt_s(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        LtId, !Core),
+        LtId, !Map, !Core),
     register_int_comp(BoolType, "int_gteq", [
             pzi_lt_s(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        GtEqId, !Core),
+        GtEqId, !Map, !Core),
     register_int_comp(BoolType, "int_lteq", [
             pzi_gt_s(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        LtEqId, !Core),
+        LtEqId, !Map, !Core),
     register_int_comp(BoolType, "int_eq", [
             pzi_eq(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        EqId, !Core),
+        EqId, !Map, !Core),
     register_int_comp(BoolType, "int_neq", [
             pzi_eq(pzw_fast),
             pzi_not(pzw_fast),
             pzi_ze(pzw_fast, pzw_ptr)],
-        NEqId, !Core),
+        NEqId, !Map, !Core),
 
     register_int_fn1(nq_name_det("int_minus"),
         [pzi_load_immediate(pzw_fast, im_i32(0i32)),
          pzi_roll(2),
          pzi_sub(pzw_fast)],
-        MinusId, !Core),
+        MinusId, !Map, !Core),
 
     % Register the builtin bitwise functions..
     % TODO: make the number of bits to shift a single byte.
@@ -349,19 +354,18 @@ setup_int_builtins(BoolType,
         [pzi_load_immediate(pzw_32, im_i32(-1i32)),
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
-        IntComp, !Core),
-    builtin_name(builtin_int_comp, bi_func(IntComp), !Map).
+        _, !Map, !Core).
 
 :- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
-    core::in, core::out) is det.
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
-register_int_fn1(Name, Defn, FuncId, !Core) :-
+register_int_fn1(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(
+    register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int)], [builtin_type(int)],
             init, init, Defn),
-        FuncId, !Core).
+        FuncId, !Map, !Core).
 
 :- pred register_int_fn2(nq_name::in, list(pz_instr)::in, func_id::out,
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
@@ -375,30 +379,19 @@ register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
             init, init, Defn),
         FuncId, !Map, !Core).
 
-:- pred register_int_fn2(nq_name::in, list(pz_instr)::in, func_id::out,
+:- pred register_int_comp(type_id::in, string::in, list(pz_instr)::in,
+    func_id::out, builtin_map::in, builtin_map::out,
     core::in, core::out) is det.
 
-register_int_fn2(Name, Defn, FuncId, !Core) :-
-    FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(
-        func_init_builtin_inline_pz(FName,
-            [builtin_type(int), builtin_type(int)],
-            [builtin_type(int)],
-            init, init, Defn),
-        FuncId, !Core).
-
-:- pred register_int_comp(type_id::in, string::in, list(pz_instr)::in,
-    func_id::out, core::in, core::out) is det.
-
-register_int_comp(BoolType, NameStr, Defn, FuncId, !Core) :-
+register_int_comp(BoolType, NameStr, Defn, FuncId, !Map, !Core) :-
     Name = nq_name_det(NameStr),
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func(
+    register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [type_ref(BoolType, [])],
             init, init, Defn),
-        FuncId, !Core).
+        FuncId, !Map, !Core).
 
 :- pred setup_list_builtins(type_id::out, ctor_id::out, ctor_id::out,
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
