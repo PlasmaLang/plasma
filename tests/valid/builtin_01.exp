@@ -1,2 +1,8 @@
 Map result: None
 Map result: Some(24)
+int_leftshift(5, 3) = 40
+int_rightshift(37, 2) = 9
+int_and(15, 28) = 12
+int_or(15, 28) = 31
+int_xor(15, 28) = 19
+int_comp(5) = -6

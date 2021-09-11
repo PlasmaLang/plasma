@@ -14,8 +14,12 @@ entrypoint
 func main() uses IO -> Int {
     test_maybe!()
 
+    test_int!()
+
     return 0
 }
+
+/* ****************************************** */
 
 func test_maybe() uses IO {
     var a = None
@@ -44,5 +48,31 @@ func maybe_map(f : func('a) -> 'b, m : Maybe('a)) -> Maybe('b) {
 
 func plus1(x : Int) -> Int {
     return x + 1
+}
+
+/* ****************************************** */
+
+func test_int() uses IO {
+    // Tests for integer oeprators are in operators.p
+
+    // We can name the Int type.
+    func foo(v : Int) -> Int {
+        return v * 42
+    }
+
+    // Builtin Int functions that are not operators, including
+    // int_to_string. 
+    print!("int_leftshift(5, 3) = " ++
+        int_to_string(Builtin.int_lshift(5, 3)) ++ "\n")
+    print!("int_rightshift(37, 2) = " ++
+        int_to_string(Builtin.int_rshift(37, 2)) ++ "\n")
+    print!("int_and(15, 28) = " ++
+        int_to_string(Builtin.int_and(15, 28)) ++ "\n")
+    print!("int_or(15, 28) = " ++
+        int_to_string(Builtin.int_or(15, 28)) ++ "\n")
+    print!("int_xor(15, 28) = " ++
+        int_to_string(Builtin.int_xor(15, 28)) ++ "\n")
+    print!("int_comp(5) = " ++ 
+        int_to_string(Builtin.int_comp(5)) ++ "\n")
 }
 

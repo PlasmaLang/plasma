@@ -13,9 +13,9 @@ module Bitwise
 
 entrypoint
 func main() uses IO -> Int {
-    print!("1 << 8 = " ++ int_to_string(int_lshift(1, 8)) ++ "\n")
-    print!("21 >> 2 = " ++ int_to_string(int_rshift(21, 2)) ++ "\n")
-    print!("~7 = " ++ int_to_string(int_comp(7)) ++ "\n")
+    print!("1 << 8 = " ++ int_to_string(Builtin.int_lshift(1, 8)) ++ "\n")
+    print!("21 >> 2 = " ++ int_to_string(Builtin.int_rshift(21, 2)) ++ "\n")
+    print!("~7 = " ++ int_to_string(Builtin.int_comp(7)) ++ "\n")
 
     return 0
 }

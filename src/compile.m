@@ -216,10 +216,17 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
 
 setup_env_and_core(ModuleName, ImportEnv, Env, !:Core) :-
     !:Core = core.init(ModuleName),
-    init_builtins_and_env(BuiltinMap, InitEnv, !Core),
+    init_builtins_and_env(BuiltinMap, InitEnv0, !Core),
+
+    % Setup those builtins that are always module qualified:
+    map.foldl(env_add_builtin(func(Name) =
+            q_name_append(builtin_module_name, Name)
+        ), BuiltinMap ^ bm_builtin_map, InitEnv0, InitEnv),
+
+    % Setup those that are sometimes qulaified,  We split the Environment in
+    % two to create an environment were they are (ImportEnv) and one where
+    % they arn't (Env).
     map.foldl(env_add_builtin(q_name), BuiltinMap ^ bm_root_map, InitEnv, Env),
-    % We create a second environment, this one is used only for reading
-    % interface files.
     map.foldl(env_add_builtin(func(Name) =
             q_name_append(builtin_module_name, Name)
         ), BuiltinMap ^ bm_root_map, InitEnv, ImportEnv).

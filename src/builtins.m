@@ -350,7 +350,7 @@ setup_int_builtins(BoolType,
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
         IntComp, !Core),
-    root_name(builtin_int_comp, bi_func(IntComp), !Map).
+    builtin_name(builtin_int_comp, bi_func(IntComp), !Map).
 
 :- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
     core::in, core::out) is det.
@@ -368,7 +368,7 @@ register_int_fn1(Name, Defn, FuncId, !Core) :-
 
 register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
     FName = q_name_append(builtin_module_name, Name),
-    register_builtin_func_root(Name,
+    register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
             [builtin_type(int), builtin_type(int)],
             [builtin_type(int)],
@@ -639,6 +639,16 @@ register_builtin_func_root(Name, Func, FuncId, !Map, !Core) :-
     register_builtin_func(Func, FuncId, !Core),
     root_name(Name, bi_func(FuncId), !Map).
 
+    % Register the builtin function with it's name in the Builtin module
+    % namespace.
+    %
+:- pred register_builtin_func_builtin(nq_name::in, function::in, func_id::out,
+    builtin_map::in, builtin_map::out, core::in, core::out) is det.
+
+register_builtin_func_builtin(Name, Func, FuncId, !Map, !Core) :-
+    register_builtin_func(Func, FuncId, !Core),
+    builtin_name(Name, bi_func(FuncId), !Map).
+
 :- pred register_builtin_func(function::in, func_id::out,
     core::in, core::out) is det.
 
@@ -682,6 +692,13 @@ define_bool_to_string(TrueId, FalseId, !Func) :-
 root_name(Name, Item, !Map) :-
     det_insert(Name, Item, !.Map ^ bm_root_map, Map),
     !Map ^ bm_root_map := Map.
+
+:- pred builtin_name(nq_name::in, builtin_item::in,
+    builtin_map::in, builtin_map::out) is det.
+
+builtin_name(Name, Item, !Map) :-
+    det_insert(Name, Item, !.Map ^ bm_builtin_map, Map),
+    !Map ^ bm_builtin_map := Map.
 
 %-----------------------------------------------------------------------%
 

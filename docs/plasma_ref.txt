@@ -1497,14 +1497,23 @@ implementation defined.
   (link:https://github.com/PlasmaLang/plasma/issues/378[#378, which one?])
 `- Int -> Int`:: Unary minus (prefix operator, takes only one argument).
 
-`func int_lshift(a : Int, b : Int) -> Int`::
+`func Builtin.int_lshift(a : Int, b : Int) -> Int`::
   Left shift `a` by `b` bits.
 
-`func int_rshift(a : Int, b : Int) -> Int`::
+`func Builtin.int_rshift(a : Int, b : Int) -> Int`::
   Right shift `a` by `b` bits.
 
-`func int_comp(Int) -> Int`::
-  One's compliment.
+`func Builtin.int_and(a : Int, b : Int) -> Int`::
+  Bitwise and.
+
+`func Builtin.int_or(a : Int, b : Int) -> Int`::
+  Bitwise or.
+
+`func Builtin.int_xor(a : Int, b : Int) -> Int`::
+  Bitwise exclusive-or.
+
+`func Builtin.int_comp(Int) -> Int`::
+  One's compliment (flip all the bits).
 
 `func int_to_string(Int) -> String`::
   Return a string representation of the number.  No nice formatting is
@@ -1515,6 +1524,8 @@ Future work:
  * TODO: Use interfaces to provide many of these operations to a group of
    types.  Eg many integer operations will apply to all numbers.  Same with
    the relational operators below.
+ * TODO: Once there is an Int module move the builtin Int functions to it.
+ * TODO: The bitwise functions should be for sized integers only.
 
 === Bools
 
