@@ -1,20 +1,2 @@
 Map result: None
 Map result: Some(24)
-int_add(5, 3) = 8
-int_sub(5, 3) = 2
-int_mul(5, 3) = 15
-int_div(36, 7) = 5
-int_mod(36, 7) = 1
-int_minus(23) = -23
-int_leftshift(5, 3) = 40
-int_rightshift(37, 2) = 9
-int_and(15, 28) = 12
-int_or(15, 28) = 31
-int_xor(15, 28) = 19
-int_comp(5) = -6
-int_gt(3, 5) = False
-int_lt(3, 5) = True
-int_gteq(3, 5) = False
-int_lteq(3, 5) = True
-int_eq(3, 5) = False
-int_neq(3, 5) = True
