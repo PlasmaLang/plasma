@@ -298,30 +298,33 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     root_name(BoolName, bi_type(BoolId, arity(0)), !Map),
 
     BoolWidth = bool_width,
-    register_builtin_func(
+    BoolNotName = nq_name_det("bool_not"),
+    register_builtin_func_builtin(BoolNotName,
         func_init_builtin_inline_pz(
-            q_name_append_str(builtin_module_name, "bool_not"),
+            q_name_append(builtin_module_name, BoolNotName),
             [type_ref(BoolId, [])], [type_ref(BoolId, [])], init, init,
             [pzi_not(BoolWidth)]),
-        NotId, !Core),
+        NotId, !Map, !Core),
 
     register_bool_biop(BoolId, "bool_and",
-        [pzi_and(BoolWidth)], AndId, !Core),
+        [pzi_and(BoolWidth)], AndId, !Map, !Core),
     register_bool_biop(BoolId, "bool_or",
-        [pzi_or(BoolWidth)], OrId, !Core).
+        [pzi_or(BoolWidth)], OrId, !Map, !Core).
 
 :- pred register_bool_biop(type_id::in, string::in, list(pz_instr)::in,
-    func_id::out, core::in, core::out) is det.
+    func_id::out, builtin_map::in, builtin_map::out, core::in, core::out)
+    is det.
 
-register_bool_biop(BoolType, Name, Defn, FuncId, !Core) :-
-    FName = q_name_append(builtin_module_name, nq_name_det(Name)),
-    register_builtin_func(
+register_bool_biop(BoolType, NameStr, Defn, FuncId, !Map, !Core) :-
+    Name = nq_name_det(NameStr),
+    FName = q_name_append(builtin_module_name, Name),
+    register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
             [type_ref(BoolType, []), type_ref(BoolType, [])],
             [type_ref(BoolType, [])],
             init, init,
             Defn),
-        FuncId, !Core).
+        FuncId, !Map, !Core).
 
 %-----------------------------------------------------------------------%
 

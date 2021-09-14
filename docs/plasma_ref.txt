@@ -1566,8 +1566,13 @@ type Bool = False
   (also `func Builtin.int_neq(a : Int, b : Int) -> Int`)
 
 `Bool and Bool -> Bool`:: Logical add
+  (also `func Builtin.bool_and(a : Bool, b : Bool) -> Bool`)
+
 `Bool or Bool -> Bool`:: Logical or
-`not Bool -> Bool`:: Unary not (prefix operator, takes only one argument).
+  (also `func Builtin.bool_or(a : Bool, b : Bool) -> Bool`)
+
+`not Bool -> Bool`:: Unary not (prefix operator, takes only one argument)
+  (also `func Builtin.bool_not(a : Bool) -> Bool`)
 
 `func bool_to_string(Bool) -> String`::
   Return one of the strings "True" or "False".
