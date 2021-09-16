@@ -248,10 +248,15 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                 ; Locn = pl_other(ValLocn),
                     InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap,
                         ValLocn)
-                ; Locn = pl_instrs(_),
+                ; Locn = pl_instrs(_, no),
                     % This should have been filtered out and wrapped in a
                     % proc if it appears as a constant.
                     unexpected($file, $pred, "Instructions")
+                ; Locn = pl_instrs(_, yes(PID)),
+                    InstrsMain = from_list([
+                        pzio_instr(pzi_get_env),
+                        pzio_instr(pzi_make_closure(PID))
+                    ])
                 )
             ; Const = c_ctor(_),
                 util.exception.sorry($file, $pred, Context,
@@ -299,7 +304,7 @@ gen_call(CGInfo, Callee, Args, CodeInfo, Depth, LocnMap, Continuation,
         CallComment = singleton(pzio_comment(Decl)),
 
         Locn = vl_lookup_proc(LocnMap, FuncId),
-        ( Locn = pl_instrs(Instrs0),
+        ( Locn = pl_instrs(Instrs0, _),
             % The function is implemented with a short sequence of
             % instructions.
             Instrs1 = singleton(pzio_comment("Callee is instructions")) ++

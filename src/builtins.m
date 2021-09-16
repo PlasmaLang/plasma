@@ -140,6 +140,7 @@
 :- implementation.
 
 :- import_module list.
+:- import_module pair.
 :- import_module require.
 :- import_module set.
 
@@ -166,12 +167,15 @@ setup_builtins(!:Map, Operators, !Core) :-
     setup_string_builtins(BoolType, MaybeType,
         StringConcat, !Map, !Core),
     setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core),
+
     Operators = operators(
         IntAdd, IntSub, IntMul, IntDiv, IntMod,
         IntGt, IntLt, IntGtEq, IntLtEq, IntEq, IntNEq, IntMinus,
         BoolTrue, BoolFalse, BoolAnd, BoolOr, BoolNot,
         ListType, ListNil, ListCons,
-        StringConcat).
+        StringConcat),
+
+    foldl(make_body_for_inline, core_all_functions(!.Core), !Core).
 
 :- pred setup_core_types(type_id::out, builtin_map::in, builtin_map::out,
     core::in, core::out) is det.
@@ -214,6 +218,51 @@ setup_core_types(MaybeType, !Map, !Core) :-
             [MaybeParamName], [NoneId, SomeId], st_private),
         !Core),
     root_name(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
+
+    % If a function is implemented by inlining PZ instructions during
+    % codegen, then give it a definition that does the same so it can be
+    % used as a higher order value.
+    %
+:- pred make_body_for_inline(pair(func_id, function)::in,
+    core::in, core::out) is det.
+
+make_body_for_inline(FuncId - Function0, !Core) :-
+    ( if func_builtin_inline_pz(Function0, _) then
+        func_get_type_signature(Function0, ParamTypes, ReturnTypes, Arity),
+        func_get_resource_signature(Function0, Uses, Observes),
+        some [!Varmap, !Typemap, !CodeInfo] (
+            !:Varmap = varmap.init,
+            !:Typemap = init,
+            map_foldl2(add_var_with_type, ParamTypes, Params, !Varmap,
+                !Typemap),
+            % The whacky thing here is that to implement a function whose
+            % contents get replaced by a list of PZ instructions, we implement
+            % it as a call to itself, because that direct call will be replaced
+            % with the PZ instructions during codegen.
+            Callee = c_plain(FuncId),
+            Resources = resources(Uses, Observes),
+            !:CodeInfo = code_info_init(o_builtin),
+            code_info_set_arity(Arity, !CodeInfo),
+            code_info_set_types(ReturnTypes, !CodeInfo),
+            % XXX: If we add extra parts to code_info in the future then
+            % this may be incomplete.  We need a typesafe way to make a
+            % complete one or we should run this code through the
+            % typechecker etc.
+            Expr = expr(e_call(Callee, Params, Resources), !.CodeInfo),
+            func_set_body(!.Varmap, Params, [], Expr, !.Typemap,
+                Function0, Function),
+            core_set_function(FuncId, Function, !Core)
+        )
+    else
+        true
+    ).
+
+:- pred add_var_with_type(type_::in, var::out, varmap::in, varmap::out,
+    map(var, type_)::in, map(var, type_)::out) is det.
+
+add_var_with_type(Type, Var, !Varmap, !Typemap) :-
+    add_anon_var(Var, !Varmap),
+    det_insert(Var, Type, !Typemap).
 
 %-----------------------------------------------------------------------%
 

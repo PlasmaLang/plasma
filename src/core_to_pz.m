@@ -163,14 +163,18 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
         assert_has_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
-    ; ShouldGenerate = need_inline_pz,
+    ; ShouldGenerate = need_inline_pz_and_codegen,
         ( if func_builtin_inline_pz(Function, PZInstrs) then
             vls_set_proc_instrs(FuncId, PZInstrs, !LocnMap)
         else
             unexpected($file, $pred, format(
                 "Inline PZ builtin ('%s') without list of instructions",
                 [s(Name)]))
-        )
+        ),
+
+        assert_has_body(Function),
+        make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
+            !BuildModClosure, !PZ)
     ; ShouldGenerate = need_extern,
         assert_has_no_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
@@ -189,7 +193,7 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
 
 :- type generate
     --->    need_codegen
-    ;       need_inline_pz
+    ;       need_inline_pz_and_codegen
     ;       need_extern
     ;       dead_code.
 
@@ -202,7 +206,10 @@ should_generate(Function) = Generate :-
             ( BuiltinType = bit_core,
                 Generate = need_codegen
             ; BuiltinType = bit_inline_pz,
-                Generate = need_inline_pz
+                % Everything with inline PZ also gets codegen.  TODO we
+                % should check if address is taken to skip that most of the
+                % time.
+                Generate = need_inline_pz_and_codegen
             ; BuiltinType = bit_rts,
                 Generate = need_extern
             )
