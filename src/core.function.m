@@ -310,14 +310,12 @@ func_builtin_inline_pz(Func, PZInstrs) :-
 %-----------------------------------------------------------------------%
 
 func_set_body(Varmap, ParamNames, Captured, Expr, !Function) :-
-    ( if func_get_vartypes(!.Function, _) then
-        unexpected($file, $pred,
-            "This call will throw away old VarTypes information, " ++
-            "use the 6 argument version instead")
+    ( if func_get_vartypes(!.Function, Vartypes) then
+        MaybeVartypes = yes(Vartypes)
     else
-        true
+        MaybeVartypes = no
     ),
-    Defn = function_defn(Varmap, ParamNames, no, Captured, Expr),
+    Defn = function_defn(Varmap, ParamNames, MaybeVartypes, Captured, Expr),
     !Function ^ f_maybe_func_defn := yes(Defn).
 
 func_set_body(Varmap, ParamNames, Captured, Expr, VarTypes, !Function) :-
