@@ -48,7 +48,7 @@ func test_uses_time() uses Time -> Int {
 }
 
 func test_gettimeofday() observes Time -> Int {
-    var ok, var s, _ = gettimeofday!()
+    var ok, var s, _ = Builtin.gettimeofday!()
     if (ok) {
         return s
     } else {

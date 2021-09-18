@@ -1,2 +1,4 @@
 Map result: None
 Map result: Some(24)
+Print works, duh
+setenv result: True

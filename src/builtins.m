@@ -507,7 +507,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     SetParameterName = q_name_append_str(builtin_module_name, "set_parameter"),
-    register_builtin_func_root(nq_name_det("set_parameter"),
+    register_builtin_func_builtin(nq_name_det("set_parameter"),
         func_init_builtin_rts(SetParameterName,
             [builtin_type(string), builtin_type(int)],
             [type_ref(BoolType, [])],
@@ -515,7 +515,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         _, !Map, !Core),
 
     GetParameterName = q_name_append_str(builtin_module_name, "get_parameter"),
-    register_builtin_func_root(nq_name_det("get_parameter"),
+    register_builtin_func_builtin(nq_name_det("get_parameter"),
         func_init_builtin_rts(GetParameterName,
             [builtin_type(string)],
             [type_ref(BoolType, []), builtin_type(int)],
@@ -541,7 +541,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
         r_other(TimeQName, RIO, s_private, i_imported, builtin_context),
         RTime, !Map, !Core),
     GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
-    register_builtin_func_root(nq_name_det("gettimeofday"),
+    register_builtin_func_builtin(nq_name_det("gettimeofday"),
         func_init_builtin_rts(GettimeofdayName, [],
             [type_ref(BoolType, []), builtin_type(int), builtin_type(int)],
             init, list_to_set([RTime])),
@@ -549,7 +549,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
 
     DieName = nq_name_det("die"),
     DieQName = q_name_append(builtin_module_name, DieName),
-    register_builtin_func_root(DieName,
+    register_builtin_func_builtin(DieName,
         func_init_builtin_rts(DieQName, [builtin_type(string)], [],
             init, init),
         _, !Map, !Core).

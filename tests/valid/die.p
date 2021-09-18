@@ -8,7 +8,7 @@ module Die
 
 entrypoint
 func main() uses IO -> Int {
-    die("Dieing")
+    Builtin.die("Dieing")
     
     /*
      * Return shouldn't be necessary since die won't fall-through.  However

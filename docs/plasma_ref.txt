@@ -1653,11 +1653,11 @@ type CharClass = Whitespace
   Returns an empty string for the end of input, which is indistinguishable
   from an empty line.
 
-`func set_parameter(String, Int) uses IO -> Bool`::
+`func Builtin.set_parameter(String, Int) uses IO -> Bool`::
   Set a parameter for the runtime system.  There are currently no settable
   parameters so this always returns false.
 
-`func get_parameter(String) observes IO -> Bool, Int`::
+`func Builtin.get_parameter(String) observes IO -> Bool, Int`::
   Get a parameter, if the parameter exists returns `True, value`, otherwise
   returns `False, 0`. The parameters are:
   `heap_usage`::: The used memory in the heap.
@@ -1667,10 +1667,10 @@ type CharClass = Whitespace
 `func setenv(String, String) uses Environment -> Bool`::
   Calls `setenv` on POSIX.
 
-`func gettimeofday() observes Time -> Bool, Int, Int`::
+`func Builtin.gettimeofday() observes Time -> Bool, Int, Int`::
   Calls `gettimeofday` and returns `True, secs, usecs` on success.
 
-`func die(String)`::
+`func Builtin.die(String)`::
   Abort the program with the given message.
 
 A lot of these (eg `die`, `setenv`) exist for testing and will likely change

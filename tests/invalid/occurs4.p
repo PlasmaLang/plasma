@@ -18,7 +18,7 @@ func occurs4() uses IO{
                 print!("False")
             }
         }
-        Nil -> { die!("Die!") }
+        Nil -> { Builtin.die!("Die!") }
     }
 }
 

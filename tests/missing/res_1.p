@@ -25,7 +25,7 @@ func use_env() uses Environment -> Int {
 }
 
 func test_gettimeofday() observes Time -> Int {
-    var b, var s, var us = gettimeofday!()
+    var b, var s, var us = Builtin.gettimeofday!()
     if (b) {
         return s
     } else {
