@@ -593,13 +593,14 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
             init, init),
         _,  !Map, !Core),
 
-    register_builtin_func(
+    StringConcatName = nq_name_det("string_concat"),
+    register_builtin_func_builtin(StringConcatName,
         func_init_builtin_rts(
-            q_name_append_str(builtin_module_name, "string_concat"),
+            q_name_append(builtin_module_name, StringConcatName),
             [builtin_type(string), builtin_type(string)],
             [builtin_type(string)],
             init, init),
-        StringConcat, !Core),
+        StringConcat, !Map, !Core),
 
     StrposForwardName = q_name_append(builtin_module_name,
         builtin_strpos_forward),

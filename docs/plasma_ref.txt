@@ -1598,7 +1598,8 @@ type CharClass = Whitespace
   between characters, or before the first character or after the last. This
   makes substring operations clearer.
 
-`String ++ String -> String`:: String append.
+`String ++ String -> String`:: String concatenation
+  (also `func Builtin.string_concat(a : String, b : String) -> String`).
 
 `func char_class(Char) -> CharClass`::
   Return the class of a character.
@@ -1625,11 +1626,11 @@ type CharClass = Whitespace
   The `StringPos` must not be at the beginning of the string (Runtime
   check).
 
-`func strpos_next_char(StringPos) -> Maybe(Char)`::
+`func strpos_next(StringPos) -> Maybe(Char)`::
   Return the next char in the string after `StringPos`.  
   If `StringPos` is at the end of the string then `None` is returned.
 
-`func strpos_prev_char(StringPos) -> Maybe(Char)`::
+`func strpos_prev(StringPos) -> Maybe(Char)`::
   Return the previous char in the string before `StringPos`.  
   If `StringPos` is at the beginning of the string then `None` is returned.
 
