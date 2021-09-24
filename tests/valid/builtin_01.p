@@ -87,5 +87,8 @@ func test_misc() uses IO {
     } else {}
 }
 
-
+// Test that we can define a function with the same name as a hidden builtin
+func die() uses IO {
+    print!("I'm dead\n")  // not really.
+}
 
