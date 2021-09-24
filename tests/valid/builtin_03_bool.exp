@@ -1,0 +1,4 @@
+test: False and True
+and: False
+or: True
+not: False

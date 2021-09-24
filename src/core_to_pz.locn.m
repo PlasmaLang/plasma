@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.locn.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - value location information
@@ -12,6 +12,7 @@
 :- interface.
 
 :- import_module cord.
+:- import_module maybe.
 
 %-----------------------------------------------------------------------%
 
@@ -37,7 +38,7 @@
     ;       vln_struct(pzs_id, field_num, pz_width, val_locn_next).
 
 :- type proc_locn
-    --->    pl_instrs(list(pz_instr))
+    --->    pl_instrs(list(pz_instr), maybe(pzp_id))
     ;       pl_static_proc(pzp_id)
     ;       pl_other(val_locn).
 
@@ -138,7 +139,7 @@
     % Used internally.  proc_locn is just how the the result is returned.
     %
 :- type proc_locn_internal
-    --->    pli_instrs(list(pz_instr))
+    --->    pli_instrs(list(pz_instr), maybe(pzp_id))
     ;       pli_static_proc(pzp_id)
     ;       pli_import(pzi_id, field_num).
 
@@ -149,19 +150,44 @@ vls_init(ModEnvStruct) = val_locn_map_static(ModEnvStruct, init, init, init).
 %-----------------------------------------------------------------------%
 
 vls_set_proc(FuncId, ProcId, !Map) :-
-    vls_set_proc_1(FuncId, pli_static_proc(ProcId), !Map).
+    ( if search(!.Map ^ vls_proc_id_map, FuncId, Locn0) then
+        (
+            ( Locn0 = pli_static_proc(_)
+            ; Locn0 = pli_import(_, _)
+            ),
+            unexpected($file, $pred, "Already set")
+        ; Locn0 = pli_instrs(Instrs, MaybeProc),
+            ( MaybeProc = yes(_),
+                unexpected($file, $pred, "Already set")
+            ; MaybeProc = no,
+                Locn = pli_instrs(Instrs, yes(ProcId))
+            )
+        )
+    else
+        Locn = pli_static_proc(ProcId)
+    ),
+    map.set(FuncId, Locn, !.Map ^ vls_proc_id_map, ProcMap),
+    !Map ^ vls_proc_id_map := ProcMap.
 
 vls_set_proc_instrs(FuncId, Instrs, !Map) :-
-    vls_set_proc_1(FuncId, pli_instrs(Instrs), !Map).
+    ( if search(!.Map ^ vls_proc_id_map, FuncId, Locn0) then
+        (
+            ( Locn0 = pli_instrs(_, _)
+            ; Locn0 = pli_import(_, _)
+            ),
+            unexpected($file, $pred, "Already set")
+        ; Locn0 = pli_static_proc(ProcId),
+            Locn = pli_instrs(Instrs, yes(ProcId))
+        )
+    else
+        Locn = pli_instrs(Instrs, no)
+    ),
+    map.set(FuncId, Locn, !.Map ^ vls_proc_id_map, ProcMap),
+    !Map ^ vls_proc_id_map := ProcMap.
 
 vls_set_proc_imported(FuncId, ImportId, FieldNum, !Map) :-
-    vls_set_proc_1(FuncId, pli_import(ImportId, FieldNum), !Map).
-
-:- pred vls_set_proc_1(func_id::in, proc_locn_internal::in,
-    val_locn_map_static::in, val_locn_map_static::out) is det.
-
-vls_set_proc_1(FuncId, Locn, !Map) :-
-    map.det_insert(FuncId, Locn, !.Map ^ vls_proc_id_map, ProcMap),
+    map.det_insert(FuncId, pli_import(ImportId, FieldNum),
+        !.Map ^ vls_proc_id_map, ProcMap),
     !Map ^ vls_proc_id_map := ProcMap.
 
 %-----------------------------------------------------------------------%
@@ -169,10 +195,12 @@ vls_set_proc_1(FuncId, Locn, !Map) :-
 vls_lookup_proc_id(Map, FuncId) = ProcId :-
     map.lookup(Map ^ vls_proc_id_map, FuncId, Locn),
     ( Locn = pli_static_proc(ProcId)
-    ;
-        ( Locn = pli_instrs(_)
-        ; Locn = pli_import(_, _)
-        ),
+    ; Locn = pli_instrs(_, MaybeProcId),
+        ( MaybeProcId = yes(ProcId)
+        ; MaybeProcId = no,
+            unexpected($file, $pred, "Builtin with no proc")
+        )
+    ; Locn = pli_import(_, _),
         unexpected($file, $pred, "Non-static proc")
     ).
 
@@ -303,7 +331,8 @@ vl_lookup_mod_env(vlm_clos(_, _, S, F, W)) =
 
 :- func proc_locn_from_internal(pzs_id, proc_locn_internal) = proc_locn.
 
-proc_locn_from_internal(_, pli_instrs(Instrs)) = pl_instrs(Instrs).
+proc_locn_from_internal(_, pli_instrs(Instrs, MbProcId)) =
+    pl_instrs(Instrs, MbProcId).
 proc_locn_from_internal(_, pli_static_proc(ProcId)) = pl_static_proc(ProcId).
 proc_locn_from_internal(ModEnvStruct, pli_import(_, FieldNum)) =
     pl_other(vl_env(vln_struct(ModEnvStruct, FieldNum, pzw_ptr, vln_done))).
@@ -313,7 +342,7 @@ proc_locn_from_internal(ModEnvStruct, pli_import(_, FieldNum)) =
 
 proc_maybe_in_struct(Struct, Field, Width, Locn0) = Locn :-
     (
-        ( Locn0 = pl_instrs(_)
+        ( Locn0 = pl_instrs(_, _)
         ; Locn0 = pl_static_proc(_)
         ),
         Locn = Locn0

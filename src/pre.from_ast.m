@@ -470,11 +470,12 @@ ast_to_pre_stmt_ite(Info, Context, Cond0, Then0, Else0, Stmts, UseVars, DefVars,
 
     ast_to_pre_block(Info, Then0, Then, UseVarsThen, DefVarsThen, !.Env, _,
         !Varmap),
-    TrueId = env_get_bool_true(!.Env),
+    Operators = env_operators(!.Env),
+    TrueId = Operators ^ o_bool_true,
     TrueCase = pre_case(p_constr(make_singleton_set(TrueId), []), Then),
     ast_to_pre_block(Info, Else0, Else, UseVarsElse, DefVarsElse, !.Env, _,
         !Varmap),
-    FalseId = env_get_bool_false(!.Env),
+    FalseId = Operators ^ o_bool_false,
     FalseCase = pre_case(p_constr(make_singleton_set(FalseId), []), Else),
 
     UseVars = UseVarsCond `union` UseVarsThen `union` UseVarsElse `union`
@@ -525,13 +526,15 @@ ast_to_pre_pattern(Context, p_constr(Name, Args0), Pattern, Vars, !Env,
             format("Unknown %s '%s'", [s(Kind), s(q_name_to_string(Name))]))
     ).
 ast_to_pre_pattern(_, p_list_nil, Pattern, set.init, !Env, !Varmap) :-
-    Pattern = p_constr(make_singleton_set(env_get_list_nil(!.Env)), []).
+    Pattern = p_constr(
+        make_singleton_set(env_operators(!.Env) ^ o_list_nil),
+        []).
 ast_to_pre_pattern(Context, p_list_cons(Head0, Tail0), Pattern, Vars,
         !Env, !Varmap) :-
     ast_to_pre_pattern(Context, Head0, Head, HeadVars, !Env, !Varmap),
     ast_to_pre_pattern(Context, Tail0, Tail, TailVars, !Env, !Varmap),
     Vars = HeadVars `union` TailVars,
-    Pattern = p_constr(make_singleton_set(env_get_list_cons(!.Env)),
+    Pattern = p_constr(make_singleton_set(env_operators(!.Env) ^ o_list_cons),
         [Head, Tail]).
 ast_to_pre_pattern(_, p_wildcard, p_wildcard, set.init, !Env, !Varmap).
 ast_to_pre_pattern(Context, p_var(Name), Pattern, DefVars, !Env, !Varmap) :-
@@ -585,13 +588,8 @@ ast_to_pre_expr_2(Context, Env, e_call_like(Call0), Expr, Vars, !Varmap) :-
     ).
 ast_to_pre_expr_2(Context, Env, e_u_op(Op, SubExpr0), Expr, Vars, !Varmap) :-
     ast_to_pre_expr(Context, Env, SubExpr0, SubExpr, Vars, !Varmap),
-    ( if env_unary_operator_func(Env, Op, OpFunc) then
-        Expr = e_call(pre_call(OpFunc, [SubExpr], without_bang))
-    else
-        unexpected($file, $pred,
-            format("Operator implementation for %s not found",
-                [s(string(Op))]))
-    ).
+    Expr = e_call(pre_call(env_unary_operator_func(Env, Op), [SubExpr],
+        without_bang)).
 ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
         !Varmap) :-
     ast_to_pre_expr(Context, Env, ExprL0, ExprL, VarsL, !Varmap),
@@ -599,15 +597,11 @@ ast_to_pre_expr_2(Context, Env, e_b_op(ExprL0, Op, ExprR0), Expr, Vars,
     Vars = union(VarsL, VarsR),
     % NOTE: When introducing interfaces for primative types this will need
     % to change
-    ( if env_operator_entry(Env, Op, OpEntry) then
-        ( OpEntry = ee_func(OpFunc),
-            Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
-        ; OpEntry = ee_constructor(OpCtors),
-            Expr = e_construction(OpCtors, [ExprL, ExprR])
-        )
-    else
-        unexpected($file, $pred,
-            format("Operator implementation not found: %s", [s(string(Op))]))
+    env_operator_entry(Env, Op, OpEntry),
+    ( OpEntry = ee_func(OpFunc),
+        Expr = e_call(pre_call(OpFunc, [ExprL, ExprR], without_bang))
+    ; OpEntry = ee_constructor(OpCtors),
+        Expr = e_construction(OpCtors, [ExprL, ExprR])
     ).
 ast_to_pre_expr_2(Context, Env, e_match(MatchExpr0, Cases0), Expr, Vars,
         !Varmap) :-
@@ -621,8 +615,9 @@ ast_to_pre_expr_2(Context, Env, e_if(Cond0, Then0, Else0), Expr, Vars,
     ast_to_pre_expr(Context, Env, Cond0, Cond, CondVars, !Varmap),
     map2_foldl(ast_to_pre_expr(Context, Env), Then0, Then, ThenVars, !Varmap),
     map2_foldl(ast_to_pre_expr(Context, Env), Else0, Else, ElseVars, !Varmap),
-    PatTrue = p_constr(make_singleton_set(env_get_bool_true(Env)), []),
-    PatFalse = p_constr(make_singleton_set(env_get_bool_false(Env)), []),
+    Operators = env_operators(Env),
+    PatTrue = p_constr(make_singleton_set(Operators ^ o_bool_true), []),
+    PatFalse = p_constr(make_singleton_set(Operators ^ o_bool_false), []),
     Expr = e_match(Cond,
         [pre_e_case(PatTrue, Then),
          pre_e_case(PatFalse, Else)]),
@@ -665,7 +660,7 @@ ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
     ; Const0 = c_number(Number),
         Const = c_number(Number)
     ; Const0 = c_list_nil,
-        Const = c_ctor(make_singleton_set(env_get_list_nil(Env)))
+        Const = c_ctor(make_singleton_set(env_operators(Env) ^ o_list_nil))
     ).
 ast_to_pre_expr_2(Context, _, e_array(_), _, _, !Varmap) :-
     util.exception.sorry($file, $pred, Context, "Arrays").

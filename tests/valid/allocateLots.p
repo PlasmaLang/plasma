@@ -27,18 +27,18 @@ func main() uses IO -> Int {
 }
 
 func heap_collections() uses IO -> Int {
-    var res, var collections = get_parameter!("heap_collections")
+    var res, var collections = Builtin.get_parameter!("heap_collections")
     if (res) {
         print!("# There have been " ++ int_to_string(collections) ++
             " GCs.\n")
     } else {
-        die("Can't retrive heap_collections\n")
+        Builtin.die("Can't retrive heap_collections\n")
     }
     return collections
 }
 
 func print_heap_size() uses IO {
-    var res, var heap_size = get_parameter!("heap_usage")
+    var res, var heap_size = Builtin.get_parameter!("heap_usage")
     if (res) {
         print!("# Heap_size: " ++ int_to_string(heap_size/1024) ++ "KB\n")
     } else {

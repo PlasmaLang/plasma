@@ -1475,9 +1475,12 @@ func write(Fd, ...) uses Fd
 These builtin operations are always available, they don't need to be
 imported from a module.
 
+// This documentation should be kept in-sync with tests/valid/builtin_*.p
+// and tests/valid/operators.p
+
 `type Maybe('v)`:: A maybe type, defined as:
 ----
-type Maybe('v) = Just('v)
+type Maybe('v) = Some('v)
                | None
 ----
 
@@ -1487,21 +1490,41 @@ type Maybe('v) = Just('v)
 implementation defined.
 
 `Int + Int -> Int`:: Addition
+  (also `func Builtin.int_add(a : Int, b : Int) -> Int`)
+
 `Int - Int -> Int`:: Subtraction
+  (also `func Builtin.int_sub(a : Int, b : Int) -> Int`)
+
 `Int * Int -> Int`:: Multiplication
+  (also `func Builtin.int_mul(a : Int, b : Int) -> Int`)
+
 `Int / Int -> Int`:: Division
+  (also `func Builtin.int_div(a : Int, b : Int) -> Int`)
+
 `Int % Int -> Int`:: Modulo/Remainder
   (link:https://github.com/PlasmaLang/plasma/issues/378[#378, which one?])
-`- Int -> Int`:: Unary minus (prefix operator, takes only one argument).
+  (also `func Builtin.int_mod(a : Int, b : Int) -> Int`)
 
-`func int_lshift(a : Int, b : Int) -> Int`::
+`- Int -> Int`:: Unary minus (prefix operator, takes only one argument).
+  (also `func Builtin.int_minus(a : Int) -> Int`)
+
+`func Builtin.int_lshift(a : Int, b : Int) -> Int`::
   Left shift `a` by `b` bits.
 
-`func int_rshift(a : Int, b : Int) -> Int`::
+`func Builtin.int_rshift(a : Int, b : Int) -> Int`::
   Right shift `a` by `b` bits.
 
-`func int_comp(Int) -> Int`::
-  One's compliment.
+`func Builtin.int_and(a : Int, b : Int) -> Int`::
+  Bitwise and.
+
+`func Builtin.int_or(a : Int, b : Int) -> Int`::
+  Bitwise or.
+
+`func Builtin.int_xor(a : Int, b : Int) -> Int`::
+  Bitwise exclusive-or.
+
+`func Builtin.int_comp(Int) -> Int`::
+  One's compliment (flip all the bits).
 
 `func int_to_string(Int) -> String`::
   Return a string representation of the number.  No nice formatting is
@@ -1512,6 +1535,8 @@ Future work:
  * TODO: Use interfaces to provide many of these operations to a group of
    types.  Eg many integer operations will apply to all numbers.  Same with
    the relational operators below.
+ * TODO: Once there is an Int module move the builtin Int functions to it.
+ * TODO: The bitwise functions should be for sized integers only.
 
 === Bools
 
@@ -1523,14 +1548,31 @@ type Bool = False
 ----
 
 `Int > Int -> Bool`:: Greater than
+  (also `func Builtin.int_gt(a : Int, b : Int) -> Int`)
+
 `Int < Int -> Bool`:: Lesser than
+  (also `func Builtin.int_lt(a : Int, b : Int) -> Int`)
+
 `Int >= Int -> Bool`:: Greater than or equal to
+  (also `func Builtin.int_gteq(a : Int, b : Int) -> Int`)
+
 `Int <= Int -> Bool`:: Less than or equal to
+  (also `func Builtin.int_lteq(a : Int, b : Int) -> Int`)
+
 `Int == Int -> Bool`:: Equal
+  (also `func Builtin.int_eq(a : Int, b : Int) -> Int`)
+
 `Int != Int -> Bool`:: Not-equal
+  (also `func Builtin.int_neq(a : Int, b : Int) -> Int`)
+
 `Bool and Bool -> Bool`:: Logical add
+  (also `func Builtin.bool_and(a : Bool, b : Bool) -> Bool`)
+
 `Bool or Bool -> Bool`:: Logical or
-`not Bool -> Bool`:: Unary not (prefix operator, takes only one argument).
+  (also `func Builtin.bool_or(a : Bool, b : Bool) -> Bool`)
+
+`not Bool -> Bool`:: Unary not (prefix operator, takes only one argument)
+  (also `func Builtin.bool_not(a : Bool) -> Bool`)
 
 `func bool_to_string(Bool) -> String`::
   Return one of the strings "True" or "False".
@@ -1556,7 +1598,8 @@ type CharClass = Whitespace
   between characters, or before the first character or after the last. This
   makes substring operations clearer.
 
-`String ++ String -> String`:: String append.
+`String ++ String -> String`:: String concatenation
+  (also `func Builtin.string_concat(a : String, b : String) -> String`).
 
 `func char_class(Char) -> CharClass`::
   Return the class of a character.
@@ -1583,13 +1626,32 @@ type CharClass = Whitespace
   The `StringPos` must not be at the beginning of the string (Runtime
   check).
 
-`func strpos_next_char(StringPos) -> Maybe(Char)`::
+`func strpos_next(StringPos) -> Maybe(Char)`::
   Return the next char in the string after `StringPos`.  
   If `StringPos` is at the end of the string then `None` is returned.
 
-`func strpos_prev_char(StringPos) -> Maybe(Char)`::
+`func strpos_prev(StringPos) -> Maybe(Char)`::
   Return the previous char in the string before `StringPos`.  
   If `StringPos` is at the beginning of the string then `None` is returned.
+
+=== Lists
+
+----
+type List('t) = ['t | List('t)]
+              | []
+----
+
+The list data type.  This is recursively defined to either be a single
+element (the head) appended on to another list (the tail); or the empty
+list.  The fields of the concatentation constructor (head and tail) have
+names internal to the compiler, TODO: maybe expose them in a list module if
+fields are permitted to be used as functions in the future.
+
+'[]':: The empty list.
+  (also `func Builtin.list_nil() -> List('t)`).
+
+'[x | xs]':: 'x' appended to the front of 'xs'.
+  (also `func BUiltin.list_cons('t, List('t)) -> List('t)`).
 
 === Misc
 
@@ -1610,11 +1672,11 @@ type CharClass = Whitespace
   Returns an empty string for the end of input, which is indistinguishable
   from an empty line.
 
-`func set_parameter(String, Int) uses IO -> Bool`::
+`func Builtin.set_parameter(String, Int) uses IO -> Bool`::
   Set a parameter for the runtime system.  There are currently no settable
   parameters so this always returns false.
 
-`func get_parameter(String) observes IO -> Bool, Int`::
+`func Builtin.get_parameter(String) observes IO -> Bool, Int`::
   Get a parameter, if the parameter exists returns `True, value`, otherwise
   returns `False, 0`. The parameters are:
   `heap_usage`::: The used memory in the heap.
@@ -1624,10 +1686,10 @@ type CharClass = Whitespace
 `func setenv(String, String) uses Environment -> Bool`::
   Calls `setenv` on POSIX.
 
-`func gettimeofday() observes Time -> Bool, Int, Int`::
+`func Builtin.gettimeofday() observes Time -> Bool, Int, Int`::
   Calls `gettimeofday` and returns `True, secs, usecs` on success.
 
-`func die(String)`::
+`func Builtin.die(String)`::
   Abort the program with the given message.
 
 A lot of these (eg `die`, `setenv`) exist for testing and will likely change
