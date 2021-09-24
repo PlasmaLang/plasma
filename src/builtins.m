@@ -452,25 +452,29 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
     core_allocate_type_id(ListId, !Core),
     T = "T",
 
-    NilQName = q_name_append_str(builtin_module_name, "list_nil"),
+    NilName = nq_name_det("list_nil"),
+    NilQName = q_name_append(builtin_module_name, NilName),
     core_allocate_ctor_id(NilId, !Core),
     core_set_constructor(NilId, NilQName, ListId,
         constructor(NilQName, [T], []), !Core),
+    builtin_name(NilName, bi_ctor(NilId), !Map),
 
     Head = q_name_append_str(builtin_module_name, "head"),
     Tail = q_name_append_str(builtin_module_name, "tail"),
-    Cons = q_name_append_str(builtin_module_name, "list_cons"),
+    ConsName = nq_name_det("list_cons"),
+    ConsQName = q_name_append(builtin_module_name, ConsName),
     core_allocate_ctor_id(ConsId, !Core),
-    core_set_constructor(ConsId, Cons, ListId,
-        constructor(Cons, [T],
+    core_set_constructor(ConsId, ConsQName, ListId,
+        constructor(ConsQName, [T],
         [type_field(Head, type_variable(T)),
          type_field(Tail, type_ref(ListId, [type_variable(T)]))]), !Core),
+    builtin_name(ConsName, bi_ctor(ConsId), !Map),
 
     core_set_type(ListId,
         type_init(q_name_append_str(builtin_module_name, "List"), [T],
             [NilId, ConsId], st_private),
         !Core),
-    % TODO: Add a constant for the List type name.
+
     root_name(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
 
 %-----------------------------------------------------------------------%

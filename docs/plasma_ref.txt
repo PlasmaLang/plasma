@@ -1634,6 +1634,25 @@ type CharClass = Whitespace
   Return the previous char in the string before `StringPos`.  
   If `StringPos` is at the beginning of the string then `None` is returned.
 
+=== Lists
+
+----
+type List('t) = ['t | List('t)]
+              | []
+----
+
+The list data type.  This is recursively defined to either be a single
+element (the head) appended on to another list (the tail); or the empty
+list.  The fields of the concatentation constructor (head and tail) have
+names internal to the compiler, TODO: maybe expose them in a list module if
+fields are permitted to be used as functions in the future.
+
+'[]':: The empty list.
+  (also `func Builtin.list_nil() -> List('t)`).
+
+'[x | xs]':: 'x' appended to the front of 'xs'.
+  (also `func BUiltin.list_cons('t, List('t)) -> List('t)`).
+
 === Misc
 
 `resource IO`::
