@@ -94,22 +94,6 @@
 
 :- func builtin_module_name = q_name.
 
-:- func builtin_int_lshift = nq_name.
-:- func builtin_int_rshift = nq_name.
-:- func builtin_int_and = nq_name.
-:- func builtin_int_or = nq_name.
-:- func builtin_int_xor = nq_name.
-:- func builtin_int_comp = nq_name.
-:- func builtin_char_class = nq_name.
-:- func builtin_string_begin = nq_name.
-:- func builtin_string_end = nq_name.
-:- func builtin_string_substring = nq_name.
-:- func builtin_string_equals = nq_name.
-:- func builtin_strpos_forward = nq_name.
-:- func builtin_strpos_backward = nq_name.
-:- func builtin_strpos_next = nq_name.
-:- func builtin_strpos_prev = nq_name.
-
 %-----------------------------------------------------------------------%
 %
 % PZ Builtins
@@ -338,17 +322,17 @@ setup_int_builtins(BoolType,
         AddId, SubId, MulId, DivId, ModId,
         GtId, LtId, GtEqId, LtEqId, EqId, NEqId, MinusId,
         !Map, !Core) :-
-    register_int_fn2(nq_name_det("int_add"), [pzi_add(pzw_fast)], AddId,
+    register_int_fn2("int_add", [pzi_add(pzw_fast)], AddId,
         !Map, !Core),
-    register_int_fn2(nq_name_det("int_sub"), [pzi_sub(pzw_fast)], SubId,
+    register_int_fn2("int_sub", [pzi_sub(pzw_fast)], SubId,
         !Map, !Core),
-    register_int_fn2(nq_name_det("int_mul"), [pzi_mul(pzw_fast)], MulId,
+    register_int_fn2("int_mul", [pzi_mul(pzw_fast)], MulId,
         !Map, !Core),
     % Mod and div can maybe be combined into one operator, and optimised at
     % PZ load time.
-    register_int_fn2(nq_name_det("int_div"), [pzi_div(pzw_fast)], DivId,
+    register_int_fn2("int_div", [pzi_div(pzw_fast)], DivId,
         !Map, !Core),
-    register_int_fn2(nq_name_det("int_mod"), [pzi_mod(pzw_fast)], ModId,
+    register_int_fn2("int_mod", [pzi_mod(pzw_fast)], ModId,
         !Map, !Core),
 
     % TODO: remove the extend operation once we fix how booleans are
@@ -384,7 +368,7 @@ setup_int_builtins(BoolType,
             pzi_ze(pzw_fast, pzw_ptr)],
         NEqId, !Map, !Core),
 
-    register_int_fn1(nq_name_det("int_minus"),
+    register_int_fn1("int_minus",
         [pzi_load_immediate(pzw_fast, im_i32(0i32)),
          pzi_roll(2),
          pzi_sub(pzw_fast)],
@@ -392,26 +376,27 @@ setup_int_builtins(BoolType,
 
     % Register the builtin bitwise functions..
     % TODO: make the number of bits to shift a single byte.
-    register_int_fn2(builtin_int_lshift,
+    register_int_fn2("int_lshift",
         [pzi_trunc(pzw_fast, pzw_8),
          pzi_lshift(pzw_fast)], _, !Map, !Core),
-    register_int_fn2(builtin_int_rshift,
+    register_int_fn2("int_rshift",
         [pzi_trunc(pzw_fast, pzw_8),
          pzi_rshift(pzw_fast)], _, !Map, !Core),
-    register_int_fn2(builtin_int_and, [pzi_and(pzw_fast)], _, !Map, !Core),
-    register_int_fn2(builtin_int_or, [pzi_or(pzw_fast)], _, !Map, !Core),
-    register_int_fn2(builtin_int_xor,
+    register_int_fn2("int_and", [pzi_and(pzw_fast)], _, !Map, !Core),
+    register_int_fn2("int_or", [pzi_or(pzw_fast)], _, !Map, !Core),
+    register_int_fn2("int_xor",
         [pzi_xor(pzw_fast)], _, !Map, !Core),
-    register_int_fn1(builtin_int_comp,
+    register_int_fn1("int_comp",
         [pzi_load_immediate(pzw_32, im_i32(-1i32)),
          pzi_se(pzw_32, pzw_fast),
          pzi_xor(pzw_fast)],
         _, !Map, !Core).
 
-:- pred register_int_fn1(nq_name::in, list(pz_instr)::in, func_id::out,
+:- pred register_int_fn1(string::in, list(pz_instr)::in, func_id::out,
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
-register_int_fn1(Name, Defn, FuncId, !Map, !Core) :-
+register_int_fn1(NameStr, Defn, FuncId, !Map, !Core) :-
+    Name = nq_name_det(NameStr),
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
@@ -419,10 +404,11 @@ register_int_fn1(Name, Defn, FuncId, !Map, !Core) :-
             init, init, Defn),
         FuncId, !Map, !Core).
 
-:- pred register_int_fn2(nq_name::in, list(pz_instr)::in, func_id::out,
+:- pred register_int_fn2(string::in, list(pz_instr)::in, func_id::out,
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
-register_int_fn2(Name, Defn, FuncId, !Map, !Core) :-
+register_int_fn2(NameStr, Defn, FuncId, !Map, !Core) :-
+    Name = nq_name_det(NameStr),
     FName = q_name_append(builtin_module_name, Name),
     register_builtin_func_builtin(Name,
         func_init_builtin_inline_pz(FName,
@@ -582,16 +568,17 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         constructor(OtherQName, [], []), !Core),
     root_name(OtherName, bi_ctor(OtherId), !Map),
 
-    CharClassName = nq_name_det("CharClass"),
+    CharClassTypeName = nq_name_det("CharClass"),
     core_set_type(CharClassId,
-        type_init(q_name_append(builtin_module_name, CharClassName), [],
+        type_init(q_name_append(builtin_module_name, CharClassTypeName), [],
             [WhitespaceId, OtherId], st_private),
         !Core),
-    root_name(CharClassName, bi_type(CharClassId, arity(0)), !Map),
+    root_name(CharClassTypeName, bi_type(CharClassId, arity(0)), !Map),
 
-    CharClassFnName = q_name_append(builtin_module_name, builtin_char_class),
-    register_builtin_func_root(builtin_char_class,
-        func_init_builtin_rts(CharClassFnName,
+    CharClassName = nq_name_det("char_class"),
+    register_builtin_func_root(CharClassName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, CharClassName),
             [builtin_type(char)],
             [type_ref(CharClassId, [])],
             init, init),
@@ -606,73 +593,73 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
             init, init),
         StringConcat, !Map, !Core),
 
-    StrposForwardName = q_name_append(builtin_module_name,
-        builtin_strpos_forward),
-    register_builtin_func_root(builtin_strpos_forward,
-        func_init_builtin_rts(StrposForwardName,
+    StrposForwadName = nq_name_det("strpos_forward"),
+    register_builtin_func_root(StrposForwadName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StrposForwadName),
             [builtin_type(string_pos)],
             [builtin_type(string_pos)],
             init, init),
         _, !Map, !Core),
 
-    StrposBackwardName = q_name_append(builtin_module_name,
-        builtin_strpos_backward),
-    register_builtin_func_root(builtin_strpos_backward,
-        func_init_builtin_rts(StrposBackwardName,
+    StrposBackwardName = nq_name_det("strpos_backward"),
+    register_builtin_func_root(StrposBackwardName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StrposBackwardName),
             [builtin_type(string_pos)],
             [builtin_type(string_pos)],
             init, init),
         _, !Map, !Core),
 
-    StrposNextName = q_name_append(builtin_module_name,
-        builtin_strpos_next),
-    register_builtin_func_root(builtin_strpos_next,
-        func_init_builtin_rts(StrposNextName,
+    StrposNextName = nq_name_det("strpos_next"),
+    register_builtin_func_root(StrposNextName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StrposNextName),
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
         _, !Map, !Core),
 
-    StrposPrevName = q_name_append(builtin_module_name,
-        builtin_strpos_prev),
-    register_builtin_func_root(builtin_strpos_prev,
-        func_init_builtin_rts(StrposPrevName,
+    StrposPrevName = nq_name_det("strpos_prev"),
+    register_builtin_func_root(StrposPrevName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StrposPrevName),
             [builtin_type(string_pos)],
                 [type_ref(MaybeType, [builtin_type(char)])],
             init, init),
         _, !Map, !Core),
 
-    StringBeginName = q_name_append(builtin_module_name,
-        builtin_string_begin),
-    register_builtin_func_root(builtin_string_begin,
-        func_init_builtin_rts(StringBeginName,
+    StringBeginName = nq_name_det("string_begin"),
+    register_builtin_func_root(StringBeginName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StringBeginName),
             [builtin_type(string)],
             [builtin_type(string_pos)],
             init, init),
         _, !Map, !Core),
 
-    StringEndName = q_name_append(builtin_module_name,
-        builtin_string_end),
-    register_builtin_func_root(builtin_string_end,
-        func_init_builtin_rts(StringEndName,
+    StringEndName = nq_name_det("string_end"),
+    register_builtin_func_root(StringEndName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StringEndName),
             [builtin_type(string)],
             [builtin_type(string_pos)],
             init, init),
         _, !Map, !Core),
 
-    SubstringName = q_name_append(builtin_module_name,
-        builtin_string_substring),
-    register_builtin_func_root(builtin_string_substring,
-        func_init_builtin_rts(SubstringName,
+    StringSubstringName = nq_name_det("string_substring"),
+    register_builtin_func_root(StringSubstringName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StringSubstringName),
             [builtin_type(string_pos), builtin_type(string_pos)],
             [builtin_type(string)],
             init, init),
         _, !Map, !Core),
 
-    StringEqualsName = q_name_append(builtin_module_name,
-        builtin_string_equals),
-    register_builtin_func_root(builtin_string_equals,
-        func_init_builtin_rts(StringEqualsName,
+    StringEqualsName = nq_name_det("string_equals"),
+    register_builtin_func_root(StringEqualsName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, StringEqualsName),
             [builtin_type(string), builtin_type(string)],
             [type_ref(BoolType, [])],
             init, init),
@@ -753,22 +740,6 @@ builtin_name(Name, Item, !Map) :-
 %-----------------------------------------------------------------------%
 
 builtin_module_name = q_name_single("Builtin").
-
-builtin_int_lshift = nq_name_det("int_lshift").
-builtin_int_rshift = nq_name_det("int_rshift").
-builtin_int_and =    nq_name_det("int_and").
-builtin_int_or =     nq_name_det("int_or").
-builtin_int_xor =    nq_name_det("int_xor").
-builtin_int_comp =   nq_name_det("int_comp").
-builtin_char_class = nq_name_det("char_class").
-builtin_string_substring = nq_name_det("string_substring").
-builtin_string_equals = nq_name_det("string_equals").
-builtin_string_begin = nq_name_det("string_begin").
-builtin_string_end = nq_name_det("string_end").
-builtin_strpos_forward = nq_name_det("strpos_forward").
-builtin_strpos_backward = nq_name_det("strpos_backward").
-builtin_strpos_next = nq_name_det("strpos_next").
-builtin_strpos_prev = nq_name_det("strpos_prev").
 
 %-----------------------------------------------------------------------%
 
