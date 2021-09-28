@@ -104,7 +104,7 @@ static unsigned
 read_proc(ReadInfo       &read,
           Imported       &imported,
           LibraryLoading *library,
-          Proc           *proc, /* null fir first pass */
+          Proc           *proc, /* null for first pass */
           unsigned      **block_offsets,
           GCCapability   &gc);
 
