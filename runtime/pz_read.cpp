@@ -596,16 +596,11 @@ read_code(ReadInfo       &read,
           Imported       &imported,
           GCCapability   &gc)
 {
-    unsigned ** block_offsets = new unsigned *[num_procs];
+    unsigned * block_offsets[num_procs];
     memset(block_offsets, 0, sizeof(unsigned *) * num_procs);
-    ScopeExit cleanup([block_offsets, num_procs] {
-        if (block_offsets != nullptr) {
-            for (unsigned i = 0; i < num_procs; i++) {
-                if (block_offsets[i] != nullptr) {
-                    delete[] block_offsets[i];
-                }
-            }
-            delete[] block_offsets;
+    ScopeExit cleanup([&block_offsets, num_procs] {
+        for (unsigned i = 0; i < num_procs; i++) {
+            delete[] block_offsets[i];
         }
     });
 
