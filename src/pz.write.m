@@ -213,75 +213,77 @@ write_data_values(File, PZ, Type, Values, !IO) :-
         else
             unexpected($file, $pred, "Incorrect array length")
         ),
-        foldl(write_value(File, Width), Values, !IO)
+        foldl(write_enc_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
         pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
-        foldl_corresponding(write_value(File), Widths, Values, !IO)
+        foldl_corresponding(write_enc_value(File), Widths, Values, !IO)
     ; Type = type_string(NumUnits),
         ( if length(Values, NumUnits) then
             true
         else
             unexpected($file, $pred, "Incorrect string length")
         ),
-        foldl(write_value(File, pzw_8), Values, !IO)
+        foldl(write_enc_value(File, pzw_8), Values, !IO)
     ).
 
-:- pred write_value(io.binary_output_stream::in, pz_width::in,
+:- pred write_enc_value(io.binary_output_stream::in, pz_width::in,
     pz_data_value::in, io::di, io::uo) is det.
 
-write_value(File, Width, Value, !IO) :-
-    ( Value = pzv_num(Num),
-        ( Width = pzw_8,
-            pz_enc_byte(t_normal, 1, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_int8(File, det_from_int(Num), !IO)
-        ; Width = pzw_16,
-            pz_enc_byte(t_normal, 2, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_int16_le(File, det_from_int(Num), !IO)
-        ; Width = pzw_32,
-            pz_enc_byte(t_normal, 4, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_int32_le(File, det_from_int(Num), !IO)
-        ; Width = pzw_64,
-            pz_enc_byte(t_normal, 8, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_int64_le(File, from_int(Num), !IO)
-        ; Width = pzw_fast,
-            pz_enc_byte(t_wfast, 4, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_int32_le(File, det_from_int(Num), !IO)
-        ; Width = pzw_ptr,
-            % This could be used by tag values in the future, currently I
-            % think 32bit values are used.
-            unexpected($file, $pred, "Unused")
-        )
-    ;
-        ( Value = pzv_data(DID),
-            IdNum = pzd_id_get_num(DID),
-            Enc = t_data
-        ; Value = pzv_import(IID),
-            IdNum = pzi_id_get_num(IID),
-            Enc = t_import
-        ; Value = pzv_closure(CID),
-            IdNum = pzc_id_get_num(CID),
-            Enc = t_closure
-        ),
-        ( Width = pzw_ptr,
-            pz_enc_byte(Enc, 4, EncByte),
-            write_binary_uint8(File, EncByte, !IO),
-            write_binary_uint32_le(File, IdNum, !IO)
-        ;
-            ( Width = pzw_8
-            ; Width = pzw_16
-            ; Width = pzw_32
-            ; Width = pzw_64
-            ; Width = pzw_fast
-            ),
-            unexpected($file, $pred,
-                "Data with a non-pointer width encoding")
-        )
-    ).
+write_enc_value(File, Width, Value, !IO) :-
+    value_enc(Value, Width, EncType, NumBytes),
+    pz_enc_byte(EncType, NumBytes, EncByte),
+    write_binary_uint8(File, EncByte, !IO),
+    write_value(File, Value, Width, !IO).
+
+:- pred value_enc(pz_data_value::in, pz_width::in, enc_type::out, int::out)
+    is det.
+
+value_enc(pzv_num(_), pzw_8, t_normal, 1).
+value_enc(pzv_num(_), pzw_16, t_normal, 2).
+value_enc(pzv_num(_), pzw_32, t_normal, 4).
+value_enc(pzv_num(_), pzw_64, t_normal, 8).
+value_enc(pzv_num(_), pzw_fast, t_wfast, 4).
+value_enc(pzv_num(_), pzw_ptr, _, _) :-
+    % This could be used by tag values in the future, currently I
+    % think 32bit values are used.
+    unexpected($file, $pred, "Unused").
+value_enc(Value, Width, Type, 4) :-
+    ( Value = pzv_data(_),
+        Type = t_data
+    ; Value = pzv_import(_),
+        Type = t_import
+    ; Value = pzv_closure(_),
+        Type = t_closure
+    ),
+    expect(unify(Width, pzw_ptr), $file, $pred, "Must be pointer width").
+
+:- pred write_value(io.binary_output_stream::in, pz_data_value::in,
+    pz_width::in, io::di, io::uo) is det.
+
+write_value(File, pzv_num(Num), pzw_8, !IO) :-
+    write_binary_int8(File, det_from_int(Num), !IO).
+write_value(File, pzv_num(Num), pzw_16, !IO) :-
+    write_binary_int16_le(File, det_from_int(Num), !IO).
+write_value(File, pzv_num(Num), pzw_32, !IO) :-
+    write_binary_int32_le(File, det_from_int(Num), !IO).
+write_value(File, pzv_num(Num), pzw_64, !IO) :-
+    write_binary_int64_le(File, from_int(Num), !IO).
+write_value(File, pzv_num(Num), pzw_fast, !IO) :-
+    write_binary_int32_le(File, det_from_int(Num), !IO).
+write_value(_, pzv_num(_), pzw_ptr, !IO) :-
+    % This could be used by tag values in the future, currently I
+    % think 32bit values are used.
+    unexpected($file, $pred, "Unused").
+write_value(File, Value, Width, !IO) :-
+    ( Value = pzv_data(DID),
+        IdNum = pzd_id_get_num(DID)
+    ; Value = pzv_import(IID),
+        IdNum = pzi_id_get_num(IID)
+    ; Value = pzv_closure(CID),
+        IdNum = pzc_id_get_num(CID)
+    ),
+    write_binary_uint32_le(File, IdNum, !IO),
+    expect(unify(Width, pzw_ptr), $file, $pred, "Must be pointer width").
 
 %-----------------------------------------------------------------------%
 

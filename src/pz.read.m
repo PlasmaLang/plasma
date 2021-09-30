@@ -389,10 +389,11 @@ read_data(Input, PZ, Result, !IO) :-
             ; Type = type_string(Num),
                 Width = pzw_8
             ),
-            read_n(read_data_value(PZ, Input, Width), Num, ValuesResult, !IO)
+            read_n(read_data_enc_value(PZ, Input, Width), Num, ValuesResult,
+                !IO)
         ; Type = type_struct(StructId),
             pz_struct(Widths) = pz_lookup_struct(PZ, StructId),
-            read_map(read_data_value(PZ, Input), Widths, ValuesResult, !IO)
+            read_map(read_data_enc_value(PZ, Input), Widths, ValuesResult, !IO)
         ),
         ( ValuesResult = ok(Values),
             Result = ok(pz_data(Type, Values))
@@ -434,64 +435,70 @@ read_data_type(PZ, Input, Result, !IO) :-
         Result = error(Error)
     ).
 
-:- pred read_data_value(pz::in, binary_input_stream::in,
+:- pred read_data_enc_value(pz::in, binary_input_stream::in,
     pz_width::in, maybe_error(pz_data_value)::out, io::di, io::uo) is det.
 
-read_data_value(PZ, Input, Width, Result, !IO) :-
+read_data_enc_value(PZ, Input, _Width, Result, !IO) :-
     read_uint8(Input, MaybeEncByte, !IO),
     ( MaybeEncByte = ok(EncByte),
         ( if pz_enc_byte(EncType, NumBytes, EncByte) then
-            ( EncType = t_normal,
-                ( if NumBytes = 1 then
-                    read_uint8(Input, MaybeNum, !IO),
-                    Result = maybe_error_map(
-                        (func(N) = pzv_num(to_int(N))), MaybeNum)
-                else if NumBytes = 2 then
-                    read_uint16(Input, MaybeNum, !IO),
-                    Result = maybe_error_map(
-                        (func(N) = pzv_num(to_int(N))), MaybeNum)
-                else if NumBytes = 4 then
-                    read_uint32(Input, MaybeNum, !IO),
-                    Result = maybe_error_map(
-                        (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum)
-                else if NumBytes = 8 then
-                    read_uint64(Input, MaybeNum, !IO),
-                    Result = maybe_error_map(
-                        (func(N) = pzv_num(det_uint64_to_int(N))), MaybeNum)
-                else
-                    unexpected($file, $pred, "Unknown encoding")
-                )
-            ; ( EncType = t_wfast
-              ; EncType = t_wptr
-              ),
-                read_uint32(Input, MaybeNum, !IO),
-                Result = maybe_error_map(
-                    (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum)
-            ; EncType = t_data,
-                read_data_id(PZ, Input, MaybeDataId, !IO),
-                Result = maybe_error_map(func(Id) = pzv_data(Id),
-                    MaybeDataId),
-                expect(unify(Width, pzw_ptr), $file, $pred,
-                    "These items must be pointer wiedth")
-            ; EncType = t_closure,
-                read_closure_id(PZ, Input, MaybeClosureId, !IO),
-                Result = maybe_error_map(func(Id) = pzv_closure(Id),
-                    MaybeClosureId),
-                expect(unify(Width, pzw_ptr), $file, $pred,
-                    "These items must be pointer wiedth")
-            ; EncType = t_import,
-                read_import_id(PZ, Input, MaybeImportId, !IO),
-                Result = maybe_error_map(func(Id) = pzv_import(Id),
-                    MaybeImportId),
-                expect(unify(Width, pzw_ptr), $file, $pred,
-                    "These items must be pointer wiedth")
-            )
+            read_data_value(PZ, Input, EncType, NumBytes, Result, !IO)
         else
             Result = error("Unknown encoding type/byte")
         )
     ; MaybeEncByte = error(Error),
         Result = error(Error)
     ).
+
+:- pred read_data_value(pz::in, binary_input_stream::in,
+    enc_type::in, int::in, maybe_error(pz_data_value)::out,
+    io::di, io::uo) is det.
+
+read_data_value(_, Input, t_normal, NumBytes, Result, !IO) :-
+    ( if NumBytes = 1 then
+        read_uint8(Input, MaybeNum, !IO),
+        Result = maybe_error_map(
+            (func(N) = pzv_num(to_int(N))), MaybeNum)
+    else if NumBytes = 2 then
+        read_uint16(Input, MaybeNum, !IO),
+        Result = maybe_error_map(
+            (func(N) = pzv_num(to_int(N))), MaybeNum)
+    else if NumBytes = 4 then
+        read_uint32(Input, MaybeNum, !IO),
+        Result = maybe_error_map(
+            (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum)
+    else if NumBytes = 8 then
+        read_uint64(Input, MaybeNum, !IO),
+        Result = maybe_error_map(
+            (func(N) = pzv_num(det_uint64_to_int(N))), MaybeNum)
+    else
+        unexpected($file, $pred, "Unknown encoding")
+    ).
+read_data_value(_, Input, t_wfast, NumBytes, Result, !IO) :-
+    read_uint32(Input, MaybeNum, !IO),
+    Result = maybe_error_map(
+        (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum),
+    expect(unify(NumBytes, 4), $file, $pred, "Expected a 32bit value").
+read_data_value(_, Input, t_wptr, NumBytes, Result, !IO) :-
+    read_uint32(Input, MaybeNum, !IO),
+    Result = maybe_error_map(
+        (func(N) = pzv_num(det_uint32_to_int(N))), MaybeNum),
+    expect(unify(NumBytes, 4), $file, $pred, "Expected a 32bit value").
+read_data_value(PZ, Input, t_data, NumBytes, Result, !IO) :-
+    read_data_id(PZ, Input, MaybeDataId, !IO),
+    Result = maybe_error_map(func(Id) = pzv_data(Id),
+        MaybeDataId),
+    expect(unify(NumBytes, 4), $file, $pred, "Expected a 32bit value").
+read_data_value(PZ, Input, t_closure, NumBytes, Result, !IO) :-
+    read_closure_id(PZ, Input, MaybeClosureId, !IO),
+    Result = maybe_error_map(func(Id) = pzv_closure(Id),
+        MaybeClosureId),
+    expect(unify(NumBytes, 4), $file, $pred, "Expected a 32bit value").
+read_data_value(PZ, Input, t_import, NumBytes, Result, !IO) :-
+    read_import_id(PZ, Input, MaybeImportId, !IO),
+    Result = maybe_error_map(func(Id) = pzv_import(Id),
+        MaybeImportId),
+    expect(unify(NumBytes, 4), $file, $pred, "Expected a 32bit value").
 
 %-----------------------------------------------------------------------%
 
