@@ -385,12 +385,18 @@ read_data(Input, PZ, Result, !IO) :-
     read_data_type(PZ, Input, TypeResult, !IO),
     ( TypeResult = ok(Type),
         (
-            ( Type = type_array(Width, Num)
+            % XXX: Width is unused (#391).
+            ( Type = type_array(_Width, Num)
             ; Type = type_string(Num),
-                Width = pzw_8
+                _Width = pzw_8
             ),
-            read_n(read_data_enc_value(PZ, Input, Width), Num, ValuesResult,
-                !IO)
+            read_data_enc(Input, EncResult, !IO),
+            ( EncResult = ok({EncType, NumBytes}),
+                read_n(read_data_value(PZ, Input, EncType, NumBytes),
+                    Num, ValuesResult, !IO)
+            ; EncResult = error(Error0),
+                ValuesResult = error(Error0)
+            )
         ; Type = type_struct(StructId),
             pz_struct(Widths) = pz_lookup_struct(PZ, StructId),
             read_map(read_data_enc_value(PZ, Input), Widths, ValuesResult, !IO)
@@ -435,18 +441,32 @@ read_data_type(PZ, Input, Result, !IO) :-
         Result = error(Error)
     ).
 
-:- pred read_data_enc_value(pz::in, binary_input_stream::in,
-    pz_width::in, maybe_error(pz_data_value)::out, io::di, io::uo) is det.
+:- pred read_data_enc(binary_input_stream::in,
+    maybe_error({enc_type, int})::out, io::di, io::uo) is det.
 
-read_data_enc_value(PZ, Input, _Width, Result, !IO) :-
+read_data_enc(Input, Result, !IO) :-
     read_uint8(Input, MaybeEncByte, !IO),
     ( MaybeEncByte = ok(EncByte),
         ( if pz_enc_byte(EncType, NumBytes, EncByte) then
-            read_data_value(PZ, Input, EncType, NumBytes, Result, !IO)
+            Result = ok({EncType, NumBytes})
         else
             Result = error("Unknown encoding type/byte")
         )
     ; MaybeEncByte = error(Error),
+        Result = error(Error)
+    ).
+
+:- pred read_data_enc_value(pz::in, binary_input_stream::in,
+    pz_width::in, maybe_error(pz_data_value)::out, io::di, io::uo) is det.
+
+read_data_enc_value(PZ, Input, _Width, Result, !IO) :-
+    read_data_enc(Input, EncResult, !IO),
+    ( EncResult = ok({EncType, NumBytes}),
+        % TODO: We don't actually use the Width for how to read values.
+        % That means this is another encoding inefficency (or unused
+        % feature). (Bug #391)
+        read_data_value(PZ, Input, EncType, NumBytes, Result, !IO)
+    ; EncResult = error(Error),
         Result = error(Error)
     ).
 

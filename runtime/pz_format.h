@@ -85,27 +85,32 @@ extern "C" {
  *  Data references may not form cycles, and the referred-to data items must
  *  occur before the referred-from items.
  *
- *   DataEntry ::= DataType DataValue*
+ *   DataEntry ::= DATA_ARRAY(8) NumElements(16) Width DataEnc DataValue*
+ *               | DATA_STRUCT(8) StructRef DataEncValue*
  *
  *  Note that an array of structs is acheived by an array o pointers to
  *  pre-defined structs.  (TODO: it'd be nice to support other data layouts
  *  like an array of structs.)
  *
- *   DataType ::= DATA_ARRAY(8) NumElements(16) Width
- *              | DATA_STRUCT(8) StructRef
- *
  *  Which data value depends upon context.
  *
- *   DataValue ::= ENC_NORMAL NumBytes Byte*
- *               | ENC_FAST 4 Byte*
- *               | ENC_WPTR 4 Byte*
- *               | ENC_DATA 4 DataIndex(32bit)
- *               | ENC_IMPORT 4 ImportIndex(32bit)
- *               | ENC_CLOSURE 4 ClosureIndex(32bit)
+ *   DataEncValue ::= DataEnc DataValue
+ *
+ *   DataEnc ::= ENC_NORMAL NumBytes
+ *             | ENC_FAST 4
+ *             | ENC_WPTR 4
+ *             | ENC_DATA 4
+ *             | ENC_IMPORT 4
+ *             | ENC_CLOSURE 4
  *
  *  The encoding type and number of bytes are a single byte made up by
  *  PZ_MAKE_ENC below.  Currently fast words and pointer-sized words are
  *  always 32bit.
+ *
+ *   DataValue ::= Byte*
+ *               | DataIndex(32bit)
+ *               | ImportIndex(32bit)
+ *               | ClosureIndex(32bit)
  *
  * Code
  * ----
