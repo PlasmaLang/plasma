@@ -87,6 +87,7 @@ extern "C" {
  *
  *   DataEntry ::= DATA_ARRAY(8) NumElements(16) Width DataEnc DataValue*
  *               | DATA_STRUCT(8) StructRef DataEncValue*
+ *               | DATA_STRING(8) NumElements(16) DataEnc DataValue*
  *
  *  Note that an array of structs is acheived by an array o pointers to
  *  pre-defined structs.  (TODO: it'd be nice to support other data layouts
