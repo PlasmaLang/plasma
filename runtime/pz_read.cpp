@@ -88,10 +88,12 @@ static Optional<PZ_Width>
 read_data_width(BinaryInput &file);
 
 static bool
-read_data_slot(ReadInfo       &read,
-               void           *dest,
-               LibraryLoading *library,
-               Imported       &imports);
+read_data_slot(ReadInfo              &read,
+               enum pz_data_enc_type  type,
+               uint8_t                enc_width,
+               void                  *dest,
+               LibraryLoading        *library,
+               Imported              &imports);
 
 static bool
 read_code(ReadInfo       &read,
@@ -400,16 +402,23 @@ read_data(ReadInfo       &read,
         if (!read.file.read_uint8(&data_type_id)) return false;
         switch (data_type_id) {
             case PZ_DATA_ARRAY: {
-                uint16_t  num_elements;
-                uint8_t * data_ptr;
+                uint16_t num_elements;
                 if (!read.file.read_uint16(&num_elements)) return false;
+                
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
-                data     = data_new_array_data(gc, width, num_elements);
-                data_ptr = (uint8_t *)data;
+                data = data_new_array_data(gc, width, num_elements);
+                uint8_t *data_ptr = (uint8_t *)data;
+
+                uint8_t raw_enc;
+                if (!read.file.read_uint8(&raw_enc)) return false;
+                enum pz_data_enc_type type = PZ_DATA_ENC_TYPE(raw_enc);
+                uint8_t enc_width = PZ_DATA_ENC_BYTES(raw_enc);
                 for (unsigned i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(read, data_ptr, library, imports)) {
+                    if (!read_data_slot(read, type, enc_width, data_ptr,
+                                        library, imports))
+                    {
                         return false;
                     }
                     data_ptr += width_to_bytes(width);
@@ -424,9 +433,14 @@ read_data(ReadInfo       &read,
 
                 data = data_new_struct_data(gc, struct_->total_size());
                 for (unsigned f = 0; f < struct_->num_fields(); f++) {
+                    uint8_t raw_enc;
+                    if (!read.file.read_uint8(&raw_enc)) return false;
+                    enum pz_data_enc_type type = PZ_DATA_ENC_TYPE(raw_enc);
+                    uint8_t enc_width = PZ_DATA_ENC_BYTES(raw_enc);
                     void * dest = reinterpret_cast<uint8_t *>(data) +
                                   struct_->field_offset(f);
-                    if (!read_data_slot(read, dest, library, imports)) {
+                    if (!read_data_slot(read, type, enc_width, dest,
+                                        library, imports)) {
                         return false;
                     }
                 }
@@ -436,13 +450,20 @@ read_data(ReadInfo       &read,
                 uint16_t  num_elements;
                 if (!read.file.read_uint16(&num_elements)) return false;
                 
-                uint8_t * data_ptr;
+                // TODO: utf8
                 FlatString *s = FlatString::New(gc, num_elements);
                 data = String(s).ptr();
-                // TODO: utf8
-                data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
+                uint8_t * data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
+
+                uint8_t raw_enc;
+                if (!read.file.read_uint8(&raw_enc)) return false;
+                enum pz_data_enc_type type = PZ_DATA_ENC_TYPE(raw_enc);
+                uint8_t enc_width = PZ_DATA_ENC_BYTES(raw_enc);
+
                 for (unsigned i = 0; i < num_elements; i++) {
-                    if (!read_data_slot(read, data_ptr, library, imports)) {
+                    if (!read_data_slot(read, type, enc_width, data_ptr,
+                                        library, imports))
+                    {
                         return false;
                     }
                     data_ptr++;
@@ -476,20 +497,15 @@ static Optional<PZ_Width> read_data_width(BinaryInput & file)
 }
 
 static bool
-read_data_slot(ReadInfo       &read,
-               void           *dest,
-               LibraryLoading *library,
-               Imported       &imports)
+read_data_slot(ReadInfo              &read,
+               enum pz_data_enc_type  type,
+               uint8_t                enc_width,
+               void                  *dest,
+               LibraryLoading        *library,
+               Imported              &imports)
 {
-    uint8_t               enc_width, raw_enc;
-    enum pz_data_enc_type type;
-
-    if (!read.file.read_uint8(&raw_enc)) return false;
-    type = PZ_DATA_ENC_TYPE(raw_enc);
-
     switch (type) {
         case pz_data_enc_type_normal:
-            enc_width = PZ_DATA_ENC_BYTES(raw_enc);
             switch (enc_width) {
                 case 1: {
                     uint8_t value;
@@ -516,7 +532,8 @@ read_data_slot(ReadInfo       &read,
                     return true;
                 }
                 default:
-                    fprintf(stderr, "Unexpected data encoding %d.\n", raw_enc);
+                    fprintf(stderr, "Unexpected data encoding %d.\n",
+                            (int)type);
                     return false;
             }
         case pz_data_enc_type_fast: {
