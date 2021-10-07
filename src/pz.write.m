@@ -199,7 +199,7 @@ write_data_type(File, type_array(Width, Length), !IO) :-
 write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
     write_binary_uint32_le(File, pzs_id_get_num(PZSId), !IO).
-write_data_type(File, type_string( Length), !IO) :-
+write_data_type(File, type_string(Length), !IO) :-
     write_binary_uint8(File, pzf_data_string, !IO),
     write_binary_uint16_le(File, det_from_int(Length), !IO).
 

@@ -404,7 +404,7 @@ read_data(ReadInfo       &read,
             case PZ_DATA_ARRAY: {
                 uint16_t num_elements;
                 if (!read.file.read_uint16(&num_elements)) return false;
-                
+
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
