@@ -126,6 +126,7 @@ class BaseString {
     virtual const char * c_str() const = 0;
 };
 
+// A flat string has both a null-terminating byte and a length field.
 class FlatString : public BaseString {
   private:
     uint32_t    mLen;
