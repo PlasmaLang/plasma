@@ -126,8 +126,7 @@
 %-----------------------------------------------------------------------%
 
 pz_encode_string(String) = Data :-
-    Values = map(func(C) = pzv_num(to_int(C)),
-        to_char_list(String)) ++ [pzv_num(0)],
+    Values = map(func(C) = pzv_num(to_int(C)), to_char_list(String)),
     Data = pz_data(type_string(length(Values)), Values).
 
 %-----------------------------------------------------------------------%

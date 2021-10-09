@@ -234,12 +234,13 @@ write_data_values(File, PZ, Type, Values, !IO) :-
 write_enc_for_values(File, Width, Values, !IO) :-
     Encs = map(get_enc(Width), Values),
     ( Encs = [],
-        unexpected($file, $pred, "Empty array")
+        EncType = t_normal,
+        NumBytes = 1
     ; Encs = [Enc | _],
         expect(all_true(unify(Enc), Encs), $file, $pred,
-            "All elements must encode the same")
+            "All elements must encode the same"),
+        Enc = {EncType, NumBytes}
     ),
-    Enc = {EncType, NumBytes},
     pz_enc_byte(EncType, NumBytes, EncByte),
     write_binary_uint8(File, EncByte, !IO).
 
