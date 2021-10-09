@@ -53,6 +53,8 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
             } else if (feof(stdin)) {
                 break;
             }
+            // unreachable
+            assert(false);
         }
 
         int read_len = strlen(fs->buffer());
