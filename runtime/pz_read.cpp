@@ -462,8 +462,7 @@ read_data(ReadInfo       &read,
                 // null (it thinks they're not filled in yet) (#392).
 
                 // TODO: utf8
-                // +1 because we will often need to add null termination.
-                FlatString *s = FlatString::New(gc, num_elements+1);
+                FlatString *s = FlatString::New(gc, num_elements);
                 data = String(s).ptr();
                 uint8_t * data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
 
@@ -474,15 +473,6 @@ read_data(ReadInfo       &read,
                         return false;
                     }
                     data_ptr++;
-                }
-
-                if (num_elements > 0 && s->buffer()[num_elements-1] == 0) {
-                    // The encoding already included a null-terminating
-                    // byte.
-                    s->fixSize(num_elements-1);
-                } else {
-                    s->fixSize(num_elements);
-                    s->buffer()[num_elements] = 0;
                 }
 
                 total_size += s->storageSize();
