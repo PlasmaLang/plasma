@@ -280,6 +280,13 @@ FlatString::c_str() const {
     return reinterpret_cast<const char *>(mBuffer);
 }
 
+void
+FlatString::fixSize(uint32_t len) {
+    assert(len <= mLen);
+    mBuffer[len] = 0;
+    mLen = len;
+}
+
 /*
  * StringPos 
  ************/
