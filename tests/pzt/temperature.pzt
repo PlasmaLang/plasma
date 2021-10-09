@@ -38,9 +38,9 @@ proc main_p (- w) {
 };
 
 data c_is_string = string {32 100 101 103 114 101 101 115 32 99 101 108
-    99 105 117 115 32 105 115 32 0};
+    99 105 117 115 32 105 115 32};
 data f_string = string {32 100 101 103 114 101 101 115 32 102 97 114
-    114 101 110 104 101 105 116 46 10 0};
+    114 101 110 104 101 105 116 46 10};
 struct main_s { ptr ptr };
 data main_d = main_s { c_is_string f_string };
 
