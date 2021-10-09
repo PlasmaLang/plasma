@@ -202,7 +202,6 @@ String::substring(GCCapability &gc, const StringPos * pos1,
 
     FlatString *s = FlatString::New(gc, len);
     strncpy(s->buffer(), &pos1->mStr.c_str()[pos1->mPos], len);
-    s->fixSize(len);
     return String(s);
 }
 
@@ -243,9 +242,11 @@ String::end(GCCapability &gc) const {
 FlatString::FlatString(uint32_t len) :
     mLen(len)
 {
-    assert(len > 0);
-    // It starts as an empty, null terminated string.
-    mBuffer[0] = 0;
+#ifdef DEBUG
+    // Make debugging slightly more predictable.
+    memset(mBuffer, 'X', len);
+#endif
+    mBuffer[len] = 0;
 }
 
 FlatString*
