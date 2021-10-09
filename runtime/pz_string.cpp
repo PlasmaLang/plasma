@@ -193,6 +193,8 @@ String::substring(GCCapability &gc, const StringPos * pos1,
         exit(1);
     }
 
+    // This uses negative numbers to check when the beginning is after the
+    // end.
     int len = pos2->mPos - pos1->mPos;
     if (len <= 0) {
         return String();
@@ -278,8 +280,8 @@ FlatString::c_str() const {
 }
 
 /*
- * FlatString
- *************/
+ * StringPos 
+ ************/
 
 bool
 StringPos::at_beginning() const {
