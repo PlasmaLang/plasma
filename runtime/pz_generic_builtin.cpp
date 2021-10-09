@@ -51,8 +51,6 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
                 perror("stdin");
                 exit(PZ_EXIT_RUNTIME_ERROR);
             } else if (feof(stdin)) {
-                fs->fixSize(0);
-                str = String::append(nogc, str, String(fs));
                 break;
             }
         }
