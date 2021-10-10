@@ -404,7 +404,7 @@ read_data(ReadInfo       &read,
             case PZ_DATA_ARRAY: {
                 uint16_t num_elements;
                 if (!read.file.read_uint16(&num_elements)) return false;
-                
+
                 Optional<PZ_Width> maybe_width = read_data_width(read.file);
                 if (!maybe_width.hasValue()) return false;
                 PZ_Width width = maybe_width.value();
@@ -449,16 +449,22 @@ read_data(ReadInfo       &read,
             case PZ_DATA_STRING: {
                 uint16_t  num_elements;
                 if (!read.file.read_uint16(&num_elements)) return false;
-                
-                // TODO: utf8
-                FlatString *s = FlatString::New(gc, num_elements);
-                data = String(s).ptr();
-                uint8_t * data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
 
                 uint8_t raw_enc;
                 if (!read.file.read_uint8(&raw_enc)) return false;
                 enum pz_data_enc_type type = PZ_DATA_ENC_TYPE(raw_enc);
                 uint8_t enc_width = PZ_DATA_ENC_BYTES(raw_enc);
+
+                // TODO: We can check if the string is empty using
+                // num_elements, but we can't perform a shortcut to use the
+                // canonical empty string since that is the null pointer.
+                // But PZ file reading assumes that other data items wont be
+                // null (it thinks they're not filled in yet) (#392).
+
+                // TODO: utf8
+                FlatString *s = FlatString::New(gc, num_elements);
+                data = String(s).ptr();
+                uint8_t * data_ptr = reinterpret_cast<uint8_t*>(s->buffer());
 
                 for (unsigned i = 0; i < num_elements; i++) {
                     if (!read_data_slot(read, type, enc_width, data_ptr,
@@ -468,9 +474,7 @@ read_data(ReadInfo       &read,
                     }
                     data_ptr++;
                 }
-                // These are currently zero terminated, work arround that.
-                // See #376
-                s->fixSize(strlen(s->buffer()));
+
                 total_size += s->storageSize();
                 break;
             }

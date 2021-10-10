@@ -199,7 +199,7 @@ write_data_type(File, type_array(Width, Length), !IO) :-
 write_data_type(File, type_struct(PZSId), !IO) :-
     write_binary_uint8(File, pzf_data_struct, !IO),
     write_binary_uint32_le(File, pzs_id_get_num(PZSId), !IO).
-write_data_type(File, type_string( Length), !IO) :-
+write_data_type(File, type_string(Length), !IO) :-
     write_binary_uint8(File, pzf_data_string, !IO),
     write_binary_uint16_le(File, det_from_int(Length), !IO).
 
@@ -234,12 +234,13 @@ write_data_values(File, PZ, Type, Values, !IO) :-
 write_enc_for_values(File, Width, Values, !IO) :-
     Encs = map(get_enc(Width), Values),
     ( Encs = [],
-        unexpected($file, $pred, "Empty array")
+        EncType = t_normal,
+        NumBytes = 1
     ; Encs = [Enc | _],
         expect(all_true(unify(Enc), Encs), $file, $pred,
-            "All elements must encode the same")
+            "All elements must encode the same"),
+        Enc = {EncType, NumBytes}
     ),
-    Enc = {EncType, NumBytes},
     pz_enc_byte(EncType, NumBytes, EncByte),
     write_binary_uint8(File, EncByte, !IO).
 

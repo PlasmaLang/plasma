@@ -11,7 +11,7 @@ module hello;
 
 // Constant static data.
 // data NAME = TYPE VALUE;
-data hello_string = string { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will

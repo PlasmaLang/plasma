@@ -193,6 +193,8 @@ String::substring(GCCapability &gc, const StringPos * pos1,
         exit(1);
     }
 
+    // This uses negative numbers to check when the beginning is after the
+    // end.
     int len = pos2->mPos - pos1->mPos;
     if (len <= 0) {
         return String();
@@ -200,7 +202,6 @@ String::substring(GCCapability &gc, const StringPos * pos1,
 
     FlatString *s = FlatString::New(gc, len);
     strncpy(s->buffer(), &pos1->mStr.c_str()[pos1->mPos], len);
-    s->fixSize(len);
     return String(s);
 }
 
@@ -241,9 +242,11 @@ String::end(GCCapability &gc) const {
 FlatString::FlatString(uint32_t len) :
     mLen(len)
 {
-    assert(len > 0);
-    // It starts as an empty, null terminated string.
-    mBuffer[0] = 0;
+#ifdef DEBUG
+    // Make debugging slightly more predictable.
+    memset(mBuffer, 'X', len);
+#endif
+    mBuffer[len] = 0;
 }
 
 FlatString*
@@ -277,9 +280,16 @@ FlatString::c_str() const {
     return reinterpret_cast<const char *>(mBuffer);
 }
 
+void
+FlatString::fixSize(uint32_t len) {
+    assert(len <= mLen);
+    mBuffer[len] = 0;
+    mLen = len;
+}
+
 /*
- * FlatString
- *************/
+ * StringPos 
+ ************/
 
 bool
 StringPos::at_beginning() const {

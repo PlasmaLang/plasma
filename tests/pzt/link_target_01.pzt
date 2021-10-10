@@ -1,7 +1,7 @@
 
 module link_target_01;
 
-data goodbye_string = string { 103 111 111 100 98 121 101 10 0 };
+data goodbye_string = string { 103 111 111 100 98 121 101 10 };
 
 import Builtin.print (ptr - );
 

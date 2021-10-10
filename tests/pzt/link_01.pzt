@@ -1,7 +1,7 @@
 
 module link_01;
 
-data hello_string = string { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 };
 
 import Builtin.print (ptr - );
 

@@ -50,8 +50,8 @@ proc main_p ( - w) {
 };
 
 data nl = string { 10 0 };
-data label1 = string { 102 105 98 115 40 0 };
-data label2 = string { 41 32 61 32 0 };
+data label1 = string { 102 105 98 115 40 };
+data label2 = string { 41 32 61 32 };
 
 struct main_s { ptr ptr ptr };
 data main_d = main_s { label1 label2 nl };

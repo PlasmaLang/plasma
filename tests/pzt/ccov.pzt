@@ -7,17 +7,17 @@ module ccov;
 
 // Constant static data.
 // data NAME = TYPE VALUE;
-data hello_string = string { 72 101 108 108 111 32 0 };
-data closure_string = string { 99 108 111 115 117 114 101 10 0 };
-data proc_string = string { 112 114 111 99 10 0 };
+data hello_string = string { 72 101 108 108 111 32 };
+data closure_string = string { 99 108 111 115 117 114 101 10 };
+data proc_string = string { 112 114 111 99 10 };
 data closure_tail_string = string {
-    99 108 111 115 117 114 101 32 116 97 105 108 10 0 };
+    99 108 111 115 117 114 101 32 116 97 105 108 10 };
 data proc_tail_string = string {
-    112 114 111 99 32 116 97 105 108 10 0 };
+    112 114 111 99 32 116 97 105 108 10 };
 data ind_string = string {
-    105 110 100 10 0 };
+    105 110 100 10 };
 data ind_tail_string = string {
-    105 110 100 32 116 97 105 108 10 0 };
+    105 110 100 32 116 97 105 108 10 };
 
 // Forward declaration for imported procedure.
 // These are required for the assembler to build the string table and will

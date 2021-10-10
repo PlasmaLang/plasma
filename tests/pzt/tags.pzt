@@ -5,8 +5,8 @@
 
 module tags;
 
-data nl_string = string { 10 0 };
-data spc_string = string { 32 0 };
+data nl_string = string { 10 };
+data spc_string = string { 32 };
 
 import Builtin.print (ptr - );
 import Builtin.int_to_string (w - ptr);

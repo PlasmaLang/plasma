@@ -126,6 +126,7 @@ class BaseString {
     virtual const char * c_str() const = 0;
 };
 
+// A flat string has both a null-terminating byte and a length field.
 class FlatString : public BaseString {
   private:
     uint32_t    mLen;
@@ -154,11 +155,7 @@ class FlatString : public BaseString {
         return reinterpret_cast<const char*>(mBuffer);
     }
 
-    void fixSize(uint32_t len) {
-        assert(len <= mLen);
-        mBuffer[len] = 0;
-        mLen = len;
-    }
+    void fixSize(uint32_t len);
 };
 
 class StringPos : public GCNew {

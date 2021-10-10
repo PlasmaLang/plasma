@@ -5,7 +5,7 @@
 
 module struct_;
 
-data hello_string = string { 72 101 108 108 111 10 0 };
+data hello_string = string { 72 101 108 108 111 10 };
 
 struct test_struct { ptr w16 w16 w };
 
