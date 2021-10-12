@@ -15,6 +15,8 @@
 
 namespace pz {
 
+typedef uint32_t CodePoint32;
+
 class BaseString;
 class StringPos;
 
@@ -76,7 +78,7 @@ class String {
     const char * c_str() const;
 
     // Get the character at this raw position.
-    uint32_t char_at(unsigned i) const;
+    CodePoint32 char_at(unsigned i) const;
 
     size_t hash() const;
 
@@ -170,8 +172,8 @@ class StringPos : public GCNew {
     StringPos* forward(GCCapability &gc) const;
     StringPos* backward(GCCapability &gc) const;
 
-    uint32_t next_char() const;
-    uint32_t prev_char() const;
+    CodePoint32 next_char() const;
+    CodePoint32 prev_char() const;
 
     friend class String;
 };

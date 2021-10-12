@@ -214,7 +214,7 @@ unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
     
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    uint32_t c = stack[sp].u32;
+    CodePoint32 c = stack[sp].u32;
     // TODO: Use a proper FFI so we don't need to guess type tags.
     stack[sp].uptr = isspace(c) ? 0 : 1;
 
@@ -226,7 +226,7 @@ unsigned pz_builtin_codepoint_to_string(void * void_stack, unsigned sp,
 {
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    uint32_t c = stack[sp].u32;
+    CodePoint32 c = stack[sp].u32;
     FlatString *fs = FlatString::New(gc, 1);
     if (c > CHAR_MAX) {
         fprintf(stderr, "Unicode not supported yet\n");
