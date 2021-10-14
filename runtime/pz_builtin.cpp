@@ -206,6 +206,8 @@ void setup_builtins(Library * library, GCCapability & gccap)
             pz_builtin_get_parameter_func,  gccap);
     builtin_create_c_code(library,         String("char_class"),
             pz_builtin_char_class,          gccap);
+    builtin_create_c_code_alloc(library,   String("codepoint_to_string"),
+            pz_builtin_codepoint_to_string, gccap);
     builtin_create_c_code_alloc(library,   String("strpos_forward"),
             pz_builtin_strpos_forward,      gccap);
     builtin_create_c_code_alloc(library,   String("strpos_backward"),

@@ -582,7 +582,25 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
             [builtin_type(char)],
             [type_ref(CharClassId, [])],
             init, init),
-        _,  !Map, !Core),
+        _, !Map, !Core),
+
+    CPToStringName = nq_name_det("codepoint_to_string"),
+    register_builtin_func_builtin(CPToStringName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, CPToStringName),
+            [builtin_type(char)],
+            [builtin_type(string)],
+            init, init),
+        _, !Map, !Core),
+
+    IntToCPName = nq_name_det("int_to_codepoint"),
+    register_builtin_func_builtin(IntToCPName,
+        func_init_builtin_inline_pz(
+            q_name_append(builtin_module_name, IntToCPName),
+            [builtin_type(int)],
+            [builtin_type(char)],
+            init, init, [pzi_trunc(pzw_fast, pzw_32)]),
+        _, !Map, !Core),
 
     StringConcatName = nq_name_det("string_concat"),
     register_builtin_func_builtin(StringConcatName,

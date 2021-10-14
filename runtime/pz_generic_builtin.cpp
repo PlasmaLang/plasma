@@ -221,6 +221,23 @@ unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
     return sp;
 }
 
+unsigned pz_builtin_codepoint_to_string(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    uint32_t c = stack[sp].u32;
+    FlatString *fs = FlatString::New(gc, 1);
+    if (c > CHAR_MAX) {
+        fprintf(stderr, "Unicode not supported yet\n");
+        abort();
+    }
+    fs->buffer()[0] = c;
+    stack[sp].ptr = String(fs).ptr(); 
+
+    return sp;
+}
+
 unsigned pz_builtin_strpos_forward(void * void_stack, unsigned sp,
          AbstractGCTracer &gc)
 {
