@@ -141,7 +141,7 @@ gen_const_data_func(_ - Func, !LocnMap, !ModuleClo,
     val_locn_map_static::in, val_locn_map_static::out,
     closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
 
-gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
+gen_const_data_expr(expr(ExprType, CodeInfo), !LocnMap, !ModuleClo, !PZ) :-
     ( ExprType = e_lets(Lets, Expr),
         foldl3(gen_const_data_lets, Lets, !LocnMap, !ModuleClo, !PZ),
         gen_const_data_expr(Expr, !LocnMap, !ModuleClo, !PZ)
@@ -151,7 +151,14 @@ gen_const_data_expr(expr(ExprType, _), !LocnMap, !ModuleClo, !PZ) :-
     ; ExprType = e_var(_)
     ; ExprType = e_constant(Const),
         ( Const = c_string(String),
-            gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ)
+            ( if
+                [builtin_type(string)] = code_info_types(CodeInfo)
+            then
+                gen_const_data_string(String, !LocnMap, !ModuleClo, !PZ)
+            else
+                % The string literal is interpreted as a codepoint.
+                true
+            )
         ; Const = c_number(_)
         ; Const = c_func(_)
         ; Const = c_ctor(_)

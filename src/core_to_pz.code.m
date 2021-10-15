@@ -28,6 +28,7 @@
 :- implementation.
 
 :- import_module assoc_list.
+:- import_module char.
 :- import_module cord.
 :- import_module int.
 :- import_module int32.
@@ -233,8 +234,23 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                 InstrsMain = singleton(pzio_instr(
                     pzi_load_immediate(pzw_fast, im_i32(det_from_int(Num)))))
             ; Const = c_string(String),
-                Locn = vl_lookup_str(LocnMap, String),
-                InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap, Locn)
+                ( if
+                    [builtin_type(string)] = code_info_types(CodeInfo)
+                then
+                    Locn = vl_lookup_str(LocnMap, String),
+                    InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap,
+                        Locn)
+                else if
+                    [builtin_type(char)] = code_info_types(CodeInfo)
+                then
+                    % We can use det_from_int because Unicode won't exceed
+                    % range.
+                    InstrsMain = singleton(pzio_instr(pzi_load_immediate(pzw_32,
+                        im_u32(det_from_int(to_int(det_index(String, 0)))))))
+                else
+                    unexpected($file, $pred,
+                        "String literal has invalid type")
+                )
             ; Const = c_func(FuncId),
                 Locn = vl_lookup_proc(LocnMap, FuncId),
                 ( Locn = pl_static_proc(PID),
