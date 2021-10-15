@@ -13,6 +13,12 @@ func main() uses IO -> Int {
     
     var list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
     print!(int_to_string(list_length(list2)) ++ "\n")
+
+    // Oh, if we use strings of length one the typechecker can't decide if
+    // these are strings of charaters.  It doesn't matter for our program.
+    // So by doing this we give the typechecker enough information to
+    // resolve it.
+    _ = MyCons("a string", list2)
     
     return 0
 }
