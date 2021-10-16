@@ -15,8 +15,6 @@
 
 namespace pz {
 
-// There are no destructors because these are either stack or GC allocated.
-
 class BaseString;
 class StringPos;
 
