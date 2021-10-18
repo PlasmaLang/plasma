@@ -31,5 +31,5 @@ modules = [ ModuleExample, ModuleToImport ]
 
 [readline]
 type = program
-modules = [ Readline ]
+modules = [ Readline, Trim, Util ]
 
