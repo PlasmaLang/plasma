@@ -383,7 +383,7 @@ build_cp_expr_constant(_, Context, c_string(Str), TypesOrVars, !Problem,
         new_variable("string_or_codepoint", Var, !Problem),
         post_constraint(make_disjunction([
                 make_constraint(cl_var_builtin(Var, string, Context)),
-                make_constraint(cl_var_builtin(Var, char, Context))]),
+                make_constraint(cl_var_builtin(Var, codepoint, Context))]),
             !Problem),
         TypesOrVars = [var(Var)]
     else

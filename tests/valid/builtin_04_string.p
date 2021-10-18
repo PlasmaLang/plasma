@@ -14,7 +14,7 @@ entrypoint
 func main() uses IO -> Int {
 
     // Show that we can name the type and constructor.
-    func name_some_types(s : String, c : Char, cc : CharClass) -> StringPos {
+    func name_some_types(s : String, c : CodePoint, cc : CharClass) -> StringPos {
         return string_begin(s)
     }
 

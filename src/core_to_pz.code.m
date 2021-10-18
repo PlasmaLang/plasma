@@ -241,7 +241,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     InstrsMain = gen_val_locn_access(CGInfo, Depth, LocnMap,
                         Locn)
                 else if
-                    [builtin_type(char)] = code_info_types(CodeInfo)
+                    [builtin_type(codepoint)] = code_info_types(CodeInfo)
                 then
                     % We can use det_from_int because Unicode won't exceed
                     % range.
@@ -568,9 +568,10 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
         % This is really stupid, but it'll do for now.
         SwitchType = enum
     ; ( Builtin = string
-      ; Builtin = char
+      ; Builtin = codepoint
       ),
-        util.exception.sorry($file, $pred, "Cannot switch on strings/chars")
+        util.exception.sorry($file, $pred,
+            "Cannot switch on strings/codepoints")
     ; Builtin = string_pos,
         unexpected($file, $pred, "Cannot switch on string_pos")
     ).

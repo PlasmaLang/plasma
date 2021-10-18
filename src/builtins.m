@@ -168,8 +168,8 @@ setup_core_types(MaybeType, !Map, !Core) :-
     builtin_type_name(int, IntName),
     root_name(IntName, bi_type_builtin(int), !Map),
 
-    builtin_type_name(char, CharName),
-    root_name(CharName, bi_type_builtin(char), !Map),
+    builtin_type_name(codepoint, CodePointName),
+    root_name(CodePointName, bi_type_builtin(codepoint), !Map),
 
     builtin_type_name(string, StringName),
     root_name(StringName, bi_type_builtin(string), !Map),
@@ -579,7 +579,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     register_builtin_func_root(CharClassName,
         func_init_builtin_rts(
             q_name_append(builtin_module_name, CharClassName),
-            [builtin_type(char)],
+            [builtin_type(codepoint)],
             [type_ref(CharClassId, [])],
             init, init),
         _, !Map, !Core),
@@ -588,7 +588,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     register_builtin_func_builtin(CPToStringName,
         func_init_builtin_rts(
             q_name_append(builtin_module_name, CPToStringName),
-            [builtin_type(char)],
+            [builtin_type(codepoint)],
             [builtin_type(string)],
             init, init),
         _, !Map, !Core),
@@ -598,7 +598,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         func_init_builtin_inline_pz(
             q_name_append(builtin_module_name, IntToCPName),
             [builtin_type(int)],
-            [builtin_type(char)],
+            [builtin_type(codepoint)],
             init, init, [pzi_trunc(pzw_fast, pzw_32)]),
         _, !Map, !Core),
 
@@ -634,7 +634,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         func_init_builtin_rts(
             q_name_append(builtin_module_name, StrposNextName),
             [builtin_type(string_pos)],
-                [type_ref(MaybeType, [builtin_type(char)])],
+                [type_ref(MaybeType, [builtin_type(codepoint)])],
             init, init),
         _, !Map, !Core),
 
@@ -643,7 +643,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         func_init_builtin_rts(
             q_name_append(builtin_module_name, StrposPrevName),
             [builtin_type(string_pos)],
-                [type_ref(MaybeType, [builtin_type(char)])],
+                [type_ref(MaybeType, [builtin_type(codepoint)])],
             init, init),
         _, !Map, !Core),
 

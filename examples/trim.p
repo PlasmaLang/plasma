@@ -51,7 +51,7 @@ func trim_left(s : String) -> String {
     return loop(string_begin(s))
 }
 
-func find_last(test : func(Char) -> Bool,
+func find_last(test : func(CodePoint) -> Bool,
                string : String) -> StringPos {
     func loop(pos : StringPos) -> StringPos {
         // We can't fold these tests into one because Plasma's || isn't
@@ -74,7 +74,7 @@ func find_last(test : func(Char) -> Bool,
 }
 
 func trim_right(s : String) -> String {
-    func is_not_whitespace(c : Char) -> Bool {
+    func is_not_whitespace(c : CodePoint) -> Bool {
         return match (char_class(c)) {
             Whitespace -> False
             Other -> True
