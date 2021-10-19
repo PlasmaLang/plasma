@@ -165,17 +165,10 @@ setup_builtins(!:Map, Operators, !Core) :-
     core::in, core::out) is det.
 
 setup_core_types(MaybeType, !Map, !Core) :-
-    builtin_type_name(int, IntName),
-    root_name(IntName, bi_type_builtin(int), !Map),
-
-    builtin_type_name(codepoint, CodePointName),
-    root_name(CodePointName, bi_type_builtin(codepoint), !Map),
-
-    builtin_type_name(string, StringName),
-    root_name(StringName, bi_type_builtin(string), !Map),
-
-    builtin_type_name(string_pos, StringPosName),
-    root_name(StringPosName, bi_type_builtin(string_pos), !Map),
+    foldl((pred(Type::in, M0::in, M::out) is det :-
+            builtin_type_name(Type, Name),
+            root_name(Name, bi_type_builtin(Type), M0, M)
+        ), [int, codepoint, string, string_pos], !Map),
 
     core_allocate_type_id(MaybeType, !Core),
     MaybeParamName = "v",
