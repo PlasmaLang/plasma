@@ -206,7 +206,7 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     return sp;
 }
 
-unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
+unsigned pz_builtin_codepoint_category(void * void_stack, unsigned sp)
 {
     // TODO use a unicode library.  While POSIX is locale-aware it does not
     // handle characters outside the current locale, but applications may

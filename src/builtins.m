@@ -568,10 +568,10 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         !Core),
     root_name(CharClassTypeName, bi_type(CharClassId, arity(0)), !Map),
 
-    CharClassName = nq_name_det("char_class"),
-    register_builtin_func_root(CharClassName,
+    CodepointCategoryName = nq_name_det("codepoint_category"),
+    register_builtin_func_root(CodepointCategoryName,
         func_init_builtin_rts(
-            q_name_append(builtin_module_name, CharClassName),
+            q_name_append(builtin_module_name, CodepointCategoryName),
             [builtin_type(codepoint)],
             [type_ref(CharClassId, [])],
             init, init),

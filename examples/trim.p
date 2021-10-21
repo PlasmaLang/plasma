@@ -36,7 +36,7 @@ func trim_left(s : String) -> String {
     func loop(pos : StringPos) -> String {
         match (strpos_next(pos)) {
             Some(var c) -> {
-                match char_class(c) {
+                match codepoint_category(c) {
                     Whitespace -> { return loop(strpos_forward(pos)) }
                     Other -> { return string_substring(pos, string_end(s)) }
                 }
@@ -75,7 +75,7 @@ func find_last(test : func(CodePoint) -> Bool,
 
 func trim_right(s : String) -> String {
     func is_not_whitespace(c : CodePoint) -> Bool {
-        return match (char_class(c)) {
+        return match (codepoint_category(c)) {
             Whitespace -> False
             Other -> True
         }

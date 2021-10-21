@@ -61,7 +61,7 @@ unsigned pz_builtin_set_parameter_func(void * stack, unsigned sp, PZ & pz);
 
 unsigned pz_builtin_get_parameter_func(void * stack, unsigned sp, PZ & pz);
 
-unsigned pz_builtin_char_class(void * stack, unsigned sp);
+unsigned pz_builtin_codepoint_category(void * stack, unsigned sp);
 unsigned pz_builtin_codepoint_to_string(void * stack, unsigned sp,
         AbstractGCTracer & gc);
 unsigned pz_builtin_strpos_forward(void * stack, unsigned sp,

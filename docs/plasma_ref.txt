@@ -1600,7 +1600,7 @@ type CharClass = Whitespace
 `String ++ String -> String`:: String concatenation
   (also `func Builtin.string_concat(a : String, b : String) -> String`).
 
-`func char_class(CodePoint) -> CharClass`::
+`func codepoint_category(CodePoint) -> CodepointCategory`::
   Return the class of a character.
 
 `func string_begin(String) -> StringPos`::

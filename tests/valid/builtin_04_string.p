@@ -51,9 +51,9 @@ func main() uses IO -> Int {
                     print!("Failed to get next character from moved2\n")
                 }
                 Some(var c2) -> {
-                    // char_class
-                    var cl1 = char_class(c1)
-                    var cl2 = char_class(c2)
+                    // codepoint category 
+                    var cl1 = codepoint_category(c1)
+                    var cl2 = codepoint_category(c2)
                     print!("cl1 is " ++ class_string(cl1) ++ "\n")
                     print!("cl2 is " ++ class_string(cl2) ++ "\n")
                 }
