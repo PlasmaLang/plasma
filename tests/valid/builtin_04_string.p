@@ -14,7 +14,9 @@ entrypoint
 func main() uses IO -> Int {
 
     // Show that we can name the type and constructor.
-    func name_some_types(s : String, c : CodePoint, cc : CharClass) -> StringPos {
+    func name_some_types(s : String, c : CodePoint, cc : CodepointCategory) ->
+        StringPos
+    {
         return string_begin(s)
     }
 
@@ -54,8 +56,8 @@ func main() uses IO -> Int {
                     // codepoint category 
                     var cl1 = codepoint_category(c1)
                     var cl2 = codepoint_category(c2)
-                    print!("cl1 is " ++ class_string(cl1) ++ "\n")
-                    print!("cl2 is " ++ class_string(cl2) ++ "\n")
+                    print!("cl1 is " ++ category_string(cl1) ++ "\n")
+                    print!("cl2 is " ++ category_string(cl2) ++ "\n")
                 }
             }
         }
@@ -64,7 +66,7 @@ func main() uses IO -> Int {
     return 0
 }
 
-func class_string(c : CharClass) -> String {
+func category_string(c : CodepointCategory) -> String {
     return match (c) {
         Whitespace -> "Whitespace"
         Other -> "Other"

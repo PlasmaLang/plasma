@@ -544,36 +544,38 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
-    core_allocate_type_id(CharClassId, !Core),
+    core_allocate_type_id(CodepointCategoryId, !Core),
 
     % TODO: Implement more character classes.
     WhitespaceName = nq_name_det("Whitespace"),
     WhitespaceQName = q_name_append(builtin_module_name, WhitespaceName),
     core_allocate_ctor_id(WhitespaceId, !Core),
-    core_set_constructor(WhitespaceId, WhitespaceQName, CharClassId,
+    core_set_constructor(WhitespaceId, WhitespaceQName, CodepointCategoryId,
         constructor(WhitespaceQName, [], []), !Core),
     root_name(WhitespaceName, bi_ctor(WhitespaceId), !Map),
 
     OtherName = nq_name_det("Other"),
     OtherQName = q_name_append(builtin_module_name, OtherName),
     core_allocate_ctor_id(OtherId, !Core),
-    core_set_constructor(OtherId, OtherQName, CharClassId,
+    core_set_constructor(OtherId, OtherQName, CodepointCategoryId,
         constructor(OtherQName, [], []), !Core),
     root_name(OtherName, bi_ctor(OtherId), !Map),
 
-    CharClassTypeName = nq_name_det("CharClass"),
-    core_set_type(CharClassId,
-        type_init(q_name_append(builtin_module_name, CharClassTypeName), [],
+    CodepointCategoryTypeName = nq_name_det("CodepointCategory"),
+    core_set_type(CodepointCategoryId,
+        type_init(q_name_append(builtin_module_name,
+                CodepointCategoryTypeName), [],
             [WhitespaceId, OtherId], st_private),
         !Core),
-    root_name(CharClassTypeName, bi_type(CharClassId, arity(0)), !Map),
+    root_name(CodepointCategoryTypeName,
+        bi_type(CodepointCategoryId, arity(0)), !Map),
 
     CodepointCategoryName = nq_name_det("codepoint_category"),
     register_builtin_func_root(CodepointCategoryName,
         func_init_builtin_rts(
             q_name_append(builtin_module_name, CodepointCategoryName),
             [builtin_type(codepoint)],
-            [type_ref(CharClassId, [])],
+            [type_ref(CodepointCategoryId, [])],
             init, init),
         _, !Map, !Core),
 

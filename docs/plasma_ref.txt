@@ -1585,11 +1585,13 @@ type Bool = False
 `type CodePoint`::
   A Unicode Codepoint (see https://unicode.org/glossary/#code_point).
 
-`type CharClass`::
+`type CodepointCategory`::
+  The general category of a Unicode codepoint
+  (see https://unicode.org/glossary/#general_category).
   Is defined as:
 ----
-type CharClass = Whitespace
-               | Other
+type CodepointCategory = Whitespace
+                       | Other
 ----
 
 `type StringPos`::
