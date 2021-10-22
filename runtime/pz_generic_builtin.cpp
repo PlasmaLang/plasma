@@ -206,7 +206,7 @@ unsigned pz_builtin_get_parameter_func(void * void_stack, unsigned sp, PZ & pz)
     return sp;
 }
 
-unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
+unsigned pz_builtin_codepoint_category(void * void_stack, unsigned sp)
 {
     // TODO use a unicode library.  While POSIX is locale-aware it does not
     // handle characters outside the current locale, but applications may
@@ -214,9 +214,26 @@ unsigned pz_builtin_char_class(void * void_stack, unsigned sp)
     
     StackValue * stack = static_cast<StackValue *>(void_stack);
 
-    uint32_t c = stack[sp].u32;
+    CodePoint32 c = stack[sp].u32;
     // TODO: Use a proper FFI so we don't need to guess type tags.
     stack[sp].uptr = isspace(c) ? 0 : 1;
+
+    return sp;
+}
+
+unsigned pz_builtin_codepoint_to_string(void * void_stack, unsigned sp,
+        AbstractGCTracer & gc)
+{
+    StackValue * stack = static_cast<StackValue *>(void_stack);
+
+    CodePoint32 c = stack[sp].u32;
+    FlatString *fs = FlatString::New(gc, 1);
+    if (c > CHAR_MAX) {
+        fprintf(stderr, "Unicode not supported yet\n");
+        abort();
+    }
+    fs->buffer()[0] = c;
+    stack[sp].ptr = String(fs).ptr(); 
 
     return sp;
 }

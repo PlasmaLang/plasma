@@ -165,17 +165,10 @@ setup_builtins(!:Map, Operators, !Core) :-
     core::in, core::out) is det.
 
 setup_core_types(MaybeType, !Map, !Core) :-
-    builtin_type_name(int, IntName),
-    root_name(IntName, bi_type_builtin(int), !Map),
-
-    builtin_type_name(char, CharName),
-    root_name(CharName, bi_type_builtin(char), !Map),
-
-    builtin_type_name(string, StringName),
-    root_name(StringName, bi_type_builtin(string), !Map),
-
-    builtin_type_name(string_pos, StringPosName),
-    root_name(StringPosName, bi_type_builtin(string_pos), !Map),
+    foldl((pred(Type::in, M0::in, M::out) is det :-
+            builtin_type_name(Type, Name),
+            root_name(Name, bi_type_builtin(Type), M0, M)
+        ), [int, codepoint, string, string_pos], !Map),
 
     core_allocate_type_id(MaybeType, !Core),
     MaybeParamName = "v",
@@ -551,38 +544,58 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     builtin_map::in, builtin_map::out, core::in, core::out) is det.
 
 setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
-    core_allocate_type_id(CharClassId, !Core),
+    core_allocate_type_id(CodepointCategoryId, !Core),
 
     % TODO: Implement more character classes.
     WhitespaceName = nq_name_det("Whitespace"),
     WhitespaceQName = q_name_append(builtin_module_name, WhitespaceName),
     core_allocate_ctor_id(WhitespaceId, !Core),
-    core_set_constructor(WhitespaceId, WhitespaceQName, CharClassId,
+    core_set_constructor(WhitespaceId, WhitespaceQName, CodepointCategoryId,
         constructor(WhitespaceQName, [], []), !Core),
     root_name(WhitespaceName, bi_ctor(WhitespaceId), !Map),
 
     OtherName = nq_name_det("Other"),
     OtherQName = q_name_append(builtin_module_name, OtherName),
     core_allocate_ctor_id(OtherId, !Core),
-    core_set_constructor(OtherId, OtherQName, CharClassId,
+    core_set_constructor(OtherId, OtherQName, CodepointCategoryId,
         constructor(OtherQName, [], []), !Core),
     root_name(OtherName, bi_ctor(OtherId), !Map),
 
-    CharClassTypeName = nq_name_det("CharClass"),
-    core_set_type(CharClassId,
-        type_init(q_name_append(builtin_module_name, CharClassTypeName), [],
+    CodepointCategoryTypeName = nq_name_det("CodepointCategory"),
+    core_set_type(CodepointCategoryId,
+        type_init(q_name_append(builtin_module_name,
+                CodepointCategoryTypeName), [],
             [WhitespaceId, OtherId], st_private),
         !Core),
-    root_name(CharClassTypeName, bi_type(CharClassId, arity(0)), !Map),
+    root_name(CodepointCategoryTypeName,
+        bi_type(CodepointCategoryId, arity(0)), !Map),
 
-    CharClassName = nq_name_det("char_class"),
-    register_builtin_func_root(CharClassName,
+    CodepointCategoryName = nq_name_det("codepoint_category"),
+    register_builtin_func_root(CodepointCategoryName,
         func_init_builtin_rts(
-            q_name_append(builtin_module_name, CharClassName),
-            [builtin_type(char)],
-            [type_ref(CharClassId, [])],
+            q_name_append(builtin_module_name, CodepointCategoryName),
+            [builtin_type(codepoint)],
+            [type_ref(CodepointCategoryId, [])],
             init, init),
-        _,  !Map, !Core),
+        _, !Map, !Core),
+
+    CPToStringName = nq_name_det("codepoint_to_string"),
+    register_builtin_func_builtin(CPToStringName,
+        func_init_builtin_rts(
+            q_name_append(builtin_module_name, CPToStringName),
+            [builtin_type(codepoint)],
+            [builtin_type(string)],
+            init, init),
+        _, !Map, !Core),
+
+    IntToCPName = nq_name_det("int_to_codepoint"),
+    register_builtin_func_builtin(IntToCPName,
+        func_init_builtin_inline_pz(
+            q_name_append(builtin_module_name, IntToCPName),
+            [builtin_type(int)],
+            [builtin_type(codepoint)],
+            init, init, [pzi_trunc(pzw_fast, pzw_32)]),
+        _, !Map, !Core),
 
     StringConcatName = nq_name_det("string_concat"),
     register_builtin_func_builtin(StringConcatName,
@@ -616,7 +629,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         func_init_builtin_rts(
             q_name_append(builtin_module_name, StrposNextName),
             [builtin_type(string_pos)],
-                [type_ref(MaybeType, [builtin_type(char)])],
+                [type_ref(MaybeType, [builtin_type(codepoint)])],
             init, init),
         _, !Map, !Core),
 
@@ -625,7 +638,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         func_init_builtin_rts(
             q_name_append(builtin_module_name, StrposPrevName),
             [builtin_type(string_pos)],
-                [type_ref(MaybeType, [builtin_type(char)])],
+                [type_ref(MaybeType, [builtin_type(codepoint)])],
             init, init),
         _, !Map, !Core),
 

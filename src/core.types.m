@@ -32,7 +32,7 @@
 
 :- type builtin_type
     --->    int
-    ;       char
+    ;       codepoint
     ;       string
     ;       string_pos.
 
@@ -114,7 +114,7 @@ builtin_type_name(Type::out, Name::in) :-
 :- mode builtin_type_name_2(out, in) is semidet.
 
 builtin_type_name_2(int,        "Int").
-builtin_type_name_2(char,       "Char").
+builtin_type_name_2(codepoint,  "CodePoint").
 builtin_type_name_2(string,     "String").
 builtin_type_name_2(string_pos, "StringPos").
 

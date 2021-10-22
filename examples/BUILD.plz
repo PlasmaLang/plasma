@@ -23,7 +23,7 @@ modules = [ Mr4 ]
 
 [readline]
 type = program
-modules = [ Readline ]
+modules = [ Readline, Trim, Util ]
 
 [temperature]
 type = program

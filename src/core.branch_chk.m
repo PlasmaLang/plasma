@@ -94,7 +94,7 @@ branchcheck_match(Core, Context, Type, Cases) = Errors :-
         (
             ( Builtin = int
             ; Builtin = string
-            ; Builtin = char
+            ; Builtin = codepoint
             )
         ; Builtin = string_pos,
             unexpected($file, $pred, "Match on opaque builtin")
