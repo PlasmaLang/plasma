@@ -5,17 +5,25 @@
 # in Makefile
 #
 
-[hello]
-type = program
-modules = [ Hello ]
-
 [fib]
 type = program
 modules = [ Fib ]
 
+[hello]
+type = program
+modules = [ Hello ]
+
+[modules]
+type = program
+modules = [ ModuleExample, ModuleToImport ]
+
 [mr4]
 type = program
 modules = [ Mr4 ]
+
+[readline]
+type = program
+modules = [ Readline ]
 
 [temperature]
 type = program
@@ -24,12 +32,4 @@ modules = [ Temperature ]
 [types]
 type = program
 modules = [ Types, Set ]
-
-[modules]
-type = program
-modules = [ ModuleExample, ModuleToImport ]
-
-[readline]
-type = program
-modules = [ Readline ]
 
