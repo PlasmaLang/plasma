@@ -343,7 +343,13 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
     then
         QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
-        ( MaybeFunction = ok(Function),
+        ( MaybeFunction = ok(Function0),
+            ( Body = ast_body_block(_),
+                Function = Function0
+            ; Body = ast_body_foreign,
+                func_set_builtin(bit_rts, Function0, Function)
+            ),
+
             core_set_function(FuncId, Function, !Core),
             ( IsEntrypoint = is_entrypoint,
                 expect(unify(Sharing, s_public), $file, $pred,

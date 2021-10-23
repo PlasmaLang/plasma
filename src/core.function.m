@@ -113,6 +113,9 @@
     %
 :- pred func_builtin_type(function::in, builtin_impl_type::out) is semidet.
 
+:- pred func_set_builtin(builtin_impl_type::in, function::in, function::out)
+    is det.
+
 :- pred func_builtin_inline_pz(function::in, list(pz_instr)::out)
     is semidet.
 
@@ -303,6 +306,18 @@ func_is_builtin(Func) :-
 
 func_builtin_type(Func, BuiltinType) :-
     yes(BuiltinType) = Func ^ f_builtin.
+
+func_set_builtin(BuiltinType, !Func) :-
+    ( if
+        not func_is_builtin(!.Func),
+        no = !.Func ^ f_maybe_func_defn
+    then
+        !Func ^ f_builtin := yes(BuiltinType),
+        func_set_captured_vars_types([], !Func)
+    else
+        unexpected($file, $pred,
+            "Function is already builtin or already has a body")
+    ).
 
 func_builtin_inline_pz(Func, PZInstrs) :-
     yes(PZInstrs) = Func ^ f_maybe_ipz_defn.
