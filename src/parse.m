@@ -618,6 +618,36 @@ parse_func(ParseName, ParseType, Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
+    % NestedFuncDefinition := 'func' Ident '(' ( Param ( ',' Param )* )? ')'
+    %                             Uses* ReturnTypes? Block
+    %
+    % Param := ident : TypeExpr
+    %
+    % Uses := uses QualifiedIdent
+    %       | uses '(' QualifiedIdentList ')'
+    %       | observes QualifiedIdent
+    %       | observes '(' QualifiedIdentList ')'
+    %
+    % ReturnTypes := '->' TypeExpr
+    %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
+    %
+:- pred parse_nested_func(parse_res(ast_block_thing), tokens, tokens).
+:- mode parse_nested_func(out, in, out) is det.
+
+parse_nested_func(Result, !Tokens) :-
+    parse_func_decl(parse_nq_name, parse_source, DeclResult, !Tokens),
+    ( DeclResult = ok({Name, Decl}),
+        parse_block(BodyResult, !Tokens),
+        ( BodyResult = ok(Body),
+            Result = ok(astbt_function(Name,
+                ast_nested_function(Decl, Body)))
+        ; BodyResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    ; DeclResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
 :- pred parse_func_decl(pred(parse_res(Name), tokens, tokens),
     parse_type, parse_res({Name, ast_function_decl}), tokens, tokens).
 :- mode parse_func_decl(pred(out, in, out) is det,
@@ -781,8 +811,7 @@ parse_block(Result, !Tokens) :-
 parse_block_thing(Result, !Tokens) :-
     or([  parse_map(func(S) = astbt_statement(S),
             parse_statement),
-          parse_map(func({N, F}) = astbt_function(nq_name_det(N), F),
-            parse_func(match_token(ident), parse_source))],
+          parse_nested_func],
         Result, !Tokens).
 
     % Statement := 'var' Ident ( ',' Ident )+

@@ -158,10 +158,10 @@ ast_to_pre_block_defns(Defns0, Stmts, UseVars, DefVars, !Env, !Varmap) :-
     UseVars = union_list(UseVarsList),
     DefVars = union_list(DefVarsList).
 
-:- pred defn_make_letrec({nq_name, ast_function}::in, var::out,
+:- pred defn_make_letrec({nq_name, ast_nested_function}::in, var::out,
     env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_letrec({Name, ast_function(Decl, _, _, _)}, Var, !Env, !Varmap) :-
+defn_make_letrec({Name, ast_nested_function(Decl, _)}, Var, !Env, !Varmap) :-
     Context = Decl ^ afd_context,
     NameStr = nq_name_to_string(Name),
     ( if env_add_for_letrec(NameStr, VarPrime, !Env, !Varmap) then
@@ -172,11 +172,11 @@ defn_make_letrec({Name, ast_function(Decl, _, _, _)}, Var, !Env, !Varmap) :-
                 [s(NameStr)]))
     ).
 
-:- pred defn_make_pre_body({nq_name, ast_function}::in, pre_expr::out,
+:- pred defn_make_pre_body({nq_name, ast_nested_function}::in, pre_expr::out,
     set(var)::out, env::in, env::out, varmap::in, varmap::out) is det.
 
-defn_make_pre_body({Name, ast_function(Decl, Body0, _, _)}, Expr, UseVars, !Env,
-        !Varmap) :-
+defn_make_pre_body({Name, ast_nested_function(Decl, Body0)}, Expr, UseVars,
+        !Env, !Varmap) :-
     Decl = ast_function_decl(Params0, Returns, _, Context),
     NameStr = nq_name_to_string(Name),
     MangledName = mangle_lambda(NameStr, Context),
@@ -191,10 +191,10 @@ defn_make_pre_body({Name, ast_function(Decl, Body0, _, _)}, Expr, UseVars, !Env,
     env_letrec_defined(NameStr, !Env),
     Expr = e_lambda(pre_lambda(FuncId, Params, no, Arity, Body)).
 
-:- pred defn_make_stmt({nq_name, ast_function}::in, var::in, pre_expr::in,
-    set(var)::in, pre_statements::out, set(var)::out) is det.
+:- pred defn_make_stmt({nq_name, ast_nested_function}::in, var::in,
+    pre_expr::in, set(var)::in, pre_statements::out, set(var)::out) is det.
 
-defn_make_stmt({_, ast_function(Decl, _, _, _)},
+defn_make_stmt({_, ast_nested_function(Decl, _)},
         Var, Expr, UseVars, Stmts, DefVars) :-
     Context = Decl ^ afd_context,
     DefVars = make_singleton_set(Var),
