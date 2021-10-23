@@ -91,10 +91,16 @@
 :- type ast_function
     --->    ast_function(
                 af_decl             :: ast_function_decl,
-                af_body             :: list(ast_block_thing),
+                af_body             :: ast_body,
                 af_export           :: sharing,
                 af_is_entrypoint    :: is_entrypoint
             ).
+
+:- type ast_body
+    --->    ast_body_block(
+                list(ast_block_thing)
+            )
+    ;       ast_body_foreign.
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))

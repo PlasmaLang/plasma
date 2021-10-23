@@ -372,7 +372,10 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
         add_error(Context, ce_function_already_defined(NameStr), !Errors)
     ),
 
-    foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
+    ( Body = ast_body_block(Block),
+        foldl3(gather_funcs_block, Block, !Core, !Env, !Errors)
+    ; Body = ast_body_foreign
+    ).
 
 :- pred gather_nested_funcs(nq_name::in, ast_nested_function::in,
     core::in, core::out, env::in, env::out,
@@ -653,10 +656,14 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
 func_to_pre(Env0, nq_named(Name, Func), !Pre) :-
     Func = ast_function(ast_function_decl(Params, Returns, _, Context),
         Body, _, _),
-    % The name parameter is the name in the environment and doesn't need to
-    % be qualified.
-    func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,
-        !Pre).
+    ( Body = ast_body_block(Block),
+        % The name parameter is the name in the environment and doesn't need to
+        % be qualified.
+        func_to_pre_func(Env0, q_name(Name), Params, Returns, Block, Context,
+            !Pre)
+    ; Body = ast_body_foreign
+        % Foreign functions skip pre representation.
+    ).
 
 %-----------------------------------------------------------------------%
 
