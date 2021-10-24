@@ -92,13 +92,15 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
         gen_const_data(!.Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ),
 
         % Generate functions.
-        verbose_output(Verbose,
-            format("Generating %d functions\n", [i(length(Funcs))]), !IO),
         Funcs = core_all_functions(!.Core),
         foldl3(make_proc_and_struct_ids, Funcs, !LocnMap, !ModuleClo, !PZ),
+        DefinedFuncs = core_all_defined_functions(!.Core),
+        verbose_output(Verbose,
+            format("Generating %d functions\n", [i(length(DefinedFuncs))]),
+            !IO),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
                 !.FilenameDataMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
-            Funcs, !PZ),
+            DefinedFuncs, !PZ),
 
         % Finalize the module closure.
         verbose_output(Verbose, "Generating module closure\n", !IO),

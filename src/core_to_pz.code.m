@@ -92,8 +92,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
         Proc = pz_proc(Symbol, Signature, yes(Blocks)),
         pz_add_proc(ProcId, Proc, !PZ)
     else
-        % Imports were placed into the PZ structure earlier.
-        true
+        unexpected($file, $pred, "Function missing body or types")
     ).
 
 :- pred gen_proc_body(code_gen_info::in, val_locn_map::in, list(var)::in,
