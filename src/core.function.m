@@ -105,8 +105,10 @@
 :- type builtin_impl_type
     --->    bit_core
     ;       bit_inline_pz
-            % Foreign and non-foreign bultins implemented by the RTS.
-    ;       bit_rts.
+            % Bultins implemented by the RTS.
+    ;       bit_rts
+            % Foreign code.
+    ;       foreign.
 
     % Get how this function's definition is provided if it is a builtin,
     % false otherwise.

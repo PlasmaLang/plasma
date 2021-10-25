@@ -177,10 +177,13 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
         assert_has_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
-    ; ShouldGenerate = need_extern,
+    ; ShouldGenerate = need_extern_import,
         assert_has_no_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
+    ; ShouldGenerate = need_extern_local,
+        assert_has_no_body(Function),
+        make_proc_id_foreign(FuncId, Function, !LocnMap, !BuildModClosure, !PZ)
     ; ShouldGenerate = dead_code
     ),
 
@@ -194,9 +197,28 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
     ).
 
 :- type generate
+            % We need to do codegen for this function.  Eg it is a function
+            % defined in this module.
     --->    need_codegen
+
+            % We need to map calls to this function to a sequence of pz
+            % instructions, but also generate a body for it.  Eg: it is a
+            % builtin operator and could be called directly (replace with
+            % instructions) or used as a higher order value (provide a
+            % pointer).
     ;       need_inline_pz_and_codegen
-    ;       need_extern
+
+            % The body of this function is defined externally (eg builtin
+            % code), and it is imported from another module: we don't need
+            % to create a symbol for linking.
+    ;       need_extern_import
+
+            % The body of this function is defined externally (eg foreign
+            % code), but it belongs to this module and we need to tell the
+            % linker that the definition will be provided at runtime.
+    ;       need_extern_local
+
+            % No codegen or linking at all.
     ;       dead_code.
 
 :- func should_generate(function) = generate.
@@ -213,7 +235,9 @@ should_generate(Function) = Generate :-
                 % time.
                 Generate = need_inline_pz_and_codegen
             ; BuiltinType = bit_rts,
-                Generate = need_extern
+                Generate = need_extern_import
+            ; BuiltinType = foreign,
+                Generate = need_extern_local
             )
         ; IsUsed = unused,
             Generate = dead_code
@@ -225,7 +249,7 @@ should_generate(Function) = Generate :-
         ; Imported = i_imported,
             IsUsed = func_get_used(Function),
             ( IsUsed = used_probably,
-                Generate = need_extern
+                Generate = need_extern_import
             ; IsUsed = unused,
                 Generate = dead_code
             )
@@ -273,6 +297,16 @@ make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
         vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
     ).
+
+:- pred make_proc_id_foreign(func_id::in, function::in,
+    val_locn_map_static::in, val_locn_map_static::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
+
+make_proc_id_foreign(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
+    pz_new_import(ImportId, pz_import(func_get_name(Function), pzit_foreign),
+        !PZ),
+    closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
+    vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap).
 
 %-----------------------------------------------------------------------%
 

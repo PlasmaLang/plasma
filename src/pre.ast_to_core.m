@@ -347,7 +347,7 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
             ( Body = ast_body_block(_),
                 Function = Function0
             ; Body = ast_body_foreign,
-                func_set_builtin(bit_rts, Function0, Function)
+                func_set_builtin(foreign, Function0, Function)
             ),
 
             core_set_function(FuncId, Function, !Core),
