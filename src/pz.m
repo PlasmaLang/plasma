@@ -14,14 +14,15 @@
 
 :- import_module list.
 
+:- import_module q_name.
+:- import_module pz.pz_ds.
+
 :- include_module pz.code.
 :- include_module pz.pretty.
 :- include_module pz.pz_ds.
 :- include_module pz.link.
 :- include_module pz.read.
 :- include_module pz.write.
-
-:- import_module pz.pz_ds.
 
 %-----------------------------------------------------------------------%
 %
@@ -66,6 +67,20 @@
 
 :- type pz_closure
     --->    pz_closure(pzp_id, pzd_id).
+
+:- type pz_import_type
+            % Import from another module.
+    --->    pzit_import
+
+            % Import from foreign code, the imported thing probably has the
+            % same module name as this module.
+    ;       pzit_foreign.
+
+:- type pz_import
+    --->    pz_import(
+                pzi_name        :: q_name,
+                pzi_type        :: pz_import_type
+            ).
 
 %
 % PZ isn't typed like a high level language.  The only things PZ needs to

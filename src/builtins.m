@@ -745,19 +745,22 @@ builtin_module_name = q_name_single("Builtin").
 
 setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
     % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
-    pz_new_import(MakeTag, make_tag_qname, !PZ),
+    pz_new_import(MakeTag, pz_import(make_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
-    pz_new_import(ShiftMakeTag, shift_make_tag_qname, !PZ),
+    pz_new_import(ShiftMakeTag, pz_import(shift_make_tag_qname, pzit_import),
+        !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
-    pz_new_import(BreakTag, break_tag_qname, !PZ),
+    pz_new_import(BreakTag, pz_import(break_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
-    pz_new_import(BreakShiftTag, break_shift_tag_qname, !PZ),
+    pz_new_import(BreakShiftTag,
+        pz_import(break_shift_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr])
-    pz_new_import(UnshiftValue, unshift_value_qname, !PZ),
+    pz_new_import(UnshiftValue, pz_import(unshift_value_qname, pzit_import),
+        !PZ),
 
     STagStruct = pz_struct([pzw_fast]),
     pz_new_struct_id(STagStructId, "Secondary tag struct", !PZ),

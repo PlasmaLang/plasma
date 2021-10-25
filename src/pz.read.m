@@ -308,7 +308,7 @@ read_imports(Input, Num, PZ0, Result, !IO) :-
     read_items(read_import(Input),
         (pred(N::in, I::in, PZI0::in, PZI::out) is det :-
             ( if pzi_id_from_num(PZI0, N, ImportId) then
-                pz_add_import(ImportId, I, PZI0, PZI)
+                pz_add_import(ImportId, pz_import(I, pzit_import), PZI0, PZI)
             else
                 unexpected($file, $pred, "Bad Import Id")
             )

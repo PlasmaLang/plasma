@@ -268,7 +268,8 @@ make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
         pz_new_proc_id(ProcId, !PZ),
         vls_set_proc(FuncId, ProcId, !LocnMap)
     else
-        pz_new_import(ImportId, func_get_name(Function), !PZ),
+        pz_new_import(ImportId,
+            pz_import(func_get_name(Function), pzit_import), !PZ),
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
         vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
     ).

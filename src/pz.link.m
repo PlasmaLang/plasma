@@ -185,25 +185,33 @@ link_imports(ModuleMap, Input, InputNum, InputNum+1, !PZ, !LinkMap) :-
     Imports = pz_get_imports(Input),
     foldl2(link_imports_2(ModuleMap, InputNum), Imports, !PZ, !LinkMap).
 
-:- pred link_imports_2(export_map::in, int::in, pair(pzi_id, q_name)::in,
-    pz::in, pz::out, link_map::in, link_map::out) is det.
+:- pred link_imports_2(export_map::in, int::in,
+    pair(pzi_id, pz_import)::in, pz::in, pz::out,
+    link_map::in, link_map::out) is det.
 
-link_imports_2(ExportMap0, InputNum, ImportId - Name, !PZ, !LinkMap) :-
-    ( if
-        q_name_parts(Name, yes(Module), _),
-        search(ExportMap0, Module, ExportMap),
-        ( if search(ExportMap, Name, ClosureId0) then
-            ClosureId = ClosureId0
+link_imports_2(ExportMap0, InputNum, ImportId - Import, !PZ, !LinkMap) :-
+    Import = pz_import(Name, ImportType),
+    ( ImportType = pzit_import,
+        ( if
+            q_name_parts(Name, yes(Module), _),
+            search(ExportMap0, Module, ExportMap),
+            ( if search(ExportMap, Name, ClosureId0) then
+                ClosureId = ClosureId0
+            else
+                % This could almost be a compilation error, it shouldn't be
+                % possible though but we could reconsider it.
+                unexpected($file, $pred,
+                    format("Unknown symbol `%s`\n", [s(q_name_to_string(Name))]))
+            )
+        then
+            det_insert({InputNum, ImportId}, link_to(ClosureId), !LinkMap)
         else
-            % This could almost be a compilation error, it shouldn't be
-            % possible though but we could reconsider it.
-            unexpected($file, $pred,
-                format("Unknown symbol `%s`\n", [s(q_name_to_string(Name))]))
+            pz_new_import(NewImportId, Import, !PZ),
+            det_insert({InputNum, ImportId}, link_external(NewImportId),
+                !LinkMap)
         )
-    then
-        det_insert({InputNum, ImportId}, link_to(ClosureId), !LinkMap)
-    else
-        pz_new_import(NewImportId, Name, !PZ),
+    ; ImportType = pzit_foreign,
+        pz_new_import(NewImportId, Import, !PZ),
         det_insert({InputNum, ImportId}, link_external(NewImportId),
             !LinkMap)
     ).

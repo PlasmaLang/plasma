@@ -151,9 +151,9 @@ write_pz_entries(File, PZ, !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred write_imported_proc(io.binary_output_stream::in,
-    pair(T, q_name)::in, io::di, io::uo) is det.
+    pair(T, pz_import)::in, io::di, io::uo) is det.
 
-write_imported_proc(File, _ - QName, !IO) :-
+write_imported_proc(File, _ - pz_import(QName, _), !IO) :-
     q_name_parts(QName, MaybeModule, Proc),
     ( MaybeModule = yes(Module),
         ModuleName = q_name_to_string(Module),
