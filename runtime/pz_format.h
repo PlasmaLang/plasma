@@ -63,7 +63,7 @@ extern "C" {
  *  for the module and the check for whether the module contains the symbol
  *  are easily seperated as they can produce different errors.
  *
- *   ImportRef ::= ModuleName(String) SymbolName(String)
+ *   ImportRef ::= ImportType(8bit) ModuleName(String) SymbolName(String)
  *
  *  Export refs map fully qualified names onto closure Ids. All the symbols
  *  listed are exported.
@@ -179,6 +179,12 @@ enum PZOptEntrySignature {
     PZ_OPT_ENTRY_SIG_PLAIN,
     PZ_OPT_ENTRY_SIG_ARGS,
     PZ_OPT_ENTRY_SIG_LAST = PZ_OPT_ENTRY_SIG_ARGS
+};
+
+enum PZ_Import_Type {
+    PZ_IMPORT_IMPORT,
+    PZ_IMPORT_FOREIGN,
+    PZ_IMPORT_LAST = PZ_IMPORT_FOREIGN
 };
 
 /*

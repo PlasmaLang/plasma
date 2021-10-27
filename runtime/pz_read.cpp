@@ -326,6 +326,9 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported & imported, GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
+        uint8_t type;
+        if (!read.file.read_uint8(&type)) return false;
+
         Optional<String> maybe_module_name = read.file.read_len_string(gc);
         if (!maybe_module_name.hasValue()) return false;
         RootString module_name(gc, maybe_module_name.release());

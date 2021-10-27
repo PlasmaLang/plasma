@@ -129,6 +129,11 @@
 :- pragma foreign_decl("C", include_file("../runtime/pz_common.h")).
 :- pragma foreign_decl("C", include_file("../runtime/pz_format.h")).
 
+:- pragma foreign_enum("C", pz_import_type/0, [
+    pzit_import     - "PZ_IMPORT_IMPORT",
+    pzit_foreign    - "PZ_IMPORT_FOREIGN"
+]).
+
 :- pragma foreign_enum("C", pz_width/0, [
     pzw_8       - "PZW_8",
     pzw_16      - "PZW_16",
