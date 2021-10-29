@@ -25,15 +25,16 @@
 namespace pz {
 
 struct Imported {
-    Imported(unsigned num_imports) : num_imports_(num_imports)
+    Imported(unsigned num_imports)
     {
         import_closures.reserve(num_imports);
-        imports.reserve(num_imports);
     }
 
-    unsigned               num_imports_;
     std::vector<Closure *> import_closures;
-    std::vector<unsigned>  imports;
+
+    size_t num_imports() const {
+        return import_closures.size();
+    }
 };
 
 struct ReadInfo {
@@ -345,7 +346,6 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
 
         if (maybe_export.hasValue()) {
             Export export_ = maybe_export.value();
-            imported.imports.push_back(export_.id());
             imported.import_closures.push_back(export_.closure());
         } else {
             fprintf(stderr,
@@ -587,7 +587,7 @@ read_data_slot(ReadInfo              &read,
             // XXX: support non-data references, such as proc
             // references.
             if (!read.file.read_uint32(&ref)) return false;
-            assert(ref < imports.num_imports_);
+            assert(ref < imports.num_imports());
             import = imports.import_closures[ref];
             assert(import);
             *dest_ = import;
