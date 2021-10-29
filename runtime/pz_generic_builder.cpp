@@ -2,7 +2,7 @@
  * Plasma bytecode memory representation builder
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2020 Plasma Team
+ * Copyright (C) 2015-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -144,8 +144,6 @@ unsigned write_instr(uint8_t * proc, unsigned offset, PZ_Opcode opcode,
 
     PZ_WRITE_INSTR_0(PZI_ALLOC, PZT_ALLOC);
     PZ_WRITE_INSTR_0(PZI_MAKE_CLOSURE, PZT_MAKE_CLOSURE);
-
-    PZ_WRITE_INSTR_0(PZI_LOAD_NAMED, PZT_LOAD_PTR);
 
     PZ_WRITE_INSTR_0(PZI_CCALL, PZT_CCALL);
     PZ_WRITE_INSTR_0(PZI_CCALL_ALLOC, PZT_CCALL_ALLOC);

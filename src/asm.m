@@ -390,13 +390,6 @@ build_instruction(Info, Context, PInstr,
         else
             MaybeInstr = return_error(Context, e_struct_not_found(Name))
         )
-    ; PInstr = pzti_load_named(QName),
-        ( if search(Info ^ ai_symbols, QName, Entry) then
-            ImportId = item_expect_import($file, $pred, Entry),
-            MaybeInstr = ok(pzi_load_named(ImportId, Width1))
-        else
-            MaybeInstr = return_error(Context, e_import_not_found(QName))
-        )
     ; PInstr = pzti_make_closure(QName),
         ( if
             search(Info ^ ai_symbols, QName, Entry),

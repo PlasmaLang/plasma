@@ -545,7 +545,6 @@ parse_instr_code(Result, !Tokens) :-
         parse_token_qname_instr(make_closure,
             (func(Proc) = pzti_make_closure(Proc))),
         parse_loadstore_instr,
-        parse_load_named_instr,
         parse_imm_instr],
         Result, !Tokens).
 
@@ -630,27 +629,6 @@ parse_loadstore_instr(Result, !Tokens) :-
             Result = error(Context, InstrString, "instruction")
         )
     ; MatchInstr = error(C, G, E),
-        Result = error(C, G, E)
-    ).
-
-:- pred parse_load_named_instr(parse_res(pzt_instruction_code)::out,
-    pzt_tokens::in, pzt_tokens::out) is det.
-
-parse_load_named_instr(Result, !Tokens) :-
-    get_context(!.Tokens, Context),
-    next_token("instruction", MatchLoad, !Tokens),
-    ( MatchLoad = ok(token_and_string(Instr, InstrString)),
-        ( if Instr = load_named then
-            parse_q_name(NameResult, !Tokens),
-            ( NameResult = ok(Name),
-                Result = ok(pzti_load_named(Name))
-            ; NameResult = error(C, G, E),
-                Result = error(C, G, E)
-            )
-        else
-            Result = error(Context, InstrString, "instruction")
-        )
-    ; MatchLoad = error(C, G, E),
         Result = error(C, G, E)
     ).
 
