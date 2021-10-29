@@ -229,6 +229,7 @@ clean : localclean
 	$(MAKE) -C tests/modules clean
 	$(MAKE) -C tests/modules-invalid clean
 	$(MAKE) -C tests/build-invalid clean
+	$(MAKE) -C tests/ffi clean
 	$(MAKE) -C tests/missing clean
 
 #
@@ -243,6 +244,7 @@ realclean : localclean
 	$(MAKE) -C tests/modules realclean
 	$(MAKE) -C tests/modules-invalid realclean
 	$(MAKE) -C tests/build-invalid realclean
+	$(MAKE) -C tests/ffi realclean
 	$(MAKE) -C tests/missing realclean
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk

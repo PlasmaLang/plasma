@@ -22,6 +22,8 @@
 #include "pz_string.h"
 #include "pz_util.h"
 
+#include "foreign_hack.cpp"
+
 namespace pz {
 
 struct Imported {
@@ -327,8 +329,10 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported & imported, GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
-        uint8_t type;
-        if (!read.file.read_uint8(&type)) return false;
+        uint8_t type_;
+        if (!read.file.read_uint8(&type_)) return false;
+        if (type_ > PZ_IMPORT_LAST) return false;
+        PZ_Import_Type type = static_cast<PZ_Import_Type>(type_);
 
         Optional<String> maybe_module_name = read.file.read_len_string(gc);
         if (!maybe_module_name.hasValue()) return false;
@@ -337,23 +341,46 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
         if (!maybe_name.hasValue()) return false;
         RootString name(gc, maybe_name.release());
 
-        Library * library = read.pz.lookup_library(module_name);
-        if (!library) {
-            fprintf(stderr, "Module not found: %s\n", module_name.c_str());
-            return false;
-        }
+        switch (type) {
+          case PZ_IMPORT_IMPORT: {
+            Library * library = read.pz.lookup_library(module_name);
+            if (!library) {
+                fprintf(stderr, "Module not found: %s\n", module_name.c_str());
+                return false;
+            }
 
-        RootString module_dot(gc, String::append(gc, module_name, String(".")));
-        RootString lookup_name(gc, String::append(gc, module_dot, name));
-        Optional<Closure *> maybe_export = library->lookup_symbol(lookup_name);
+            RootString module_dot(gc,
+                String::append(gc, module_name, String(".")));
+            RootString lookup_name(gc, String::append(gc, module_dot, name));
+            Optional<Closure *> maybe_export =
+                library->lookup_symbol(lookup_name);
 
-        if (maybe_export.hasValue()) {
-            imported.import_closures.push_back(maybe_export.value());
-        } else {
+            if (maybe_export.hasValue()) {
+                imported.import_closures.push_back(maybe_export.value());
+            } else {
+                fprintf(stderr,
+                        "Procedure not found: %s\n",
+                        lookup_name.c_str());
+                return false;
+            }
+            break;
+          }
+          case PZ_IMPORT_FOREIGN: {
+            // Before we actually implement the runtime side let's test the
+            // basics.
+            if (module_name == String("ImportFunction") &&
+                    name == String("getpid"))
+            {
+                Root<Closure> closure(gc);
+                setup_hack(gc, closure);
+                imported.import_closures.push_back(closure.ptr());
+                return true;
+            }
             fprintf(stderr,
-                    "Procedure not found: %s\n",
-                    lookup_name.c_str());
+                    "Foreign procedure not found: %s.%s\n",
+                    module_name.c_str(), name.c_str());
             return false;
+          }
         }
     }
 
