@@ -44,7 +44,6 @@ static unsigned immediate_size(ImmediateType imt)
             return 1;
         case IMT_16:
         case IMT_STRUCT_REF_FIELD:
-        case IMT_IMPORT_REF:
             return 2;
         case IMT_32:
             return 4;
@@ -426,7 +425,6 @@ write_immediate(uint8_t        *proc,
                 break;
             case IMT_16:
             case IMT_STRUCT_REF_FIELD:
-            case IMT_IMPORT_REF:
                 *((uint16_t *)(&proc[offset])) = imm_value.uint16;
                 break;
             case IMT_32:
