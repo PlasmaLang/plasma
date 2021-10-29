@@ -20,15 +20,6 @@
 namespace pz {
 
 /*
- * Export class
- ***************/
-
-Export::Export(Closure * closure, unsigned export_id)
-    : m_closure(closure)
-    , m_export_id(export_id)
-{}
-
-/*
  * LibraryLoading class
  **********************/
 
@@ -36,7 +27,6 @@ LibraryLoading::LibraryLoading(unsigned num_structs,
                                unsigned num_data, unsigned num_procs,
                                unsigned num_closures, NoGCScope & no_gc)
     : m_total_code_size(0)
-    , m_next_export(0)
 {
     m_structs.reserve(num_structs);
     m_datas.reserve(num_data);
@@ -81,8 +71,7 @@ Proc * LibraryLoading::new_proc(String name, unsigned size, bool is_builtin,
 
 void LibraryLoading::add_symbol(String name, Closure * closure)
 {
-    unsigned id = m_next_export++;
-    m_symbols.insert(std::make_pair(name, Export(closure, id)));
+    m_symbols.insert(std::make_pair(name, closure));
 }
 
 void LibraryLoading::print_loaded_stats() const
@@ -116,7 +105,7 @@ void LibraryLoading::do_trace(HeapMarkState * marker) const
 
     for (auto symbol : m_symbols) {
         marker->mark_root(symbol.first.ptr());
-        marker->mark_root(symbol.second.closure());
+        marker->mark_root(symbol.second);
     }
 }
 
@@ -131,20 +120,19 @@ Library::Library(LibraryLoading & loading)
     , m_entry_closure(nullptr)
 {}
 
-void Library::add_symbol(String name, Closure * closure,
-                         unsigned export_id)
+void Library::add_symbol(String name, Closure * closure)
 {
-    m_symbols.insert(std::make_pair(name, Export(closure, export_id)));
+    m_symbols.insert(std::make_pair(name, closure));
 }
 
-Optional<Export> Library::lookup_symbol(String name) const
+Optional<Closure *> Library::lookup_symbol(String name) const
 {
     auto iter = m_symbols.find(name);
 
     if (iter != m_symbols.end()) {
         return iter->second;
     } else {
-        return Optional<Export>::Nothing();
+        return Optional<Closure *>::Nothing();
     }
 }
 
@@ -152,7 +140,7 @@ void Library::do_trace(HeapMarkState * marker) const
 {
     for (auto symbol : m_symbols) {
         marker->mark_root(symbol.first.ptr());
-        marker->mark_root(symbol.second.closure());
+        marker->mark_root(symbol.second);
     }
 
     marker->mark_root(m_entry_closure);

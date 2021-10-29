@@ -342,11 +342,10 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
 
         RootString module_dot(gc, String::append(gc, module_name, String(".")));
         RootString lookup_name(gc, String::append(gc, module_dot, name));
-        Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
+        Optional<Closure *> maybe_export = library->lookup_symbol(lookup_name);
 
         if (maybe_export.hasValue()) {
-            Export export_ = maybe_export.value();
-            imported.import_closures.push_back(export_.closure());
+            imported.import_closures.push_back(maybe_export.value());
         } else {
             fprintf(stderr,
                     "Procedure not found: %s\n",
