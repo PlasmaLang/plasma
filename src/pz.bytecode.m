@@ -72,7 +72,6 @@
     ;       pzo_alloc
     ;       pzo_make_closure
     ;       pzo_load
-    ;       pzo_load_named
     ;       pzo_store
     ;       pzo_get_env.
 
@@ -197,7 +196,6 @@
     pzo_alloc               - "PZI_ALLOC",
     pzo_make_closure        - "PZI_MAKE_CLOSURE",
     pzo_load                - "PZI_LOAD",
-    pzo_load_named          - "PZI_LOAD_NAMED",
     pzo_store               - "PZI_STORE",
     pzo_get_env             - "PZI_GET_ENV"
 ]).
@@ -277,8 +275,6 @@ instruction(pzi_make_closure(P),        pzo_make_closure,   no_width,
     yes(pz_im_proc(P))).
 instruction(pzi_load(S, F, W),          pzo_load,           one_width(W),
     yes(pz_im_struct_field(S, F))).
-instruction(pzi_load_named(I, W),       pzo_load_named,     one_width(W),
-    yes(pz_im_import(I))).
 instruction(pzi_store(S, F, W),         pzo_store,          one_width(W),
     yes(pz_im_struct_field(S, F))).
 instruction(pzi_get_env,                pzo_get_env,        no_width,
@@ -334,7 +330,6 @@ instruction_encoding(pzo_ret,                   no_width,   im_none).
 instruction_encoding(pzo_alloc,                 no_width,   im_struct).
 instruction_encoding(pzo_make_closure,          no_width,   im_proc).
 instruction_encoding(pzo_load,                  one_width,  im_struct_field).
-instruction_encoding(pzo_load_named,            one_width,  im_import).
 instruction_encoding(pzo_store,                 one_width,  im_struct_field).
 instruction_encoding(pzo_get_env,               no_width,   im_none).
 

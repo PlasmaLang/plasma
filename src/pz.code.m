@@ -5,7 +5,7 @@
 %
 % PZ representation of code.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -113,7 +113,6 @@
     ;       pzi_alloc(pzs_id)
     ;       pzi_make_closure(pzp_id)
     ;       pzi_load(pzs_id, field_num, pz_width)
-    ;       pzi_load_named(pzi_id, pz_width)
     ;       pzi_store(pzs_id, field_num, pz_width)
     ;       pzi_get_env.
 

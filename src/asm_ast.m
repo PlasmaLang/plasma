@@ -130,7 +130,6 @@
     ;       pzti_alloc(string)
     ;       pzti_make_closure(q_name)
     ;       pzti_load(string, field_num)
-    ;       pzti_load_named(q_name)
     ;       pzti_store(string, field_num).
 
 :- type pzt_instruction_widths

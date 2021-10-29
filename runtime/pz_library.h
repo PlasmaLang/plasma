@@ -20,26 +20,6 @@
 
 namespace pz {
 
-class Export
-{
-   private:
-    Closure *          m_closure;
-    Optional<unsigned> m_export_id;
-
-   public:
-    explicit Export(Closure * closure);
-    Export(Closure * closure, unsigned export_id);
-
-    Closure * closure() const
-    {
-        return m_closure;
-    }
-    unsigned id() const
-    {
-        return m_export_id.value();
-    }
-};
-
 /*
  * This class tracks all the information we need to load a library, since
  * loading also includes linking.  Once that's complete a lot of this can be
@@ -58,9 +38,7 @@ class LibraryLoading : public GCNewTrace
 
     std::vector<Closure *> m_closures;
 
-    unsigned m_next_export;
-
-    std::unordered_map<String, Export> m_symbols;
+    std::unordered_map<String, Closure *> m_symbols;
 
     friend class Library;
 
@@ -110,11 +88,6 @@ class LibraryLoading : public GCNewTrace
 
     void add_symbol(String name, Closure * closure);
 
-    /*
-     * Returns the ID of the closure in the exports struct.
-     */
-    Optional<unsigned> lookup_symbol(String name) const;
-
     void print_loaded_stats() const;
 
     LibraryLoading(LibraryLoading & other) = delete;
@@ -126,7 +99,7 @@ class LibraryLoading : public GCNewTrace
 class Library : public GCNewTrace
 {
    private:
-    std::unordered_map<String, Export>      m_symbols;
+    std::unordered_map<String, Closure *>   m_symbols;
     PZOptEntrySignature                     m_entry_signature;
     Closure *                               m_entry_closure;
 
@@ -153,9 +126,9 @@ class Library : public GCNewTrace
      * Symbol names are fully qualified, since one Module class (which
      * really represents a library) may contain more than one modules.
      */
-    void add_symbol(String name, Closure * closure, unsigned export_id);
+    void add_symbol(String name, Closure * closure);
 
-    Optional<Export> lookup_symbol(String name) const;
+    Optional<Closure *> lookup_symbol(String name) const;
 
     void do_trace(HeapMarkState * marker) const;
 

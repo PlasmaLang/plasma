@@ -25,15 +25,16 @@
 namespace pz {
 
 struct Imported {
-    Imported(unsigned num_imports) : num_imports_(num_imports)
+    Imported(unsigned num_imports)
     {
         import_closures.reserve(num_imports);
-        imports.reserve(num_imports);
     }
 
-    unsigned               num_imports_;
     std::vector<Closure *> import_closures;
-    std::vector<unsigned>  imports;
+
+    size_t num_imports() const {
+        return import_closures.size();
+    }
 };
 
 struct ReadInfo {
@@ -341,12 +342,10 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
 
         RootString module_dot(gc, String::append(gc, module_name, String(".")));
         RootString lookup_name(gc, String::append(gc, module_dot, name));
-        Optional<Export> maybe_export = library->lookup_symbol(lookup_name);
+        Optional<Closure *> maybe_export = library->lookup_symbol(lookup_name);
 
         if (maybe_export.hasValue()) {
-            Export export_ = maybe_export.value();
-            imported.imports.push_back(export_.id());
-            imported.import_closures.push_back(export_.closure());
+            imported.import_closures.push_back(maybe_export.value());
         } else {
             fprintf(stderr,
                     "Procedure not found: %s\n",
@@ -587,7 +586,7 @@ read_data_slot(ReadInfo              &read,
             // XXX: support non-data references, such as proc
             // references.
             if (!read.file.read_uint32(&ref)) return false;
-            assert(ref < imports.num_imports_);
+            assert(ref < imports.num_imports());
             import = imports.import_closures[ref];
             assert(import);
             *dest_ = import;
@@ -808,15 +807,6 @@ read_instr(BinaryInput &file, Imported &imported, LibraryLoading *library,
             } else {
                 immediate_value.word = 0;
             }
-            break;
-        }
-        case IMT_IMPORT_REF: {
-            uint32_t import_id;
-            if (!file.read_uint32(&import_id)) return false;
-            // TODO Should lookup the offset within the struct in
-            // case there's non-pointer sized things in there.
-            immediate_value.uint16 =
-                imported.imports.at(import_id) * sizeof(void *);
             break;
         }
         case IMT_IMPORT_CLOSURE_REF: {

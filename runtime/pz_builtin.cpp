@@ -264,8 +264,7 @@ static void builtin_create(Library * library, const String name,
     Root<Closure> closure(gc, new (gc) Closure(proc->code(), nullptr));
 
     RootString full_name(gc, String::append(gc, String("Builtin."), name));
-    // XXX: -1 is a temporary hack.
-    library->add_symbol(full_name, closure.ptr(), (unsigned)-1);
+    library->add_symbol(full_name, closure.ptr());
 }
 
 static void builtin_create_c_code(Library * library, String name,
