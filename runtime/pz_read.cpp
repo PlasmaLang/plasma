@@ -811,13 +811,8 @@ read_instr(BinaryInput &file, Imported &imported, LibraryLoading *library,
             break;
         }
         case IMT_IMPORT_REF: {
-            uint32_t import_id;
-            if (!file.read_uint32(&import_id)) return false;
-            // TODO Should lookup the offset within the struct in
-            // case there's non-pointer sized things in there.
-            immediate_value.uint16 =
-                imported.imports.at(import_id) * sizeof(void *);
-            break;
+            fprintf(stderr, "Import ref is broken and unused\n");
+            abort();
         }
         case IMT_IMPORT_CLOSURE_REF: {
             uint32_t import_id;
