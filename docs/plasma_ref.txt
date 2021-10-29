@@ -499,7 +499,7 @@ calls.
 * Uint
 * Int8, Int16, Int32, Int64
 * Uint8, UInt16, UInt32, UInt64
-* Char (a unicode codepoint)
+* CodePoint (a unicode codepoint)
 * Float (NIY)
 * Array('t)
 * List('t)
@@ -1582,15 +1582,16 @@ type Bool = False
 `type String`::
   A character string.
 
-`type Char`::
-  A character (link:https://github.com/PlasmaLang/plasma/issues/368[#368
-  A code point data type)
+`type CodePoint`::
+  A Unicode Codepoint (see https://unicode.org/glossary/#code_point).
 
-`type CharClass`::
+`type CodepointCategory`::
+  The general category of a Unicode codepoint
+  (see https://unicode.org/glossary/#general_category).
   Is defined as:
 ----
-type CharClass = Whitespace
-               | Other
+type CodepointCategory = Whitespace
+                       | Other
 ----
 
 `type StringPos`::
@@ -1601,7 +1602,7 @@ type CharClass = Whitespace
 `String ++ String -> String`:: String concatenation
   (also `func Builtin.string_concat(a : String, b : String) -> String`).
 
-`func char_class(Char) -> CharClass`::
+`func codepoint_category(CodePoint) -> CodepointCategory`::
   Return the class of a character.
 
 `func string_begin(String) -> StringPos`::
@@ -1626,11 +1627,11 @@ type CharClass = Whitespace
   The `StringPos` must not be at the beginning of the string (Runtime
   check).
 
-`func strpos_next(StringPos) -> Maybe(Char)`::
+`func strpos_next(StringPos) -> Maybe(CodePoint)`::
   Return the next char in the string after `StringPos`.  
   If `StringPos` is at the end of the string then `None` is returned.
 
-`func strpos_prev(StringPos) -> Maybe(Char)`::
+`func strpos_prev(StringPos) -> Maybe(CodePoint)`::
   Return the previous char in the string before `StringPos`.  
   If `StringPos` is at the beginning of the string then `None` is returned.
 

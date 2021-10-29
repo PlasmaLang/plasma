@@ -2,7 +2,7 @@
  * Plasma bytecode instructions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -74,7 +74,6 @@ typedef enum {
     PZI_ALLOC,
     PZI_MAKE_CLOSURE,
     PZI_LOAD,
-    PZI_LOAD_NAMED,
     PZI_STORE,
     PZI_GET_ENV,
 
@@ -111,7 +110,6 @@ enum ImmediateType {
     IMT_64,
     IMT_CLOSURE_REF,
     IMT_PROC_REF,
-    IMT_IMPORT_REF,
     IMT_IMPORT_CLOSURE_REF,
     IMT_STRUCT_REF,
     IMT_STRUCT_REF_FIELD,

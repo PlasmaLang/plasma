@@ -11,12 +11,13 @@ TOP=..
 all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
 	$(TOP)/src/plzbuild --rebuild
 
-hello.pz: all
 fib.pz: all
+hello.pz: all
 modules.pz: all
 mr4.pz: all
-temperature.pz: all
 readline.pz: all
+temperature.pz: all
+types.pz: all
 
 .PHONY: %.test
 %.test : %.exp %.outs

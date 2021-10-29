@@ -148,7 +148,7 @@ String::c_str() const {
     }
 }
 
-uint32_t
+CodePoint32
 String::char_at(unsigned i) const {
     assert(i < length());
     // XXX make better.
@@ -319,7 +319,7 @@ StringPos::backward(GCCapability &gc) const {
     return new(gc) StringPos(mStr, mPos-1);
 }
 
-uint32_t
+CodePoint32
 StringPos::next_char() const {
     if (mPos == mStr.length()) {
         fprintf(stderr, "Access next character at end of string\n");
@@ -328,7 +328,7 @@ StringPos::next_char() const {
     return mStr.char_at(mPos);
 }
 
-uint32_t
+CodePoint32
 StringPos::prev_char() const {
     if (mPos == 0) {
         fprintf(stderr, "Access previous character at beginning of string\n");

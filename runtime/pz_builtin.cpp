@@ -204,8 +204,10 @@ void setup_builtins(Library * library, GCCapability & gccap)
             pz_builtin_set_parameter_func,  gccap);
     builtin_create_c_code_special(library, String("get_parameter"),
             pz_builtin_get_parameter_func,  gccap);
-    builtin_create_c_code(library,         String("char_class"),
-            pz_builtin_char_class,          gccap);
+    builtin_create_c_code(library,         String("codepoint_category"),
+            pz_builtin_codepoint_category, gccap);
+    builtin_create_c_code_alloc(library,   String("codepoint_to_string"),
+            pz_builtin_codepoint_to_string, gccap);
     builtin_create_c_code_alloc(library,   String("strpos_forward"),
             pz_builtin_strpos_forward,      gccap);
     builtin_create_c_code_alloc(library,   String("strpos_backward"),
@@ -262,8 +264,7 @@ static void builtin_create(Library * library, const String name,
     Root<Closure> closure(gc, new (gc) Closure(proc->code(), nullptr));
 
     RootString full_name(gc, String::append(gc, String("Builtin."), name));
-    // XXX: -1 is a temporary hack.
-    library->add_symbol(full_name, closure.ptr(), (unsigned)-1);
+    library->add_symbol(full_name, closure.ptr());
 }
 
 static void builtin_create_c_code(Library * library, String name,

@@ -8,7 +8,7 @@ module Types_4
 
 func main() uses IO -> Int {
     var list1 = MyCons(1, MyCons(2, MyCons(3, MyCons(4, MyNil))))
-    var list2 = MyCons("A", MyCons("B", MyCons("C", MyNil)))
+    var list2 = MyCons("Aa", MyCons("Bb", MyCons("Cc", MyNil)))
     
     print!(int_to_string(list_length(append(list1, list2))) ++ "\n")
     

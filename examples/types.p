@@ -71,6 +71,7 @@ type MyType = MyConstr (
 // Empty main function.
 entrypoint
 func main() uses IO -> Int {
+    print!("Types example doesn't actually do anything with the types\n")
     return 0
 }
 

@@ -376,8 +376,19 @@ build_cp_pattern(Core, Context, p_ctor(CtorIds, Args), Var, Constraint,
     list(type_or_var)::out, problem ::in, problem::out,
     type_vars::in, type_vars::out) is det.
 
-build_cp_expr_constant(_, _, c_string(_), [type_(builtin_type(string))],
-        !Problem, !TypeVars).
+build_cp_expr_constant(_, Context, c_string(Str), TypesOrVars, !Problem,
+        !TypeVars) :-
+    ( if count_codepoints(Str) = 1 then
+        % This could be a string or a single character.
+        new_variable("string_or_codepoint", Var, !Problem),
+        post_constraint(make_disjunction([
+                make_constraint(cl_var_builtin(Var, string, Context)),
+                make_constraint(cl_var_builtin(Var, codepoint, Context))]),
+            !Problem),
+        TypesOrVars = [var(Var)]
+    else
+        TypesOrVars = [type_(builtin_type(string))]
+    ).
 build_cp_expr_constant(_, _, c_number(_), [type_(builtin_type(int))],
         !Problem, !TypeVars).
 build_cp_expr_constant(Core, Context, c_func(FuncId), TypesOrVars,
