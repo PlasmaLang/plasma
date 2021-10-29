@@ -85,17 +85,6 @@ void LibraryLoading::add_symbol(String name, Closure * closure)
     m_symbols.insert(std::make_pair(name, Export(closure, id)));
 }
 
-Optional<unsigned> LibraryLoading::lookup_symbol(String name) const
-{
-    auto iter = m_symbols.find(name);
-
-    if (iter != m_symbols.end()) {
-        return iter->second.id();
-    } else {
-        return Optional<unsigned>::Nothing();
-    }
-}
-
 void LibraryLoading::print_loaded_stats() const
 {
     printf("Loaded %d procedures with a total of %d bytes.\n",

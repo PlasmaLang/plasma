@@ -110,11 +110,6 @@ class LibraryLoading : public GCNewTrace
 
     void add_symbol(String name, Closure * closure);
 
-    /*
-     * Returns the ID of the closure in the exports struct.
-     */
-    Optional<unsigned> lookup_symbol(String name) const;
-
     void print_loaded_stats() const;
 
     LibraryLoading(LibraryLoading & other) = delete;
