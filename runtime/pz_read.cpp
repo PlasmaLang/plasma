@@ -26,7 +26,7 @@
 
 namespace pz {
 
-struct Imported {
+struct Imported : public GCNewTrace {
     Imported(unsigned num_imports)
     {
         import_closures.reserve(num_imports);
@@ -36,6 +36,12 @@ struct Imported {
 
     size_t num_imports() const {
         return import_closures.size();
+    }
+
+    virtual void do_trace(HeapMarkState * marker) const {
+        for (Closure *c : import_closures) {
+            marker->mark_root(c);
+        }
     }
 };
 
@@ -71,7 +77,7 @@ read_options(BinaryInput &file, Optional<EntryClosure> &entry_closure);
 static bool
 read_imports(ReadInfo    &read,
              unsigned     num_imports,
-             Imported    &imported,
+             Imported    *imported,
              GCTracer    &gc);
 
 static bool
@@ -84,7 +90,7 @@ static bool
 read_data(ReadInfo       &read,
           unsigned        num_datas,
           LibraryLoading *library,
-          Imported       &imports,
+          Imported       *imports,
           GCCapability   &gc);
 
 static Optional<PZ_Width>
@@ -96,18 +102,18 @@ read_data_slot(ReadInfo              &read,
                uint8_t                enc_width,
                void                  *dest,
                LibraryLoading        *library,
-               Imported              &imports);
+               Imported              *imports);
 
 static bool
 read_code(ReadInfo       &read,
           unsigned        num_procs,
           LibraryLoading *library,
-          Imported       &imported,
+          Imported       *imported,
           GCCapability   &gc);
 
 static unsigned
 read_proc(ReadInfo       &read,
-          Imported       &imported,
+          Imported       *imported,
           LibraryLoading *library,
           Proc           *proc, /* null for first pass */
           unsigned      **block_offsets,
@@ -115,7 +121,7 @@ read_proc(ReadInfo       &read,
 
 static bool
 read_instr(BinaryInput      &file,
-           Imported         &imported,
+           Imported         *imported,
            LibraryLoading   *library,
            uint8_t          *proc_code,
            unsigned        **block_offsets,
@@ -132,7 +138,7 @@ read_meta(ReadInfo          &read,
 static bool
 read_closures(ReadInfo       &read,
               unsigned        num_closures,
-              Imported       &imported,
+              Imported       *imported,
               LibraryLoading *library);
 
 static bool
@@ -233,9 +239,9 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
         no_gc.abort_if_oom("loading a module");
     }
 
-    Imported imported(num_imports);
+    Root<Imported> imported(gc, new (gc) Imported(num_imports));
 
-    if (!read_imports(read, num_imports, imported, gc)) return false;
+    if (!read_imports(read, num_imports, imported.ptr(), gc)) return false;
 
     if (!read_structs(read, num_structs, lib_load.ptr(), gc)) return false;
 
@@ -245,14 +251,14 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
      * where each individual entry begins.  Then in the second pass we fill
      * read the bytecode and data, resolving any intra-module references.
      */
-    if (!read_data(read, num_datas, lib_load.ptr(), imported, gc)) {
+    if (!read_data(read, num_datas, lib_load.ptr(), imported.ptr(), gc)) {
         return false;
     }
-    if (!read_code(read, num_procs, lib_load.ptr(), imported, gc)) {
+    if (!read_code(read, num_procs, lib_load.ptr(), imported.ptr(), gc)) {
         return false;
     }
 
-    if (!read_closures(read, num_closures, imported, lib_load.ptr())) {
+    if (!read_closures(read, num_closures, imported.ptr(), lib_load.ptr())) {
         return false;
     }
 
@@ -326,7 +332,7 @@ static bool read_options(BinaryInput & file, Optional<EntryClosure> & mbEntry)
 }
 
 static bool read_imports(ReadInfo & read, unsigned num_imports,
-                         Imported & imported, GCTracer &gc)
+                         Imported * imported, GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
         uint8_t type_;
@@ -356,7 +362,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                 library->lookup_symbol(lookup_name);
 
             if (maybe_export.hasValue()) {
-                imported.import_closures.push_back(maybe_export.value());
+                imported->import_closures.push_back(maybe_export.value());
             } else {
                 fprintf(stderr,
                         "Procedure not found: %s\n",
@@ -373,7 +379,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             {
                 Root<Closure> closure(gc);
                 setup_hack(gc, closure);
-                imported.import_closures.push_back(closure.ptr());
+                imported->import_closures.push_back(closure.ptr());
                 return true;
             }
             fprintf(stderr,
@@ -419,7 +425,7 @@ static bool
 read_data(ReadInfo       &read,
           unsigned        num_datas,
           LibraryLoading *library,
-          Imported       &imports,
+          Imported       *imports,
           GCCapability   &gc)
 {
     unsigned total_size = 0;
@@ -535,7 +541,7 @@ read_data_slot(ReadInfo              &read,
                uint8_t                enc_width,
                void                  *dest,
                LibraryLoading        *library,
-               Imported              &imports)
+               Imported              *imports)
 {
     switch (type) {
         case pz_data_enc_type_normal:
@@ -616,8 +622,8 @@ read_data_slot(ReadInfo              &read,
             // XXX: support non-data references, such as proc
             // references.
             if (!read.file.read_uint32(&ref)) return false;
-            assert(ref < imports.num_imports());
-            import = imports.import_closures[ref];
+            assert(ref < imports->num_imports());
+            import = imports->import_closures[ref];
             assert(import);
             *dest_ = import;
             return true;
@@ -643,7 +649,7 @@ static bool
 read_code(ReadInfo       &read,
           unsigned        num_procs,
           LibraryLoading *library,
-          Imported       &imported,
+          Imported       *imported,
           GCCapability   &gc)
 {
     unsigned * block_offsets[num_procs];
@@ -716,7 +722,7 @@ read_code(ReadInfo       &read,
 
 static unsigned
 read_proc(ReadInfo       &read,
-          Imported       &imported,
+          Imported       *imported,
           LibraryLoading *library,
           Proc           *proc,
           unsigned      **block_offsets,
@@ -777,7 +783,7 @@ read_proc(ReadInfo       &read,
 }
 
 static bool
-read_instr(BinaryInput &file, Imported &imported, LibraryLoading *library,
+read_instr(BinaryInput &file, Imported *imported, LibraryLoading *library,
         uint8_t *proc_code, unsigned **block_offsets, unsigned &proc_offset)
 {
     uint8_t            byte;
@@ -843,7 +849,7 @@ read_instr(BinaryInput &file, Imported &imported, LibraryLoading *library,
             uint32_t import_id;
             if (!file.read_uint32(&import_id)) return false;
             immediate_value.word =
-                (uintptr_t)imported.import_closures.at(import_id);
+                (uintptr_t)imported->import_closures.at(import_id);
             break;
         }
         case IMT_LABEL_REF: {
@@ -955,7 +961,7 @@ static bool read_meta(ReadInfo & read, LibraryLoading * library, Proc * proc,
 static bool
 read_closures(ReadInfo       &read,
               unsigned        num_closures,
-              Imported       &imported,
+              Imported       *imported,
               LibraryLoading *library)
 {
     for (unsigned i = 0; i < num_closures; i++) {
