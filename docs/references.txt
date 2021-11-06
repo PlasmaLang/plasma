@@ -105,6 +105,19 @@ Data structures for GC::
     Fortran's performance and included parallel support for array
     computations.
 
+=== Text handling
+
+Unicode.org::
+https://unicode.org/
+Unicode standardisation happens here.  I've found the 
+https://unicode.org/glossary/[Unicode glossary] especially useful, the
+https://www.unicode.org/ucd/[Unicode database] may also be helpful.
+
+The UTF-8 Manifesto::
+https://utf8everywhere.org/
+Not a library, but a description of some best practices and calls out some
+worst-practices also.
+
 == Libraries
 
 === Message Passing
@@ -121,6 +134,14 @@ SHIM::
 https://github.com/ShimProfiler/SHIM
 SHIM is a tool for high-resolution sampling of CPU performance counters.  It
 may be more useful as a basis of our own implementation than useful as-is.
+
+=== Text handling
+
+libunistring::
+https://www.gnu.org/software/libunistring/[libunistring] is the Unicode
+library with the clearest documentation.
+It might not do everything that we eventually want but it looks like the
+best place to start.
 
 == Tools
 
