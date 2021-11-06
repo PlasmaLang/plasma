@@ -79,25 +79,41 @@ static int run(Options & options)
     }
 }
 
+static std::string get_file_extension(const std::string & filename) {
+    size_t pos = filename.find_last_of('.');
+    if (pos == std::string::npos) {
+        return "";
+    }
+
+    return filename.substr(pos);
+}
+
 static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
 {
     GCTracer gc(gc0);
     Library * builtins = pz.new_library(String("Builtin"), gc);
     setup_builtins(builtins, pz);
 
-    for (auto & filename : options.pzlibs()) {
-        Root<Vector<String>> names(gc);
-        {
-            NoGCScope no_gc(gc);
-            names = new(no_gc) Vector<String>(no_gc);
-            no_gc.abort_if_oom("setup_program");
-        }
-        Root<Library> lib(gc);
-        if (!read(pz, filename, lib, names.ptr(), gc)) {
+    for (const std::string & filename : options.pzlibs()) {
+        std::string extension = get_file_extension(filename);
+        if (extension == ".pz") {
+            Root<Vector<String>> names(gc);
+            {
+                NoGCScope no_gc(gc);
+                names = new(no_gc) Vector<String>(no_gc);
+                no_gc.abort_if_oom("setup_program");
+            }
+            Root<Library> lib(gc);
+            if (!read(pz, filename, lib, names.ptr(), gc)) {
+                return false;
+            }
+            for (auto& name : names.get()) {
+                pz.add_library(name, lib.ptr());
+            }
+        } else {
+            fprintf(stderr, "Library with unknown extension: %s\n",
+                    filename.c_str());
             return false;
-        }
-        for (auto& name : names.get()) {
-            pz.add_library(name, lib.ptr());
         }
     }
 
