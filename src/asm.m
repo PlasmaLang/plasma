@@ -526,14 +526,5 @@ item_expect_closure(File, Pred, ID) =
         unexpected(File, Pred, "Expected closure")
     ).
 
-:- func item_expect_import(string, string, pz_item_id) = pzi_id.
-
-item_expect_import(File, Pred, ID) =
-    ( if ID = pzii_import(Import) then
-        Import
-    else
-        unexpected(File, Pred, "Expected import")
-    ).
-
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
