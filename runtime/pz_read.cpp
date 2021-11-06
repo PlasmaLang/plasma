@@ -380,7 +380,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                 Root<Closure> closure(gc);
                 setup_hack(gc, closure);
                 imported->import_closures.push_back(closure.ptr());
-                return true;
+                break;
             }
             fprintf(stderr,
                     "Foreign procedure not found: %s.%s\n",
