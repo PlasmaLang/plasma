@@ -41,7 +41,6 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz.cpp \
 		runtime/pz_builtin.cpp \
 		runtime/pz_code.cpp \
-		runtime/pz_cxx_future.cpp \
 		runtime/pz_data.cpp \
 		runtime/pz_generic_closure.cpp \
 		runtime/pz_generic_builtin.cpp \
