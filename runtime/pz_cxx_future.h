@@ -2,7 +2,7 @@
  * PZ C++ future library functions.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019 Plasma Team
+ * Copyright (C) 2018-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file contains library code that has been added to a more recent C++
@@ -45,6 +45,11 @@ class Optional
         set(val);
     }
 
+    Optional(T && val) : m_present(true)
+    {
+        value() = std::move(val);
+    }
+
     Optional(const Optional & other) : m_present(false)
     {
         if (other.hasValue()) {
@@ -55,8 +60,7 @@ class Optional
     Optional(Optional && other) : m_present(false)
     {
         if (other.hasValue()) {
-            set(other.value());
-            other.m_present = false;
+            set(other.release());
         }
     }
 
@@ -77,8 +81,7 @@ class Optional
     Optional & operator=(Optional && other)
     {
         if (this != &other && other.hasValue()) {
-            set(other.value());
-            other.m_present = false;
+            set(other.release());
         }
 
         return *this;
@@ -98,6 +101,12 @@ class Optional
     {
         clear();
         new (m_data) T(val);
+        m_present = true;
+    }
+
+    void set(T && val) {
+        clear();
+        raw() = std::move(val);
         m_present = true;
     }
 
