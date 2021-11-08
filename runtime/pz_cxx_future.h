@@ -104,27 +104,36 @@ class Optional
     T & value()
     {
         assert(m_present);
-        return reinterpret_cast<T &>(m_data);
+        return raw();
     }
 
     const T & value() const
     {
         assert(m_present);
-        return reinterpret_cast<const T &>(m_data);
+        return raw();
     }
 
     T && release()
     {
         assert(m_present);
         m_present = false;
-        return std::move(reinterpret_cast<T &>(m_data));
+        return std::move(raw());
     }
 
     void clear()
     {
         if (m_present) {
-            reinterpret_cast<T *>(m_data)->~T();
+            raw().~T();
         }
+    }
+
+  private:
+    // Access the storage as the correct type without an assertion.
+    T & raw() {
+        return reinterpret_cast<T &>(m_data);
+    }
+    const T & raw() const {
+        return reinterpret_cast<const T &>(m_data);
     }
 };
 
