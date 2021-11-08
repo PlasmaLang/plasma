@@ -134,6 +134,7 @@ class Optional
         if (m_present) {
             raw().~T();
         }
+        m_present = false;
     }
 
   private:
