@@ -71,8 +71,12 @@ class Optional
 
     Optional & operator=(const Optional & other)
     {
-        if (this != &other && other.hasValue()) {
-            set(other.value());
+        if (this != &other) {
+            if (other.hasValue()) {
+                set(other.value());
+            } else {
+                clear();
+            }
         }
 
         return *this;
@@ -80,8 +84,12 @@ class Optional
 
     Optional & operator=(Optional && other)
     {
-        if (this != &other && other.hasValue()) {
-            set(other.release());
+        if (this != &other) { 
+            if (other.hasValue()) {
+                set(other.release());
+            } else {
+                clear();
+            }
         }
 
         return *this;
