@@ -40,37 +40,31 @@ class Optional
     constexpr Optional() {}
 
     // Implicit constructor
-    Optional(const T & val)
-    {
+    Optional(const T & val) {
         set(val);
     }
 
-    Optional(T && val) : m_present(true)
-    {
+    Optional(T && val) : m_present(true) {
         value() = std::move(val);
     }
 
-    Optional(const Optional & other)
-    {
+    Optional(const Optional & other) {
         if (other.hasValue()) {
             set(other.value());
         }
     }
 
-    Optional(Optional && other)
-    {
+    Optional(Optional && other) {
         if (other.hasValue()) {
             set(other.release());
         }
     }
 
-    ~Optional()
-    {
+    ~Optional() {
         clear();
     }
 
-    Optional & operator=(const Optional & other)
-    {
+    Optional & operator=(const Optional & other) {
         if (this != &other) {
             if (other.hasValue()) {
                 set(other.value());
@@ -82,8 +76,7 @@ class Optional
         return *this;
     }
 
-    Optional & operator=(Optional && other)
-    {
+    Optional & operator=(Optional && other) {
         if (this != &other) { 
             if (other.hasValue()) {
                 set(other.release());
@@ -95,18 +88,15 @@ class Optional
         return *this;
     }
 
-    static constexpr Optional Nothing()
-    {
+    static constexpr Optional Nothing() {
         return Optional();
     }
 
-    bool hasValue() const
-    {
+    bool hasValue() const {
         return m_present;
     }
 
-    void set(const T & val)
-    {
+    void set(const T & val) {
         clear();
         new (m_data) T(val);
         m_present = true;
@@ -118,27 +108,23 @@ class Optional
         m_present = true;
     }
 
-    T & value()
-    {
+    T & value() {
         assert(m_present);
         return raw();
     }
 
-    const T & value() const
-    {
+    const T & value() const {
         assert(m_present);
         return raw();
     }
 
-    T && release()
-    {
+    T && release() {
         assert(m_present);
         m_present = false;
         return std::move(raw());
     }
 
-    void clear()
-    {
+    void clear() {
         if (m_present) {
             raw().~T();
         }
