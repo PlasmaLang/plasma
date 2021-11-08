@@ -26,7 +26,7 @@ template <typename T>
 class Optional
 {
    private:
-    bool m_present;
+    bool m_present = false;
 
     /*
      * AlaskanEmily suggested this trick, allocate space for T here and use
@@ -37,10 +37,10 @@ class Optional
     alignas(alignof(T)) char m_data[sizeof(T)] = {0};
 
    public:
-    constexpr Optional() : m_present(false) {}
+    constexpr Optional() {}
 
     // Implicit constructor
-    Optional(const T & val) : m_present(false)
+    Optional(const T & val)
     {
         set(val);
     }
@@ -50,14 +50,14 @@ class Optional
         value() = std::move(val);
     }
 
-    Optional(const Optional & other) : m_present(false)
+    Optional(const Optional & other)
     {
         if (other.hasValue()) {
             set(other.value());
         }
     }
 
-    Optional(Optional && other) : m_present(false)
+    Optional(Optional && other)
     {
         if (other.hasValue()) {
             set(other.release());
