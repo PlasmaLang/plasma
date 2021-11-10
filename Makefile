@@ -130,7 +130,7 @@ install_progs : install_dirs progs
 
 .PHONY: install_docs
 install_docs : install_dirs docs
-	cd docs/ ; for FILE in *.txt *.html; do \
+	cd docs/ ; for FILE in $$(find -name '*.txt' -o -name '*.html' ); do \
 		$(INSTALL) $$FILE $(DEST_DIR)$(DOCDIR); \
 	done
 	if [ -f docs/index.html ]; then \
