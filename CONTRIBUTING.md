@@ -16,7 +16,6 @@ contributors.
   * Build scripts, tests, and sample code: Unlicense
 * No contributor agreement is required, you retain the copyright for your
   contribution.
-* Add your name to the AUTHORS file (for copyright tracking).
 * Please follow the style guides as much as possible (see below)
 * Please format your log messages following the log message style (see
   below)

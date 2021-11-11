@@ -7,7 +7,7 @@ The code except for lex.* are:
     Copyright (C) 2015-2021 Plasma Team
     Distributed under the terms of the MIT License see LICENSE.code
 
-    The file AUTHORS indicates the members of Plasma Team
+    The `git log` indicates the members of Plasma Team
 
 
 src/lex.*
