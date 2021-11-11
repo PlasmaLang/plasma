@@ -10,9 +10,12 @@ TOP=../..
 TOOLS=$(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
 
 .PHONY: all
-all: $(wildcard *.p) BUILD.plz \
+all: $(wildcard *.p) BUILD.plz foreign \
 		$(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
 	$(TOP)/src/plzbuild --rebuild
+
+.PHONY: foreign
+foreign : import_function.so
 
 import_function.pz : all
 
@@ -37,10 +40,24 @@ import_function.pz : all
 
 .PHONY: clean
 clean:
+	rm -rf *.so *.o
 	rm -rf *.pz *.diff *.log *.trace
 	rm -rf _build
 
 .PHONY: realclean
 realclean: clean
 	rm -rf *.plasma-dump_*
+
+# Temporary
+%.o : %.c
+	gcc -fpic -o $@ -c $<
+%.o : %.cpp
+	g++ -fpic -o $@ -c $<
+
+import_function.so : import_function.o
+	gcc -fpic -shared -o $@ $<
+
+import_function.out : import_function.pz import_function.so \
+		$(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $< > $@
 

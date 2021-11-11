@@ -42,6 +42,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_builtin.cpp \
 		runtime/pz_code.cpp \
 		runtime/pz_data.cpp \
+		runtime/pz_foreign.cpp \
 		runtime/pz_generic_closure.cpp \
 		runtime/pz_generic_builtin.cpp \
 		runtime/pz_generic_run.cpp \
@@ -176,7 +177,7 @@ src/plzlnk : .mer_progs
 	touch .mer_progs
 
 runtime/plzrun : $(OBJECTS)
-	$(CXX) $(CFLAGS) -o $@ $^
+	$(CXX) $(CFLAGS) -o $@ $^ -ldl
 
 %.o : %.c runtime/pz_config.h
 	$(CC) $(CFLAGS) -o $@ -c $<

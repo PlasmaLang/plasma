@@ -15,6 +15,7 @@
 #include "pz_closure.h"
 #include "pz_code.h"
 #include "pz_data.h"
+#include "pz_foreign.h"
 #include "pz_format.h"
 #include "pz_interp.h"
 #include "pz_io.h"
@@ -209,6 +210,14 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     Optional<EntryClosure> entry_closure;
     if (!read_options(read.file, entry_closure)) return false;
+
+    Optional<Foreign> foreign = Foreign::maybe_load(filename);
+    if (foreign.hasValue()) {
+        if (!foreign.value().init()) {
+            fprintf(stderr, "Couldn't initialise foreign code\n");
+            return false;
+        }
+    }
 
     uint32_t num_names;
     if (!read.file.read_uint32(&num_names)) return false;
