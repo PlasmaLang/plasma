@@ -41,7 +41,7 @@ import_function.pz : all
 .PHONY: clean
 clean:
 	rm -rf *.so *.o
-	rm -rf *.pz *.diff *.log *.trace
+	rm -rf *.pz *.diff *.log *.trace *.out *.outs
 	rm -rf _build
 
 .PHONY: realclean
