@@ -18,6 +18,7 @@
 
 #include "pz_cxx_future.h"
 #include "pz_string.h"
+#include "pz_gc_util.h"
 
 #include "pz_foreign.h"
 
@@ -30,27 +31,6 @@ Foreign::Foreign(void * handle, foreign_library_cxx_function init_fn)
     , m_init_fn(init_fn)
 {}
 
-
-Foreign::Foreign(Foreign && other)
-    : m_handle(other.m_handle)
-    , m_init_fn(other.m_init_fn)
-    , m_closures(std::move(other.m_closures))
-{
-    other.m_handle = nullptr;
-}
-
-const Foreign &
-Foreign::operator=(Foreign && other) {
-    assert(!m_handle);
-
-    m_handle = other.m_handle;
-    m_init_fn = other.m_init_fn;
-    m_closures = std::move(other.m_closures);
-
-    other.m_handle = nullptr;
-
-    return *this;
-}
 
 static std::string replace_extension(const std::string & filename,
         const char * extension)
@@ -97,8 +77,10 @@ Foreign::~Foreign() {
 }
 
 // static
-Optional<Foreign>
-Foreign::maybe_load(const std::string & filename_) {
+bool
+Foreign::maybe_load(const std::string & filename_, GCTracer &gc,
+         Root<Foreign> &foreign)
+{
     std::string filename = replace_extension(filename_, ".so");
 
     // Check that the library file exists, we need to do this ourselves
@@ -106,8 +88,8 @@ Foreign::maybe_load(const std::string & filename_) {
     struct stat statbuf;
     if (-1 == stat(filename.c_str(), &statbuf)) {
         if (errno == ENOENT) {
-            // The file doesn't exist, return no foreign code library
-            return Optional<Foreign>();
+            // The file doesn't exist
+            return false;
         }
         // Some other error,
         perror(filename.c_str());
@@ -125,7 +107,7 @@ Foreign::maybe_load(const std::string & filename_) {
     void * handle = dlopen(path.c_str(), RTLD_NOW | RTLD_LOCAL);
     if (!handle) {
         fprintf(stderr, "%s\n", dlerror());
-        return Optional<Foreign>();
+        return false;
     }
 
     dlerror(); // Clear the error state.
@@ -140,10 +122,11 @@ Foreign::maybe_load(const std::string & filename_) {
             fprintf(stderr, "%s: Initial function is null\n",
                     filename.c_str());
         }
-        return Optional<Foreign>();
+        return false;
     }
 
-    return Optional<Foreign>(Foreign(handle, init_fn));
+    foreign = new(gc) Foreign(handle, init_fn);
+    return true;
 }
 
 bool
@@ -192,6 +175,17 @@ static void make_builtin(String name, pz_builtin_c_func c_func, GCTracer & gc,
     make_ccall_instr(proc->code(), c_func);
 
     closure = new (gc) Closure(proc->code(), nullptr);
+}
+
+void
+Foreign::do_trace(HeapMarkState * marker) const {
+    for (auto m : m_closures) {
+        marker->mark_root(m.first.ptr());
+        for (auto c : m.second) {
+            marker->mark_root(c.first.ptr());
+            marker->mark_root(c.second);
+        }
+    }
 }
 
 bool

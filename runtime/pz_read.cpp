@@ -79,7 +79,7 @@ static bool
 read_imports(ReadInfo                &read,
              unsigned                 num_imports,
              Imported                *imported,
-             const Optional<Foreign> &foreign,
+             const Foreign           *foreign,
              GCTracer                &gc);
 
 static bool
@@ -212,9 +212,9 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     Optional<EntryClosure> entry_closure;
     if (!read_options(read.file, entry_closure)) return false;
 
-    Optional<Foreign> foreign = Foreign::maybe_load(filename);
-    if (foreign.hasValue()) {
-        if (!foreign.value().init(gc)) {
+    Root<Foreign> foreign(gc);
+    if (Foreign::maybe_load(filename, gc, foreign)) {
+        if (!foreign->init(gc)) {
             fprintf(stderr, "Couldn't initialise foreign code\n");
             return false;
         }
@@ -251,7 +251,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     Root<Imported> imported(gc, new (gc) Imported(num_imports));
 
-    if (!read_imports(read, num_imports, imported.ptr(), foreign, gc)) {
+    if (!read_imports(read, num_imports, imported.ptr(), foreign.ptr(), gc)) {
         return false;
     }
 
@@ -345,7 +345,7 @@ static bool read_options(BinaryInput & file, Optional<EntryClosure> & mbEntry)
 
 static bool read_imports(ReadInfo & read, unsigned num_imports,
                          Imported * imported,
-                         const Optional<Foreign> & foreign,
+                         const Foreign * foreign,
                          GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
@@ -396,8 +396,7 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                 imported->import_closures.push_back(closure.ptr());
                 break;
             }
-            Closure *closure =
-                foreign.value().lookup_foreign_proc(module_name, name);
+            Closure *closure = foreign->lookup_foreign_proc(module_name, name);
             if (!closure) {
                 fprintf(stderr,
                         "Foreign procedure not found: %s.%s\n",
