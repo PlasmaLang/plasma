@@ -150,7 +150,8 @@ read_exports(ReadInfo       &read,
              GCTracer       &gc);
 
 bool
-read(PZ &pz, const std::string &filename, Root<Library> &library,
+read(PZ &pz, const std::string &bytecode_filename,
+     const Optional<std::string> &native_filename, Root<Library> &library,
      Vector<String> * names, GCTracer &gc)
 {
     ReadInfo read(pz);
@@ -163,8 +164,8 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     uint32_t num_closures;
     uint32_t num_exports;
 
-    if (!read.file.open(filename)) {
-        perror(filename.c_str());
+    if (!read.file.open(bytecode_filename)) {
+        perror(bytecode_filename.c_str());
         return false;
     }
 
@@ -174,7 +175,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
             fprintf(stderr,
                     "%s: Cannot execute plasma objects, "
                     "link objects into a program first.\n",
-                    filename.c_str());
+                    bytecode_filename.c_str());
             return false;
         case PZ_PROGRAM_MAGIC_NUMBER:
         case PZ_LIBRARY_MAGIC_NUMBER:
@@ -182,7 +183,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
         default:
             fprintf(stderr,
                     "%s: bad magic value, is this a PZ file?\n",
-                    filename.c_str());
+                    bytecode_filename.c_str());
             return false;
     }
 
@@ -195,7 +196,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
         {
             fprintf(stderr,
                     "%s: bad version string, is this a PZ file?\n",
-                    filename.c_str());
+                    bytecode_filename.c_str());
             return false;
         }
     }
@@ -213,8 +214,10 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
     if (!read_options(read.file, entry_closure)) return false;
 
     Root<Foreign> foreign(gc);
-    if (Foreign::maybe_load(filename, gc, foreign)) {
-        if (!foreign->init(gc)) {
+    if (native_filename.hasValue()) {
+        if (!Foreign::maybe_load(native_filename.value(), gc, foreign) ||
+            !foreign->init(gc))
+        {
             fprintf(stderr, "Couldn't initialise foreign code\n");
             return false;
         }
@@ -285,11 +288,11 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
      */
     uint8_t extra_byte;
     if (read.file.read_uint8(&extra_byte)) {
-        fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
+        fprintf(stderr, "%s: junk at end of file\n", bytecode_filename.c_str());
         return false;
     }
     if (!read.file.is_at_eof()) {
-        fprintf(stderr, "%s: junk at end of file\n", filename.c_str());
+        fprintf(stderr, "%s: junk at end of file\n", bytecode_filename.c_str());
         return false;
     }
 #endif

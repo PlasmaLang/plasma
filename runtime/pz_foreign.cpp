@@ -32,21 +32,6 @@ Foreign::Foreign(void * handle, foreign_library_cxx_function init_fn)
 {}
 
 
-static std::string replace_extension(const std::string & filename,
-        const char * extension)
-{
-    size_t pos = filename.find_last_of('.');
-    std::string base_name;
-    if (pos == std::string::npos) {
-        // There is no extension to remove
-        base_name = filename;
-    } else {
-        base_name = filename.substr(0, pos);
-    }
-
-    return std::move(base_name) + extension;
-}
-
 static std::string safe_getcwd() {
     size_t len = 64;
     std::unique_ptr<char[]> buffer(new char[len]);
@@ -75,11 +60,9 @@ Foreign::~Foreign() {
 
 // static
 bool
-Foreign::maybe_load(const std::string & filename_, GCTracer &gc,
+Foreign::maybe_load(const std::string & filename, GCTracer &gc,
          Root<Foreign> &foreign)
 {
-    std::string filename = replace_extension(filename_, ".so");
-
     // Check that the library file exists, we need to do this ourselves
     // because dlload won't tell us.
     struct stat statbuf;

@@ -19,6 +19,13 @@ foreign : import_function.so
 
 import_function.pz : all
 
+import_function.so : import_function.o
+	gcc -fpic -shared -o $@ $<
+
+import_function.out : import_function.pz import_function.so \
+		$(TOP)/runtime/plzrun
+	$(TOP)/runtime/plzrun $<:import_function.so > $@
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^
@@ -53,11 +60,4 @@ realclean: clean
 	gcc -fpic -o $@ -c $<
 %.o : %.cpp
 	g++ -fpic -o $@ -c $<
-
-import_function.so : import_function.o
-	gcc -fpic -shared -o $@ $<
-
-import_function.out : import_function.pz import_function.so \
-		$(TOP)/runtime/plzrun
-	$(TOP)/runtime/plzrun $< > $@
 
