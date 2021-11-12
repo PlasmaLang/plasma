@@ -406,7 +406,7 @@ do_write_dependency_file(Options, DepInfo, BuildFile, !IO) :-
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
-    format(File, "build %s : plzlink %s\n",
+    format(File, "build %s : plzlink %s | $path/plzlnk\n",
         [s(ProgFile), s(string_join(" ", Objects))], !IO),
     format(File, "    name = %s\n\n",
         [s(nq_name_to_string(ProgName))], !IO),
@@ -418,7 +418,7 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
         !IO) :-
     % If we can detect import errors when building dependencies we can
     % remove it from this step and avoid some extra rebuilds.
-    format(File, "build %s : plzc ../%s | %s || %s\n",
+    format(File, "build %s : plzc ../%s | $path/plzc %s || %s\n",
         [s(ObjectFile), s(SourceFile),
          s(import_whitelist_file_no_directroy), s(DepFile)], !IO),
     format(File, "    dyndep = %s\n",
@@ -427,7 +427,7 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
         [s(import_whitelist_file_no_directroy)], !IO),
     format(File, "    name = %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO),
-    format(File, "build %s : plzdep ../%s | %s\n",
+    format(File, "build %s : plzdep ../%s | $path/plzc %s\n",
         [s(DepFile), s(SourceFile), s(import_whitelist_file_no_directroy)],
         !IO),
     format(File, "    import_whitelist = %s\n",
@@ -438,13 +438,13 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
         [s(q_name_to_string(ModuleName))], !IO).
 write_target(File,
         dt_interface(ModuleName, InterfaceFile, SourceFile, DepFile), !IO) :-
-    format(File, "build %s : plzi ../%s || %s\n",
+    format(File, "build %s : plzi ../%s | $path/plzc || %s\n",
         [s(InterfaceFile), s(SourceFile), s(DepFile)], !IO),
     format(File, "    dyndep = %s\n",
         [s(DepFile)], !IO),
     format(File, "    name = %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO),
-    format(File, "build %s : plzidep ../%s\n",
+    format(File, "build %s : plzidep ../%s | $path/plzc \n",
         [s(DepFile), s(SourceFile)], !IO),
     format(File, "    target = %s\n",
         [s(InterfaceFile)], !IO),
@@ -452,7 +452,7 @@ write_target(File,
         [s(q_name_to_string(ModuleName))], !IO).
 write_target(File,
         dt_typeres(ModuleName, TyperesFile, SourceFile), !IO) :-
-    format(File, "build %s : plztyperes ../%s\n",
+    format(File, "build %s : plztyperes ../%s | $path/plzc \n",
         [s(TyperesFile), s(SourceFile)], !IO),
     format(File, "    name = %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO).
