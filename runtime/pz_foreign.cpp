@@ -10,12 +10,15 @@
 
 #include <string>
 #include <memory>
+#include <unordered_map>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
 #include <dlfcn.h>
 
 #include "pz_cxx_future.h"
+#include "pz_string.h"
+
 #include "pz_foreign.h"
 
 #define PZ_INIT_FOREIGN_CODE "pz_init_foreign_code"
@@ -24,13 +27,14 @@ namespace pz {
 
 Foreign::Foreign(void * handle, foreign_library_cxx_function init_fn)
     : m_handle(handle)
-    , m_init_fn(init_fn) 
+    , m_init_fn(init_fn)
 {}
 
 
-Foreign::Foreign(Foreign && other) 
+Foreign::Foreign(Foreign && other)
     : m_handle(other.m_handle)
-    , m_init_fn(other.m_init_fn) 
+    , m_init_fn(other.m_init_fn)
+    , m_closures(std::move(other.m_closures))
 {
     other.m_handle = nullptr;
 }
@@ -41,6 +45,7 @@ Foreign::operator=(Foreign && other) {
 
     m_handle = other.m_handle;
     m_init_fn = other.m_init_fn;
+    m_closures = std::move(other.m_closures);
 
     other.m_handle = nullptr;
 
@@ -84,7 +89,10 @@ static std::string safe_getcwd() {
 
 Foreign::~Foreign() {
     if (m_handle) {
-        dlclose(m_handle);
+        // XXX For now we leak the memory mappings, this should be managed
+        // by the GC though.  Particularlly that closures may point to code
+        // even if Foreign and Library go away.
+        // dlclose(m_handle);
     }
 }
 
@@ -121,7 +129,7 @@ Foreign::maybe_load(const std::string & filename_) {
     }
 
     dlerror(); // Clear the error state.
-    foreign_library_cxx_function init_fn = 
+    foreign_library_cxx_function init_fn =
         reinterpret_cast<foreign_library_cxx_function>(
                 dlsym(handle, PZ_INIT_FOREIGN_CODE));
     if (!init_fn) {
@@ -139,9 +147,63 @@ Foreign::maybe_load(const std::string & filename_) {
 }
 
 bool
-Foreign::init() {
+Foreign::init(GCTracer & gc) {
     assert(m_init_fn);
-    return m_init_fn(*this);
+    return m_init_fn(this, &gc);
+}
+
+Closure *
+Foreign::lookup_foreign_proc(String module_name, String closure_name) const {
+    auto module = m_closures.find(module_name);
+    if (module == m_closures.end()) {
+        return nullptr;
+    }
+    auto closure = module->second.find(closure_name);
+    if (closure == module->second.end()) {
+        return nullptr;
+    }
+    return closure->second;
+}
+
+static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
+{
+    ImmediateValue immediate_value;
+    unsigned       offset = 0;
+
+    immediate_value.word = (uintptr_t)c_func;
+    offset +=
+        write_instr(bytecode, offset, PZI_CCALL, IMT_PROC_REF, immediate_value);
+    offset += write_instr(bytecode, offset, PZI_RET);
+
+    return offset;
+}
+
+static void make_builtin(String name, pz_builtin_c_func c_func, GCTracer & gc,
+        Root<Closure> &closure)
+{
+    unsigned size = make_ccall_instr(nullptr, nullptr);
+
+    Root<Proc> proc(gc);
+    {
+        NoGCScope nogc(gc);
+        proc = new (nogc) Proc(nogc, name, true, size);
+        nogc.abort_if_oom("setting up foreign code");
+    }
+    make_ccall_instr(proc->code(), c_func);
+
+    closure = new (gc) Closure(proc->code(), nullptr);
+}
+
+bool
+Foreign::register_foreign_code(String module, String proc,
+        pz_builtin_c_func c_func, GCTracer & gc)
+{
+    Root<Closure> closure(gc);
+    make_builtin(proc, c_func, gc, closure);
+
+    m_closures[module][proc] = closure.ptr();
+
+    return true;
 }
 
 }  // namespace pz

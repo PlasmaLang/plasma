@@ -9,6 +9,9 @@ module ImportFunction
 func getpid() -> Int
     foreign
 
+func foo() uses IO
+    foreign
+
 entrypoint
 func hello() uses IO -> Int {
     print!("Hello world\n")
@@ -22,6 +25,10 @@ func hello() uses IO -> Int {
     } else {
         print!("My pid changed, that's weird\n")
     }
+
+    print!("Doing another foreign call\n")
+    foo!()
+    print!("done\n")
 
     return 0
 }

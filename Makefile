@@ -176,8 +176,10 @@ src/plzlnk : .mer_progs
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
+# We need -rdynamic here so that the foreign code libraries can resolve
+# symbols in the runtime's executable.
 runtime/plzrun : $(OBJECTS)
-	$(CXX) $(CFLAGS) -o $@ $^ -ldl
+	$(CXX) $(CFLAGS) -o $@ $^ -ldl -rdynamic
 
 %.o : %.c runtime/pz_config.h
 	$(CC) $(CFLAGS) -o $@ -c $<

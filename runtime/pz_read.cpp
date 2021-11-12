@@ -76,10 +76,11 @@ static bool
 read_options(BinaryInput &file, Optional<EntryClosure> &entry_closure);
 
 static bool
-read_imports(ReadInfo    &read,
-             unsigned     num_imports,
-             Imported    *imported,
-             GCTracer    &gc);
+read_imports(ReadInfo                &read,
+             unsigned                 num_imports,
+             Imported                *imported,
+             const Optional<Foreign> &foreign,
+             GCTracer                &gc);
 
 static bool
 read_structs(ReadInfo       &read,
@@ -213,7 +214,7 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     Optional<Foreign> foreign = Foreign::maybe_load(filename);
     if (foreign.hasValue()) {
-        if (!foreign.value().init()) {
+        if (!foreign.value().init(gc)) {
             fprintf(stderr, "Couldn't initialise foreign code\n");
             return false;
         }
@@ -250,7 +251,9 @@ read(PZ &pz, const std::string &filename, Root<Library> &library,
 
     Root<Imported> imported(gc, new (gc) Imported(num_imports));
 
-    if (!read_imports(read, num_imports, imported.ptr(), gc)) return false;
+    if (!read_imports(read, num_imports, imported.ptr(), foreign, gc)) {
+        return false;
+    }
 
     if (!read_structs(read, num_structs, lib_load.ptr(), gc)) return false;
 
@@ -341,7 +344,9 @@ static bool read_options(BinaryInput & file, Optional<EntryClosure> & mbEntry)
 }
 
 static bool read_imports(ReadInfo & read, unsigned num_imports,
-                         Imported * imported, GCTracer &gc)
+                         Imported * imported,
+                         const Optional<Foreign> & foreign,
+                         GCTracer &gc)
 {
     for (uint32_t i = 0; i < num_imports; i++) {
         uint8_t type_;
@@ -391,10 +396,16 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                 imported->import_closures.push_back(closure.ptr());
                 break;
             }
-            fprintf(stderr,
-                    "Foreign procedure not found: %s.%s\n",
-                    module_name.c_str(), name.c_str());
-            return false;
+            Closure *closure =
+                foreign.value().lookup_foreign_proc(module_name, name);
+            if (!closure) {
+                fprintf(stderr,
+                        "Foreign procedure not found: %s.%s\n",
+                        module_name.c_str(), name.c_str());
+                return false;
+            }
+            imported->import_closures.push_back(closure);
+            break;
           }
         }
     }
