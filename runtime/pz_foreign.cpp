@@ -69,10 +69,7 @@ static std::string safe_getcwd() {
 
 Foreign::~Foreign() {
     if (m_handle) {
-        // XXX For now we leak the memory mappings, this should be managed
-        // by the GC though.  Particularlly that closures may point to code
-        // even if Foreign and Library go away.
-        // dlclose(m_handle);
+        dlclose(m_handle);
     }
 }
 
@@ -162,7 +159,7 @@ static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
 }
 
 static void make_builtin(String name, pz_builtin_c_func c_func, GCTracer & gc,
-        Root<Closure> &closure)
+        Foreign *foreign, Root<Closure> &closure)
 {
     unsigned size = make_ccall_instr(nullptr, nullptr);
 
@@ -174,7 +171,10 @@ static void make_builtin(String name, pz_builtin_c_func c_func, GCTracer & gc,
     }
     make_ccall_instr(proc->code(), c_func);
 
-    closure = new (gc) Closure(proc->code(), nullptr);
+    // Use foreign as the closure's unused data pointer to ensure that the
+    // Foreign object is referenced while closures may still point to its
+    // code.
+    closure = new (gc) Closure(proc->code(), foreign);
 }
 
 void
@@ -193,7 +193,7 @@ Foreign::register_foreign_code(String module, String proc,
         pz_builtin_c_func c_func, GCTracer & gc)
 {
     Root<Closure> closure(gc);
-    make_builtin(proc, c_func, gc, closure);
+    make_builtin(proc, c_func, gc, this, closure);
 
     m_closures[module][proc] = closure.ptr();
 
