@@ -399,6 +399,12 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
                 imported->import_closures.push_back(closure.ptr());
                 break;
             }
+            if (!foreign) {
+                fprintf(stderr,
+                        "No foreign code provided for %s\n",
+                        module_name.c_str());
+                return false;
+            }
             Closure *closure = foreign->lookup_foreign_proc(module_name, name);
             if (!closure) {
                 fprintf(stderr,
