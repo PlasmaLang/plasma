@@ -26,6 +26,13 @@ import_function.out : import_function.pz import_function.so \
 		$(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $<:import_function.so > $@
 
+.PHONY: import_function.gctest
+import_function.gctest : import_function.pz import_function.so \
+		$(TOP)/runtime/plzrun
+	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun \
+		import_function.pz:import_function.so \
+		> /dev/null
+
 .PHONY: %.test
 %.test : %.exp %.outs
 	diff -u $^
