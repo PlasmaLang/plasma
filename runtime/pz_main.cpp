@@ -79,15 +79,6 @@ static int run(Options & options)
     }
 }
 
-static std::string get_file_extension(const std::string & filename) {
-    size_t pos = filename.find_last_of('.');
-    if (pos == std::string::npos) {
-        return "";
-    }
-
-    return filename.substr(pos);
-}
-
 static void split_filenames(const std::string & filenames,
         std::string & bytecode, Optional<std::string> & native) 
 {
