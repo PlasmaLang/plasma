@@ -13,7 +13,16 @@
 % Builtins may include functions, types and their constructors, interfaces
 % and interface implementations.
 %
-% There are two types of builtin function:
+% There are two main types of builtin function, with sub-types:
+%
+%  + Non-foreign
+%  + Foreign
+%
+% Non-foreign
+% ===========
+%
+% Non-foreign builtins are completely handled by the compiler, by the time
+% the runtime is involved they look like regular Plasma code.
 %
 % Core builtins
 % -------------
@@ -28,16 +37,30 @@
 %
 % This covers arithmetic operators and other small "functions" that are
 % equivalent to one or maybe 2-3 PZ instructions.  core_to_pz will convert
-% calls to these functions into their native PZ bytecodes.
+% calls to these functions into their native PZ bytecodes.  It also
+% generates function bodies for these so higher-order references can call to
+% them.
 %
-% Non-foreign builtin
-% -------------------
+% Foreign
+% =======
+%
+% The compiler passes calls to foreign builtins through to the runtime where
+% they look like references to the imported Builtin module.  pz_builtin.cpp
+% decides how each foreign builtin is implemented.
+%
+% Runtime inline
+% --------------
 %
 % These builtins are stored as a sequence of PZ instructions within the
 % runtime, they're executed just like normal procedures, their definitions
 % are simply provided by the runtime rather than a .pz file.
 %
-% The runtime decides which builtins are non-foreign and which are foreign.
+% PZ builtins
+% -----------
+%
+% Just like runtime inline builtins, these are a series of PZ instructions.
+% The difference is they arn't callable by the programmer, usually being
+% responsible for data tagging.
 %
 % Foreign builtins
 % ----------------
@@ -47,13 +70,9 @@
 % that will cause the C procedure built into the RTS to be executed.  The
 % specifics depend on which pz_run_*.c file is used.
 %
-% The runtime decides which builtins are non-foreign and which are foreign.
-%
-% PZ builtins
-% -----------
-%
-% Builtins that are not callable Plasma functions, these are PZ procedures
-% and are either foreign or non-foreign.
+% They are very similar to foreign code generally, but marked as an import
+% rather than foreign in the PZ bytecode files since they have a different
+% module name.
 %
 %-----------------------------------------------------------------------%
 
