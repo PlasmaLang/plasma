@@ -9,6 +9,9 @@ TOP=../..
 
 TOOLS=$(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
 
+CC=clang
+CXX=clang++
+
 .PHONY: all
 all: $(wildcard *.p) BUILD.plz foreign \
 		$(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
@@ -20,7 +23,7 @@ foreign : import_function.so
 import_function.pz : all
 
 import_function.so : import_function.o
-	gcc -fpic -shared -o $@ $<
+	$(CC) -fpic -shared -o $@ $<
 
 import_function.out : import_function.pz import_function.so \
 		$(TOP)/runtime/plzrun
@@ -64,7 +67,7 @@ realclean: clean
 
 # Temporary
 %.o : %.c
-	gcc -fpic -o $@ -c $<
+	$(CC) -fpic -o $@ -c $<
 %.o : %.cpp
-	g++ -fpic -o $@ -c $<
+	$(CXX) -fpic -o $@ -c $<
 
