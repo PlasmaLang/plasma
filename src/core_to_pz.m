@@ -226,7 +226,10 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
 should_generate(Function) = Generate :-
     IsUsed = func_get_used(Function),
     ( IsUsed = used_probably,
-        ( if func_builtin_type(Function, BuiltinType) then
+        CodeType = func_get_code_type(Function),
+        ( CodeType = ct_foreign,
+            Generate = need_extern_local
+        ; CodeType = ct_builtin(BuiltinType),
             ( BuiltinType = bit_core,
                 Generate = need_codegen
             ; BuiltinType = bit_inline_pz,
@@ -236,10 +239,8 @@ should_generate(Function) = Generate :-
                 Generate = need_inline_pz_and_codegen
             ; BuiltinType = bit_rts,
                 Generate = need_extern_import
-            ; BuiltinType = foreign,
-                Generate = need_extern_local
             )
-        else
+        ; CodeType = ct_plasma,
             Imported = func_get_imported(Function),
             ( Imported = i_local,
                 Generate = need_codegen

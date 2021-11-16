@@ -106,9 +106,7 @@
     --->    bit_core
     ;       bit_inline_pz
             % Bultins implemented by the RTS.
-    ;       bit_rts
-            % Foreign code.
-    ;       foreign.
+    ;       bit_rts.
 
     % Get how this function's definition is provided if it is a builtin,
     % false otherwise.
@@ -120,6 +118,19 @@
 
 :- pred func_builtin_inline_pz(function::in, list(pz_instr)::out)
     is semidet.
+
+:- pred func_set_foreign(function::in, function::out) is det.
+
+:- pred func_is_foreign(function::in) is semidet.
+
+:- type code_type
+    --->    ct_plasma
+    ;       ct_foreign
+    ;       ct_builtin(
+                builtin_impl_type
+            ).
+
+:- func func_get_code_type(function) = code_type.
 
 %-----------------------------------------------------------------------%
 
@@ -178,7 +189,7 @@
                     % Some builtins may be defined by a list of PZ
                     % instructions.
                 f_maybe_ipz_defn    :: maybe(list(pz_instr)),
-                f_builtin           :: maybe(builtin_impl_type),
+                f_code_type         :: code_type,
                 f_imported          :: imported,
                 f_used              :: func_is_used,
                 f_has_errors        :: has_errors
@@ -239,9 +250,9 @@ func_init_builtin(Name, Params, Return, Captured, Uses, Observes,
     Context = builtin_context,
     Sharing = s_private,
     Arity = arity(length(Return)),
-    Builtin = yes(BuiltinImplType),
+    CodeType = ct_builtin(BuiltinImplType),
     Func = function(Name, signature(Params, Return, yes(Captured), Arity,
-        Uses, Observes), Context, Sharing, MbDefn, MbIPzDefn, Builtin,
+        Uses, Observes), Context, Sharing, MbDefn, MbIPzDefn, CodeType,
         i_imported, used_probably, does_not_have_errors).
 
 func_init_anon(ModuleName, Sharing, Params, Return, Uses, Observes) =
@@ -255,7 +266,7 @@ func_init(Name, Context, Sharing, Params, Return, Uses, Observes)
         = Func :-
     Arity = arity(length(Return)),
     Func = function(Name, signature(Params, Return, no, Arity, Uses, Observes),
-        Context, Sharing, no, no, no, i_local, used_probably,
+        Context, Sharing, no, no, ct_plasma, i_local, used_probably,
         does_not_have_errors).
 
 func_get_name(Func) = Func ^ f_name.
@@ -307,14 +318,15 @@ func_is_builtin(Func) :-
     func_builtin_type(Func, _).
 
 func_builtin_type(Func, BuiltinType) :-
-    yes(BuiltinType) = Func ^ f_builtin.
+    ct_builtin(BuiltinType) = Func ^ f_code_type.
 
 func_set_builtin(BuiltinType, !Func) :-
     ( if
         not func_is_builtin(!.Func),
+        not func_is_foreign(!.Func),
         no = !.Func ^ f_maybe_func_defn
     then
-        !Func ^ f_builtin := yes(BuiltinType),
+        !Func ^ f_code_type := ct_builtin(BuiltinType),
         func_set_captured_vars_types([], !Func)
     else
         unexpected($file, $pred,
@@ -323,6 +335,24 @@ func_set_builtin(BuiltinType, !Func) :-
 
 func_builtin_inline_pz(Func, PZInstrs) :-
     yes(PZInstrs) = Func ^ f_maybe_ipz_defn.
+
+func_set_foreign(!Func) :-
+    ( if
+        not func_is_builtin(!.Func),
+        not func_is_foreign(!.Func),
+        no = !.Func ^ f_maybe_func_defn
+    then
+        !Func ^ f_code_type := ct_foreign,
+        func_set_captured_vars_types([], !Func)
+    else
+        unexpected($file, $pred,
+            "Function is already builtin or already has a body")
+    ).
+
+func_is_foreign(Func) :-
+    Func ^ f_code_type = ct_foreign.
+
+func_get_code_type(Func) = Func ^ f_code_type.
 
 %-----------------------------------------------------------------------%
 
