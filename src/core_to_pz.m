@@ -224,9 +224,9 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
 :- func should_generate(function) = generate.
 
 should_generate(Function) = Generate :-
-    ( if func_builtin_type(Function, BuiltinType) then
-        IsUsed = func_get_used(Function),
-        ( IsUsed = used_probably,
+    IsUsed = func_get_used(Function),
+    ( IsUsed = used_probably,
+        ( if func_builtin_type(Function, BuiltinType) then
             ( BuiltinType = bit_core,
                 Generate = need_codegen
             ; BuiltinType = bit_inline_pz,
@@ -239,21 +239,16 @@ should_generate(Function) = Generate :-
             ; BuiltinType = foreign,
                 Generate = need_extern_local
             )
-        ; IsUsed = unused,
-            Generate = dead_code
-        )
-    else
-        Imported = func_get_imported(Function),
-        ( Imported = i_local,
-            Generate = need_codegen
-        ; Imported = i_imported,
-            IsUsed = func_get_used(Function),
-            ( IsUsed = used_probably,
+        else
+            Imported = func_get_imported(Function),
+            ( Imported = i_local,
+                Generate = need_codegen
+            ; Imported = i_imported,
                 Generate = need_extern_import
-            ; IsUsed = unused,
-                Generate = dead_code
             )
         )
+    ; IsUsed = unused,
+        Generate = dead_code
     ).
 
 :- pred assert_has_body(function::in) is det.
