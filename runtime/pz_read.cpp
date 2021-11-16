@@ -23,8 +23,6 @@
 #include "pz_string.h"
 #include "pz_util.h"
 
-#include "foreign_hack.cpp"
-
 namespace pz {
 
 struct Imported : public GCNewTrace {
@@ -389,16 +387,6 @@ static bool read_imports(ReadInfo & read, unsigned num_imports,
             break;
           }
           case PZ_IMPORT_FOREIGN: {
-            // Before we actually implement the runtime side let's test the
-            // basics.
-            if (module_name == String("ImportFunction") &&
-                    name == String("getpid"))
-            {
-                Root<Closure> closure(gc);
-                setup_hack(gc, closure);
-                imported->import_closures.push_back(closure.ptr());
-                break;
-            }
             if (!foreign) {
                 fprintf(stderr,
                         "No foreign code provided for %s\n",
