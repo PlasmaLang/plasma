@@ -24,16 +24,16 @@
 % Non-foreign builtins are completely handled by the compiler, by the time
 % the runtime is involved they look like regular Plasma code.
 %
-% Core builtins
-% -------------
+% Core builtins (bit_core)
+% ------------------------
 %
 % Any procedure that could be written in Plasma, but it instead provided by
 % the compiler and compiled (from Core representation, hence the name) with
 % the program.  bool_to_string is an example, these builtins have their core
 % definitions in this module.
 %
-% PZ inline builtins
-% ------------------
+% PZ inline builtins (bit_inline_pz)
+% ----------------------------------
 %
 % This covers arithmetic operators and other small "functions" that are
 % equivalent to one or maybe 2-3 PZ instructions.  core_to_pz will convert
@@ -46,7 +46,8 @@
 %
 % The compiler passes calls to foreign builtins through to the runtime where
 % they look like references to the imported Builtin module.  pz_builtin.cpp
-% decides how each foreign builtin is implemented.
+% decides how each foreign builtin is implemented.  So these are all bit_rts
+% builtins.
 %
 % Runtime inline
 % --------------

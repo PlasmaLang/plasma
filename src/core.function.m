@@ -103,10 +103,14 @@
     % module.
     %
 :- type builtin_impl_type
-    --->    bit_core
-    ;       bit_inline_pz
-            % Bultins implemented by the RTS.
-    ;       bit_rts.
+    --->    bit_core         % Builtins implemented by the compiler in core
+                             % representation.
+
+    ;       bit_inline_pz    % Builtins implemented by the compiler by
+                             % replacing their use with PZ instructions (eg
+                             % math operators)
+
+    ;       bit_rts.         % Bultins implemented by the RTS.
 
     % Get how this function's definition is provided if it is a builtin,
     % false otherwise.
