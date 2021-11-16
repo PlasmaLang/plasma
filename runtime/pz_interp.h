@@ -25,19 +25,19 @@ namespace pz {
 int run(PZ & pz, const Options & options, GCCapability & gc);
 
 /*
- * Imported foreign builtins.
+ * Foreign functions.
  *
  * The exact meaning of the parameters depends upon implementation details
  * within pz_run_*.c.
  *
  ******************************/
 
-typedef unsigned (*pz_builtin_c_func)(void * stack, unsigned sp);
+typedef unsigned (*pz_foreign_c_func)(void * stack, unsigned sp);
 
-typedef unsigned (*pz_builtin_c_alloc_func)(void * stack, unsigned sp,
+typedef unsigned (*pz_foreign_c_alloc_func)(void * stack, unsigned sp,
                                             AbstractGCTracer & gc_trace);
 
-typedef unsigned (*pz_builtin_c_special_func)(void * stack, unsigned sp,
+typedef unsigned (*pz_foreign_c_special_func)(void * stack, unsigned sp,
                                               PZ & pz);
 
 unsigned pz_builtin_print_func(void * stack, unsigned sp);

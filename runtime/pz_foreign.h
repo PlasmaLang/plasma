@@ -51,7 +51,7 @@ class Foreign : public GCNewTrace {
      * These functions help setup foreign code.
      */
     bool register_foreign_code(String module, String proc, 
-            pz_builtin_c_func c_func, GCTracer & gc);
+            pz_foreign_c_func c_func, GCTracer & gc);
 };
 
 }  // namespace pz

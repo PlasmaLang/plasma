@@ -128,7 +128,7 @@ Foreign::lookup_foreign_proc(String module_name, String closure_name) const {
     return closure->second;
 }
 
-static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
+static unsigned make_ccall_instr(uint8_t * bytecode, pz_foreign_c_func c_func)
 {
     ImmediateValue immediate_value;
     unsigned       offset = 0;
@@ -141,7 +141,7 @@ static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
     return offset;
 }
 
-static void make_builtin(String name, pz_builtin_c_func c_func, GCTracer & gc,
+static void make_foreign(String name, pz_foreign_c_func c_func, GCTracer & gc,
         Foreign *foreign, Root<Closure> &closure)
 {
     unsigned size = make_ccall_instr(nullptr, nullptr);
@@ -173,10 +173,10 @@ Foreign::do_trace(HeapMarkState * marker) const {
 
 bool
 Foreign::register_foreign_code(String module, String proc,
-        pz_builtin_c_func c_func, GCTracer & gc)
+        pz_foreign_c_func c_func, GCTracer & gc)
 {
     Root<Closure> closure(gc);
-    make_builtin(proc, c_func, gc, this, closure);
+    make_foreign(proc, c_func, gc, this, closure);
 
     m_closures[module][proc] = closure.ptr();
 
