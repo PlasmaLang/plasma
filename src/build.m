@@ -93,7 +93,10 @@ build(Options, Result, !IO) :-
     some [!Errors] (
         !:Errors = init,
 
-        read_project(Options ^ pzb_build_file, ProjRes, ProjMTime, !IO),
+        file_modification_time(Options ^ pzb_tools_path ++ "/plzbuild",
+            PlzBuildMTime, !IO),
+
+        read_project(Options ^ pzb_build_file, ProjRes, ProjFileMTime, !IO),
         ( ProjRes = ok(_)
         ; ProjRes = errors(ReadProjErrors),
             add_errors(ReadProjErrors, !Errors)
@@ -118,6 +121,7 @@ build(Options, Result, !IO) :-
                         !Errors)
                 ),
 
+                ProjMTime = latest(ProjFileMTime, PlzBuildMTime),
                 maybe_write_dependency_file(Options, ProjMTime, DepInfo,
                     WriteDepsRes, !IO),
                 ( WriteDepsRes = ok
@@ -168,13 +172,7 @@ build(Options, Result, !IO) :-
     time_t::out, io::di, io::uo) is det.
 
 read_project(BuildFile, Result, MTime, !IO) :-
-    io.file_modification_time(BuildFile, TimeRes, !IO),
-    ( TimeRes = ok(MTime)
-    ; TimeRes = error(_),
-        % Assume the file was modified now, causing the ninja file to be
-        % re-written.
-        time(MTime, !IO)
-    ),
+    file_modification_time(BuildFile, MTime, !IO),
     io.open_input(BuildFile, OpenRes, !IO),
     ( OpenRes = ok(File),
         parse_toml(File, BuildFile, TOMLRes, !IO),
@@ -806,7 +804,7 @@ mkdir_build_directory(Options, Result, !IO) :-
     pred(out, di, uo) is det, out, di, uo).
 
 update_if_stale(Verbose, ProjMTime, File, Update, Result, !IO) :-
-    file_modification_time(File, MTimeResult, !IO),
+    io.file_modification_time(File, MTimeResult, !IO),
     ( MTimeResult = ok(MTime),
         ( if difftime(ProjMTime, MTime) > 0.0 then
             % Project file is newer.
@@ -823,6 +821,29 @@ update_if_stale(Verbose, ProjMTime, File, Update, Result, !IO) :-
     ; MTimeResult = error(_),
         % Always write the file.
         Update(Result, !IO)
+    ).
+
+:- func latest(time_t, time_t) = time_t.
+
+latest(A, B) =
+    ( if difftime(A, B) > 0.0 then
+        A
+    else
+        B
+    ).
+
+    % Get a file modification time or now if unknown.
+    %
+:- pred file_modification_time(string::in, time_t::out, io::di, io::uo) is
+    det.
+
+file_modification_time(File, MTime, !IO) :-
+    io.file_modification_time(File, TimeRes, !IO),
+    ( TimeRes = ok(MTime)
+    ; TimeRes = error(_),
+        % Assume the file was modified now, causing other files to be
+        % updated.
+        time(MTime, !IO)
     ).
 
 :- pred write_file(verbose, string,
