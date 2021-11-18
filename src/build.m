@@ -106,7 +106,7 @@ build(Options, Result, !IO) :-
             build_dependency_info(Proj, DepInfoRes, init, _, !IO),
             ( DepInfoRes = ok(DepInfo),
 
-                setup_build_dir(Options, SetupDirRes, !IO),
+                setup_build_dir(Options, PlzBuildMTime, SetupDirRes, !IO),
                 ( SetupDirRes = ok
                 ; SetupDirRes = error(SetupDirError),
                     add_error(context(build_directory), SetupDirError, !Errors)
@@ -523,38 +523,17 @@ do_write_import_whitelist(Whitelist, File, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred ensure_ninja_rules_file(plzbuild_options::in, maybe_error::out,
-    io::di, io::uo) is det.
+:- pred ensure_ninja_rules_file(plzbuild_options::in, time_t::in,
+    maybe_error::out, io::di, io::uo) is det.
 
-ensure_ninja_rules_file(Options, Result, !IO) :-
+ensure_ninja_rules_file(Options, MTime, Result, !IO) :-
     Rebuild = Options ^ pzb_rebuild,
     Verbose = Options ^ pzb_verbose,
     ( Rebuild = need_rebuild,
         write_ninja_rules_file(Verbose, Result, !IO)
     ; Rebuild = dont_rebuild,
-        file_type(yes, ninja_rules_file_path, StatResult, !IO),
-        ( StatResult = ok(Stat),
-            ( Stat = regular_file,
-                Result = ok
-            ;
-                ( Stat = directory
-                ; Stat = symbolic_link
-                ; Stat = named_pipe
-                ; Stat = socket
-                ; Stat = character_device
-                ; Stat = block_device
-                ; Stat = message_queue
-                ; Stat = semaphore
-                ; Stat = shared_memory
-                ; Stat = unknown
-                ),
-                Result = error(
-                    format("Cannot create rules file, '%s' already exists",
-                        [s(ninja_rules_file_path)]))
-            )
-        ; StatResult = error(_),
-            write_ninja_rules_file(Verbose, Result, !IO)
-        )
+        update_if_stale(Verbose, MTime, ninja_rules_file_path,
+            write_ninja_rules_file(Verbose), Result, !IO)
     ).
 
 :- pred write_ninja_rules_file(verbose::in, maybe_error::out, io::di, io::uo)
@@ -684,10 +663,10 @@ invoke_command(Verbose, Command, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred setup_build_dir(plzbuild_options::in, maybe_error::out,
+:- pred setup_build_dir(plzbuild_options::in, time_t::in, maybe_error::out,
     io::di, io::uo) is det.
 
-setup_build_dir(Options, Result, !IO) :-
+setup_build_dir(Options, MTime, Result, !IO) :-
     ensure_directory(Options, Result0, FreshBuildDir, !IO),
     ( Result0 = ok,
         ( FreshBuildDir = fresh,
@@ -695,7 +674,7 @@ setup_build_dir(Options, Result, !IO) :-
             % skip a stat() call.
             write_ninja_rules_file(Options ^ pzb_verbose, Result, !IO)
         ; FreshBuildDir = stale,
-            ensure_ninja_rules_file(Options, Result, !IO)
+            ensure_ninja_rules_file(Options, MTime, Result, !IO)
         )
     ; Result0 = error(_),
         Result = Result0
