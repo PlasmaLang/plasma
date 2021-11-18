@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019 Plasma Team
+ * Copyright (C) 2015-2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -625,30 +625,30 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                                (uint64_t *)context.expr_stack);
                 return retcode;
             case PZT_CCALL: {
-                pz_builtin_c_func callee;
                 context.ip =
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                callee      = *(pz_builtin_c_func *)context.ip;
+                pz_foreign_c_func callee = 
+                    *reinterpret_cast<pz_foreign_c_func*>(context.ip);
                 context.esp = callee(context.expr_stack, context.esp);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_ALLOC: {
-                pz_builtin_c_alloc_func callee;
                 context.ip =
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                callee      = *(pz_builtin_c_alloc_func *)context.ip;
+                pz_foreign_c_alloc_func callee = 
+                    *reinterpret_cast<pz_foreign_c_alloc_func*>(context.ip);
                 context.esp = callee(context.expr_stack, context.esp, context);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_SPECIAL: {
-                pz_builtin_c_special_func callee;
                 context.ip =
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                callee      = *(pz_builtin_c_special_func *)context.ip;
+                pz_foreign_c_special_func callee =
+                    *reinterpret_cast<pz_foreign_c_special_func*>(context.ip);
                 context.esp = callee(context.expr_stack, context.esp, pz);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");

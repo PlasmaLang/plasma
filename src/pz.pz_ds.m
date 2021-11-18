@@ -5,7 +5,7 @@
 %
 % Low level plasma data structure.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -117,15 +117,15 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pz_get_imports(pz) = assoc_list(pzi_id, q_name).
+:- func pz_get_imports(pz) = assoc_list(pzi_id, pz_import).
 
 :- func pz_get_num_imports(pz) = uint32.
 
-:- func pz_lookup_import(pz, pzi_id) = q_name.
+:- func pz_lookup_import(pz, pzi_id) = pz_import.
 
-:- pred pz_new_import(pzi_id::out, q_name::in, pz::in, pz::out) is det.
+:- pred pz_new_import(pzi_id::out, pz_import::in, pz::in, pz::out) is det.
 
-:- pred pz_add_import(pzi_id::in, q_name::in, pz::in, pz::out) is det.
+:- pred pz_add_import(pzi_id::in, pz_import::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -235,7 +235,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
 
-        pz_imports                  :: map(pzi_id, q_name),
+        pz_imports                  :: map(pzi_id, pz_import),
         pz_next_import_id           :: pzi_id,
 
         pz_procs                    :: map(pzp_id, pz_proc),
@@ -371,14 +371,14 @@ pz_get_num_imports(PZ) = pzi_id_get_num(PZ ^ pz_next_import_id).
 
 pz_lookup_import(PZ, ImportId) = lookup(PZ ^ pz_imports, ImportId).
 
-pz_new_import(ImportId, Name, !PZ) :-
+pz_new_import(ImportId, Import, !PZ) :-
     ImportId = !.PZ ^ pz_next_import_id,
     !PZ ^ pz_next_import_id := pzi_id(ImportId ^ pzi_id_num + 1u32),
-    pz_add_import(ImportId, Name, !PZ).
+    pz_add_import(ImportId, Import, !PZ).
 
-pz_add_import(ImportId, Name, !PZ) :-
+pz_add_import(ImportId, Import, !PZ) :-
     Imports0 = !.PZ ^ pz_imports,
-    map.det_insert(ImportId, Name, Imports0, Imports),
+    map.det_insert(ImportId, Import, Imports0, Imports),
     !PZ ^ pz_imports := Imports.
 
 %-----------------------------------------------------------------------%

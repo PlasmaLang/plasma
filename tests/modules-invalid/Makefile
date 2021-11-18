@@ -80,6 +80,7 @@ BINS: $(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
 clean:
 	rm -rf *.pz *.pzo *.out *.diff *.log *.trace
 	rm -f module_03a.pi module_04import.pi module_06a.pi
+	rm -rf _build
 
 .PHONY: realclean
 realclean: clean

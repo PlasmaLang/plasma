@@ -42,6 +42,7 @@ CXX_SOURCES=runtime/pz_main.cpp \
 		runtime/pz_builtin.cpp \
 		runtime/pz_code.cpp \
 		runtime/pz_data.cpp \
+		runtime/pz_foreign.cpp \
 		runtime/pz_generic_closure.cpp \
 		runtime/pz_generic_builtin.cpp \
 		runtime/pz_generic_run.cpp \
@@ -175,8 +176,10 @@ src/plzlnk : .mer_progs
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
+# We need -rdynamic here so that the foreign code libraries can resolve
+# symbols in the runtime's executable.
 runtime/plzrun : $(OBJECTS)
-	$(CXX) $(CFLAGS) -o $@ $^
+	$(CXX) $(CFLAGS) -o $@ $^ -ldl -rdynamic
 
 %.o : %.c runtime/pz_config.h
 	$(CC) $(CFLAGS) -o $@ -c $<
@@ -228,6 +231,7 @@ clean : localclean
 	$(MAKE) -C tests/modules clean
 	$(MAKE) -C tests/modules-invalid clean
 	$(MAKE) -C tests/build-invalid clean
+	$(MAKE) -C tests/ffi clean
 	$(MAKE) -C tests/missing clean
 
 #
@@ -242,6 +246,7 @@ realclean : localclean
 	$(MAKE) -C tests/modules realclean
 	$(MAKE) -C tests/modules-invalid realclean
 	$(MAKE) -C tests/build-invalid realclean
+	$(MAKE) -C tests/ffi realclean
 	$(MAKE) -C tests/missing realclean
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk

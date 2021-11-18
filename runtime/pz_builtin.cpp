@@ -24,24 +24,24 @@ static void builtin_create(Library * library, const String name,
                            T data, GCCapability & gccap);
 
 static void builtin_create_c_code(Library * library, String name,
-                                  pz_builtin_c_func c_func,
+                                  pz_foreign_c_func c_func,
                                   GCCapability & gccap);
 
 static void builtin_create_c_code_alloc(Library * library, String name,
-                                        pz_builtin_c_alloc_func c_func,
+                                        pz_foreign_c_alloc_func c_func,
                                         GCCapability & gccap);
 
 static void builtin_create_c_code_special(Library * library, String name,
-                                          pz_builtin_c_special_func c_func,
+                                          pz_foreign_c_special_func c_func,
                                           GCCapability & gccap);
 
-static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func);
+static unsigned make_ccall_instr(uint8_t * bytecode, pz_foreign_c_func c_func);
 
 static unsigned make_ccall_alloc_instr(uint8_t * bytecode,
-                                       pz_builtin_c_alloc_func c_func);
+                                       pz_foreign_c_alloc_func c_func);
 
 static unsigned make_ccall_special_instr(uint8_t * bytecode,
-                                         pz_builtin_c_special_func c_func);
+                                         pz_foreign_c_special_func c_func);
 
 static unsigned builtin_make_tag_instrs(uint8_t * bytecode, std::nullptr_t data)
 {
@@ -268,30 +268,30 @@ static void builtin_create(Library * library, const String name,
 }
 
 static void builtin_create_c_code(Library * library, String name,
-                                  pz_builtin_c_func c_func,
+                                  pz_foreign_c_func c_func,
                                   GCCapability & gccap)
 {
-    builtin_create<pz_builtin_c_func>(
+    builtin_create<pz_foreign_c_func>(
         library, name, make_ccall_instr, c_func, gccap);
 }
 
 static void builtin_create_c_code_alloc(Library * library, String name,
-                                        pz_builtin_c_alloc_func c_func,
+                                        pz_foreign_c_alloc_func c_func,
                                         GCCapability & gccap)
 {
-    builtin_create<pz_builtin_c_alloc_func>(
+    builtin_create<pz_foreign_c_alloc_func>(
         library, name, make_ccall_alloc_instr, c_func, gccap);
 }
 
 static void builtin_create_c_code_special(Library * library, String name,
-                                          pz_builtin_c_special_func c_func,
+                                          pz_foreign_c_special_func c_func,
                                           GCCapability & gccap)
 {
-    builtin_create<pz_builtin_c_special_func>(
+    builtin_create<pz_foreign_c_special_func>(
         library, name, make_ccall_special_instr, c_func, gccap);
 }
 
-static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
+static unsigned make_ccall_instr(uint8_t * bytecode, pz_foreign_c_func c_func)
 {
     ImmediateValue immediate_value;
     unsigned       offset = 0;
@@ -305,7 +305,7 @@ static unsigned make_ccall_instr(uint8_t * bytecode, pz_builtin_c_func c_func)
 }
 
 static unsigned make_ccall_alloc_instr(uint8_t * bytecode,
-                                       pz_builtin_c_alloc_func c_func)
+                                       pz_foreign_c_alloc_func c_func)
 {
     ImmediateValue immediate_value;
     unsigned       offset = 0;
@@ -319,7 +319,7 @@ static unsigned make_ccall_alloc_instr(uint8_t * bytecode,
 }
 
 static unsigned make_ccall_special_instr(uint8_t * bytecode,
-                                         pz_builtin_c_special_func c_func)
+                                         pz_foreign_c_special_func c_func)
 {
     ImmediateValue immediate_value;
     unsigned       offset = 0;

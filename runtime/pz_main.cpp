@@ -79,13 +79,29 @@ static int run(Options & options)
     }
 }
 
+static void split_filenames(const std::string & filenames,
+        std::string & bytecode, Optional<std::string> & native) 
+{
+    size_t pos = filenames.find_first_of(':');
+    if (pos == std::string::npos) {
+        bytecode = filenames;
+        native = Optional<std::string>();
+    } else {
+        bytecode = filenames.substr(0, pos);
+        native = Optional<std::string>(filenames.substr(pos+1));
+    }
+}
+
 static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
 {
     GCTracer gc(gc0);
     Library * builtins = pz.new_library(String("Builtin"), gc);
     setup_builtins(builtins, pz);
 
-    for (auto & filename : options.pzlibs()) {
+    for (const std::string & filenames : options.pzlibs()) {
+        std::string bytecode_filename;
+        Optional<std::string> native_filename;
+        split_filenames(filenames, bytecode_filename, native_filename);
         Root<Vector<String>> names(gc);
         {
             NoGCScope no_gc(gc);
@@ -93,7 +109,9 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
             no_gc.abort_if_oom("setup_program");
         }
         Root<Library> lib(gc);
-        if (!read(pz, filename, lib, names.ptr(), gc)) {
+        if (!read(pz, bytecode_filename, native_filename, lib, 
+                  names.ptr(), gc))
+        {
             return false;
         }
         for (auto& name : names.get()) {
@@ -102,7 +120,12 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc0)
     }
 
     Root<Library> program(gc);
-    if (!read(pz, options.pzfile(), program, nullptr, gc)) {
+    std::string bytecode_filename;
+    Optional<std::string> native_filename;
+    split_filenames(options.pzfile(), bytecode_filename, native_filename);
+    if (!read(pz, bytecode_filename, native_filename, program,
+              nullptr, gc))
+    {
         return false;
     }
 

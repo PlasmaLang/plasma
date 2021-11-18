@@ -13,31 +13,55 @@
 % Builtins may include functions, types and their constructors, interfaces
 % and interface implementations.
 %
-% There are two types of builtin function:
+% There are two main types of builtin function, with sub-types:
 %
-% Core builtins
-% -------------
+%  + Non-foreign
+%  + Foreign
+%
+% Non-foreign
+% ===========
+%
+% Non-foreign builtins are completely handled by the compiler, by the time
+% the runtime is involved they look like regular Plasma code.
+%
+% Core builtins (bit_core)
+% ------------------------
 %
 % Any procedure that could be written in Plasma, but it instead provided by
 % the compiler and compiled (from Core representation, hence the name) with
 % the program.  bool_to_string is an example, these builtins have their core
 % definitions in this module.
 %
-% PZ inline builtins
-% ------------------
+% PZ inline builtins (bit_inline_pz)
+% ----------------------------------
 %
 % This covers arithmetic operators and other small "functions" that are
 % equivalent to one or maybe 2-3 PZ instructions.  core_to_pz will convert
-% calls to these functions into their native PZ bytecodes.
+% calls to these functions into their native PZ bytecodes.  It also
+% generates function bodies for these so higher-order references can call to
+% them.
 %
-% Non-foreign builtin
-% -------------------
+% Foreign
+% =======
+%
+% The compiler passes calls to foreign builtins through to the runtime where
+% they look like references to the imported Builtin module.  pz_builtin.cpp
+% decides how each foreign builtin is implemented.  So these are all bit_rts
+% builtins.
+%
+% Runtime inline
+% --------------
 %
 % These builtins are stored as a sequence of PZ instructions within the
 % runtime, they're executed just like normal procedures, their definitions
 % are simply provided by the runtime rather than a .pz file.
 %
-% The runtime decides which builtins are non-foreign and which are foreign.
+% PZ builtins
+% -----------
+%
+% Just like runtime inline builtins, these are a series of PZ instructions.
+% The difference is they arn't callable by the programmer, usually being
+% responsible for data tagging.
 %
 % Foreign builtins
 % ----------------
@@ -47,13 +71,9 @@
 % that will cause the C procedure built into the RTS to be executed.  The
 % specifics depend on which pz_run_*.c file is used.
 %
-% The runtime decides which builtins are non-foreign and which are foreign.
-%
-% PZ builtins
-% -----------
-%
-% Builtins that are not callable Plasma functions, these are PZ procedures
-% and are either foreign or non-foreign.
+% They are very similar to foreign code generally, but marked as an import
+% rather than foreign in the PZ bytecode files since they have a different
+% module name.
 %
 %-----------------------------------------------------------------------%
 
@@ -758,19 +778,22 @@ builtin_module_name = q_name_single("Builtin").
 
 setup_pz_builtin_procs(BuiltinProcs, !PZ) :-
     % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
-    pz_new_import(MakeTag, make_tag_qname, !PZ),
+    pz_new_import(MakeTag, pz_import(make_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr, pzw_ptr], [pzw_ptr])
-    pz_new_import(ShiftMakeTag, shift_make_tag_qname, !PZ),
+    pz_new_import(ShiftMakeTag, pz_import(shift_make_tag_qname, pzit_import),
+        !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
-    pz_new_import(BreakTag, break_tag_qname, !PZ),
+    pz_new_import(BreakTag, pz_import(break_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr, pzw_ptr])
-    pz_new_import(BreakShiftTag, break_shift_tag_qname, !PZ),
+    pz_new_import(BreakShiftTag,
+        pz_import(break_shift_tag_qname, pzit_import), !PZ),
 
     % pz_signature([pzw_ptr], [pzw_ptr])
-    pz_new_import(UnshiftValue, unshift_value_qname, !PZ),
+    pz_new_import(UnshiftValue, pz_import(unshift_value_qname, pzit_import),
+        !PZ),
 
     STagStruct = pz_struct([pzw_fast]),
     pz_new_struct_id(STagStructId, "Secondary tag struct", !PZ),

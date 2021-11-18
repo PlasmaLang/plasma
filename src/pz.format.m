@@ -86,6 +86,12 @@
 :- mode pz_width_byte(out, in) is semidet.
 
 %-----------------------------------------------------------------------%
+
+:- pred pz_import_type_byte(pz_import_type, uint8).
+:- mode pz_import_type_byte(in, out) is det.
+:- mode pz_import_type_byte(out, in) is semidet.
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- implementation.
@@ -290,6 +296,21 @@ make_id_string(Part) =
     "
         WidthValue = Byte;
         SUCCESS_INDICATOR = Byte < PZ_NUM_WIDTHS;
+    ").
+
+%-----------------------------------------------------------------------%
+
+:- pragma foreign_proc("C",
+    pz_import_type_byte(ImportType::in, Byte::out),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "Byte = ImportType;").
+
+:- pragma foreign_proc("C",
+    pz_import_type_byte(ImportType::out, Byte::in),
+    [will_not_call_mercury, promise_pure, thread_safe],
+    "
+        ImportType = Byte;
+        SUCCESS_INDICATOR = Byte <= PZ_IMPORT_LAST;
     ").
 
 %-----------------------------------------------------------------------%

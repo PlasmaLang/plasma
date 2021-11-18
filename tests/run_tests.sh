@@ -47,7 +47,16 @@ if [ -n "$STALE_BUILD_DIRS" ]; then
     rm -r $STALE_BUILD_DIRS
 fi
 
-for DIR in valid invalid modules modules-invalid missing build-invalid ../examples; do
+DIRS="valid 
+      invalid
+      modules
+      modules-invalid
+      build-invalid
+      ffi
+      missing
+      ../examples"
+
+for DIR in $DIRS; do
     for EXPFILE in $DIR/*.exp; do
         if [ -f "$EXPFILE" ]; then
             TESTS="$TESTS ${EXPFILE%.exp}"

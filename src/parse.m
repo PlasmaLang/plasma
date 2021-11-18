@@ -84,6 +84,7 @@ parse_typeres(Filename, Result, !IO) :-
     ;       uses
     ;       observes
     ;       as
+    ;       foreign
     ;       var
     ;       return
     ;       match
@@ -151,6 +152,7 @@ lexemes = [
         ("uses"             -> return(uses)),
         ("observes"         -> return(observes)),
         ("as"               -> return(as)),
+        ("foreign"          -> return(foreign)),
         ("var"              -> return(var)),
         ("return"           -> return(return)),
         ("match"            -> return(match)),
@@ -582,7 +584,7 @@ parse_resource(ParseName, Result, !Tokens) :-
     ).
 
     % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
-    %                       Uses* ReturnTypes? Block
+    %                       Uses* ReturnTypes? FuncBody
     %
     % Depending on the ParseName value that's passed in.
     % Name := ident
@@ -599,6 +601,9 @@ parse_resource(ParseName, Result, !Tokens) :-
     % ReturnTypes := '->' TypeExpr
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
+    % FuncBody := Block
+    %           | 'foreign'
+    %
 :- pred parse_func(parsing.parser(Name, token_type),
     parse_type, parse_res({Name, ast_function}), tokens, tokens).
 :- mode parse_func(in(parsing.parser),
@@ -608,9 +613,41 @@ parse_func(ParseName, ParseType, Result, !Tokens) :-
     maybe_parse_func_export(Sharing, Entrypoint, !Tokens),
     parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
-        parse_block(BodyResult, !Tokens),
+        or([parse_map(func(Bs) = ast_body_block(Bs), parse_block),
+            parse_map(func(_) = ast_body_foreign, match_token(foreign))],
+           BodyResult, !Tokens),
         ( BodyResult = ok(Body),
             Result = ok({Name, ast_function(Decl, Body, Sharing, Entrypoint)})
+        ; BodyResult = error(C, G, E),
+            Result = error(C, G, E)
+        )
+    ; DeclResult = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+    % NestedFuncDefinition := 'func' Ident '(' ( Param ( ',' Param )* )? ')'
+    %                             Uses* ReturnTypes? Block
+    %
+    % Param := ident : TypeExpr
+    %
+    % Uses := uses QualifiedIdent
+    %       | uses '(' QualifiedIdentList ')'
+    %       | observes QualifiedIdent
+    %       | observes '(' QualifiedIdentList ')'
+    %
+    % ReturnTypes := '->' TypeExpr
+    %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
+    %
+:- pred parse_nested_func(parse_res(ast_block_thing), tokens, tokens).
+:- mode parse_nested_func(out, in, out) is det.
+
+parse_nested_func(Result, !Tokens) :-
+    parse_func_decl(parse_nq_name, parse_source, DeclResult, !Tokens),
+    ( DeclResult = ok({Name, Decl}),
+        parse_block(BodyResult, !Tokens),
+        ( BodyResult = ok(Body),
+            Result = ok(astbt_function(Name,
+                ast_nested_function(Decl, Body)))
         ; BodyResult = error(C, G, E),
             Result = error(C, G, E)
         )
@@ -781,8 +818,7 @@ parse_block(Result, !Tokens) :-
 parse_block_thing(Result, !Tokens) :-
     or([  parse_map(func(S) = astbt_statement(S),
             parse_statement),
-          parse_map(func({N, F}) = astbt_function(nq_name_det(N), F),
-            parse_func(match_token(ident), parse_source))],
+          parse_nested_func],
         Result, !Tokens).
 
     % Statement := 'var' Ident ( ',' Ident )+

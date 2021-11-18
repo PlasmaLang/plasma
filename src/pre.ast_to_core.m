@@ -331,45 +331,27 @@ process_proc(Func, !Proc, !Errors) :-
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
-    gather_funcs_defn(top_level, Name, Func, !Core, !Env, !Errors).
-
-:- type level
-    --->    top_level
-    ;       nested.
-
-:- pred gather_funcs_defn(level::in, nq_name::in, ast_function::in,
-    core::in, core::out, env::in, env::out,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-gather_funcs_defn(Level, Name0,
-        ast_function(Decl, Body, Sharing, IsEntrypoint),
-        !Core, !Env, !Errors) :-
+    Func = ast_function(Decl, Body, Sharing, IsEntrypoint),
     Context = Decl ^ afd_context,
-    ( Level = top_level,
-        NameStr = nq_name_to_string(Name0),
-        Name = Name0
-    ; Level = nested,
-        NameStr = mangle_lambda(nq_name_to_string(Name0), Context),
-        Name = nq_name_det(NameStr)
-    ),
+    NameStr = nq_name_to_string(Name),
 
     ( if
         core_allocate_function(FuncId, !Core),
-        ( Level = top_level,
-            % Add the function to the environment with it's local name,
-            % since we're in the scope of the module already.
-            env_add_func(q_name(Name), FuncId, !Env)
-        ; Level = nested,
-            env_add_lambda(NameStr, FuncId, !Env)
-        )
+        % Add the function to the environment with it's local name,
+        % since we're in the scope of the module already.
+        env_add_func(q_name(Name), FuncId, !Env)
     then
         QName = q_name_append(module_name(!.Core), Name),
         ast_to_func_decl(!.Core, !.Env, QName, Decl, Sharing, MaybeFunction),
-        ( MaybeFunction = ok(Function),
+        ( MaybeFunction = ok(Function0),
+            ( Body = ast_body_block(_),
+                Function = Function0
+            ; Body = ast_body_foreign,
+                func_set_foreign( Function0, Function)
+            ),
+
             core_set_function(FuncId, Function, !Core),
             ( IsEntrypoint = is_entrypoint,
-                expect(unify(Level, top_level), $file, $pred,
-                    "entrypoints must be at the top level"),
                 expect(unify(Sharing, s_public), $file, $pred,
                     "entrypoints are always public"),
                 func_get_type_signature(Function, Params, Returns, _),
@@ -394,6 +376,32 @@ gather_funcs_defn(Level, Name0,
         )
     else
         add_error(Context, ce_function_already_defined(NameStr), !Errors)
+    ),
+
+    ( Body = ast_body_block(Block),
+        foldl3(gather_funcs_block, Block, !Core, !Env, !Errors)
+    ; Body = ast_body_foreign
+    ).
+
+:- pred gather_nested_funcs(nq_name::in, ast_nested_function::in,
+    core::in, core::out, env::in, env::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+gather_nested_funcs(Name0, ast_nested_function(Decl, Body),
+        !Core, !Env, !Errors) :-
+    Context = Decl ^ afd_context,
+    NameStr = mangle_lambda(nq_name_to_string(Name0), Context),
+    Name = nq_name_det(NameStr),
+
+    core_allocate_function(FuncId, !Core),
+    env_add_lambda(NameStr, FuncId, !Env),
+
+    QName = q_name_append(module_name(!.Core), Name),
+    ast_to_func_decl(!.Core, !.Env, QName, Decl, s_private, MaybeFunction),
+    ( MaybeFunction = ok(Function),
+        core_set_function(FuncId, Function, !Core)
+    ; MaybeFunction = errors(Errors),
+        add_errors(Errors, !Errors)
     ),
 
     foldl3(gather_funcs_block, Body, !Core, !Env, !Errors).
@@ -446,7 +454,7 @@ gather_funcs_block(astbt_statement(Stmt), !Core, !Env, !Errors) :-
     ast_statement(Type, _) = Stmt,
     gather_funcs_stmt(Type, !Core, !Env, !Errors).
 gather_funcs_block(astbt_function(Name, Defn), !Core, !Env, !Errors) :-
-    gather_funcs_defn(nested, Name, Defn, !Core, !Env, !Errors).
+    gather_nested_funcs(Name, Defn, !Core, !Env, !Errors).
 
 :- pred gather_funcs_stmt(ast_stmt_type(context)::in,
     core::in, core::out, env::in, env::out,
@@ -654,10 +662,14 @@ build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
 func_to_pre(Env0, nq_named(Name, Func), !Pre) :-
     Func = ast_function(ast_function_decl(Params, Returns, _, Context),
         Body, _, _),
-    % The name parameter is the name in the environment and doesn't need to
-    % be qualified.
-    func_to_pre_func(Env0, q_name(Name), Params, Returns, Body, Context,
-        !Pre).
+    ( Body = ast_body_block(Block),
+        % The name parameter is the name in the environment and doesn't need to
+        % be qualified.
+        func_to_pre_func(Env0, q_name(Name), Params, Returns, Block, Context,
+            !Pre)
+    ; Body = ast_body_foreign
+        % Foreign functions skip pre representation.
+    ).
 
 %-----------------------------------------------------------------------%
 

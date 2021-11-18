@@ -149,7 +149,7 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
             pz_new_closure_id(CID, !PZ),
             ID = pzii_closure(CID)
         ; Type = asm_import(_),
-            pz_new_import(IID, QName, !PZ),
+            pz_new_import(IID, pz_import(QName, pzit_import), !PZ),
             ID = pzii_import(IID)
         ),
         ( if insert(QName, ID, !SymMap) then

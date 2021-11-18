@@ -92,13 +92,15 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
         gen_const_data(!.Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ),
 
         % Generate functions.
-        verbose_output(Verbose,
-            format("Generating %d functions\n", [i(length(Funcs))]), !IO),
         Funcs = core_all_functions(!.Core),
         foldl3(make_proc_and_struct_ids, Funcs, !LocnMap, !ModuleClo, !PZ),
+        DefinedFuncs = core_all_defined_functions(!.Core),
+        verbose_output(Verbose,
+            format("Generating %d functions\n", [i(length(DefinedFuncs))]),
+            !IO),
         foldl(gen_func(CompileOpts, !.Core, !.LocnMap, BuiltinProcs,
                 !.FilenameDataMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
-            Funcs, !PZ),
+            DefinedFuncs, !PZ),
 
         % Finalize the module closure.
         verbose_output(Verbose, "Generating module closure\n", !IO),
@@ -175,10 +177,13 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
         assert_has_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
-    ; ShouldGenerate = need_extern,
+    ; ShouldGenerate = need_extern_import,
         assert_has_no_body(Function),
         make_proc_id_core_or_rts(FuncId, Function, !LocnMap,
             !BuildModClosure, !PZ)
+    ; ShouldGenerate = need_extern_local,
+        assert_has_no_body(Function),
+        make_proc_id_foreign(FuncId, Function, !LocnMap, !BuildModClosure, !PZ)
     ; ShouldGenerate = dead_code
     ),
 
@@ -192,17 +197,39 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
     ).
 
 :- type generate
+            % We need to do codegen for this function.  Eg it is a function
+            % defined in this module.
     --->    need_codegen
+
+            % We need to map calls to this function to a sequence of pz
+            % instructions, but also generate a body for it.  Eg: it is a
+            % builtin operator and could be called directly (replace with
+            % instructions) or used as a higher order value (provide a
+            % pointer).
     ;       need_inline_pz_and_codegen
-    ;       need_extern
+
+            % The body of this function is defined externally (eg builtin
+            % code), and it is imported from another module: we don't need
+            % to create a symbol for linking.
+    ;       need_extern_import
+
+            % The body of this function is defined externally (eg foreign
+            % code), but it belongs to this module and we need to tell the
+            % linker that the definition will be provided at runtime.
+    ;       need_extern_local
+
+            % No codegen or linking at all.
     ;       dead_code.
 
 :- func should_generate(function) = generate.
 
 should_generate(Function) = Generate :-
-    ( if func_builtin_type(Function, BuiltinType) then
-        IsUsed = func_get_used(Function),
-        ( IsUsed = used_probably,
+    IsUsed = func_get_used(Function),
+    ( IsUsed = used_probably,
+        CodeType = func_get_code_type(Function),
+        ( CodeType = ct_foreign,
+            Generate = need_extern_local
+        ; CodeType = ct_builtin(BuiltinType),
             ( BuiltinType = bit_core,
                 Generate = need_codegen
             ; BuiltinType = bit_inline_pz,
@@ -211,23 +238,18 @@ should_generate(Function) = Generate :-
                 % time.
                 Generate = need_inline_pz_and_codegen
             ; BuiltinType = bit_rts,
-                Generate = need_extern
+                Generate = need_extern_import
             )
-        ; IsUsed = unused,
-            Generate = dead_code
-        )
-    else
-        Imported = func_get_imported(Function),
-        ( Imported = i_local,
-            Generate = need_codegen
-        ; Imported = i_imported,
-            IsUsed = func_get_used(Function),
-            ( IsUsed = used_probably,
-                Generate = need_extern
-            ; IsUsed = unused,
-                Generate = dead_code
+        ; CodeType = ct_plasma,
+            Imported = func_get_imported(Function),
+            ( Imported = i_local,
+                Generate = need_codegen
+            ; Imported = i_imported,
+                Generate = need_extern_import
             )
         )
+    ; IsUsed = unused,
+        Generate = dead_code
     ).
 
 :- pred assert_has_body(function::in) is det.
@@ -266,10 +288,21 @@ make_proc_id_core_or_rts(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
         pz_new_proc_id(ProcId, !PZ),
         vls_set_proc(FuncId, ProcId, !LocnMap)
     else
-        pz_new_import(ImportId, func_get_name(Function), !PZ),
+        pz_new_import(ImportId,
+            pz_import(func_get_name(Function), pzit_import), !PZ),
         closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
         vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap)
     ).
+
+:- pred make_proc_id_foreign(func_id::in, function::in,
+    val_locn_map_static::in, val_locn_map_static::out,
+    closure_builder::in, closure_builder::out, pz::in, pz::out) is det.
+
+make_proc_id_foreign(FuncId, Function, !LocnMap, !BuildModClosure, !PZ) :-
+    pz_new_import(ImportId, pz_import(func_get_name(Function), pzit_foreign),
+        !PZ),
+    closure_add_field(pzv_import(ImportId), FieldNum, !BuildModClosure),
+    vls_set_proc_imported(FuncId, ImportId, FieldNum, !LocnMap).
 
 %-----------------------------------------------------------------------%
 

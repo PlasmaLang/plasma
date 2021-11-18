@@ -315,17 +315,25 @@ read_imports(Input, Num, PZ0, Result, !IO) :-
         ),
         Num, 0u32, PZ0, Result, !IO).
 
-:- pred read_import(binary_input_stream::in, T::in, maybe_error(q_name)::out,
+:- pred read_import(binary_input_stream::in, T::in, maybe_error(pz_import)::out,
     io::di, io::uo) is det.
 
 read_import(Input, _, Result, !IO) :-
+    read_uint8(Input, MaybeTypeByte, !IO),
     read_len_string(Input, MaybeModuleName, !IO),
     read_len_string(Input, MaybeSymbolName, !IO),
-    MaybeNames = combine_read_2(MaybeModuleName, MaybeSymbolName),
-    ( MaybeNames = ok({ModuleName, SymbolName}),
-        Result = ok(q_name_append_str(q_name_from_dotted_string_det(ModuleName),
-            SymbolName))
-    ; MaybeNames = error(Error),
+    MaybeReads = combine_read_3(MaybeTypeByte, MaybeModuleName,
+        MaybeSymbolName),
+    ( MaybeReads = ok({TypeByte, ModuleName, SymbolName}),
+        ( if pz_import_type_byte(TypeP, TypeByte) then
+            Type = TypeP
+        else
+            unexpected($file, $pred, "Invalid import type")
+        ),
+        Name = q_name_append_str(q_name_from_dotted_string_det(ModuleName),
+            SymbolName),
+        Result = ok(pz_import(Name, Type))
+    ; MaybeReads = error(Error),
         Result = error(Error)
     ).
 

@@ -58,11 +58,16 @@ module_decl_pretty(Name) =
 
 %-----------------------------------------------------------------------%
 
-:- func import_pretty(pair(pzi_id, q_name)) = cord(string).
+:- func import_pretty(pair(pzi_id, pz_import)) = cord(string).
 
-import_pretty(IID - Name) =
-    from_list(["import ", string(pzi_id_get_num(IID)), " ",
-        q_name_to_string(Name), ";\n"]).
+import_pretty(IID - pz_import(Name, Type)) =
+        from_list([Label, string(pzi_id_get_num(IID)), " ",
+            q_name_to_string(Name), ";\n"]) :-
+    ( Type = pzit_import,
+        Label = "import "
+    ; Type = pzit_foreign,
+        Label = "foreign "
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -270,7 +275,7 @@ pretty_instr(PZ, Instr) = String :-
                 cast_to_int(pzc_id_get_num(CID)))])
         ;
             ( Callee = pzc_import(IID),
-                CalleeSym = pz_lookup_import(PZ, IID)
+                CalleeSym = pz_lookup_import(PZ, IID) ^ pzi_name
             ; Callee = pzc_proc_opt(PID),
                 CalleeSym = pz_lookup_proc(PZ, PID) ^ pzp_name
             ),

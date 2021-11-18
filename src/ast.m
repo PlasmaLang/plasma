@@ -91,16 +91,28 @@
 :- type ast_function
     --->    ast_function(
                 af_decl             :: ast_function_decl,
-                af_body             :: list(ast_block_thing),
+                af_body             :: ast_body,
                 af_export           :: sharing,
                 af_is_entrypoint    :: is_entrypoint
             ).
 
+:- type ast_body
+    --->    ast_body_block(
+                list(ast_block_thing)
+            )
+    ;       ast_body_foreign.
+
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
-    ;       astbt_function(nq_name, ast_function).
+    ;       astbt_function(nq_name, ast_nested_function).
 
 :- type ast_block_thing == ast_block_thing(context).
+
+:- type ast_nested_function
+    --->    ast_nested_function(
+                anf_decl            :: ast_function_decl,
+                anf_body            :: list(ast_block_thing)
+            ).
 
 %
 % Modules, imports and exports.
