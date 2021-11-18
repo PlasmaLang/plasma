@@ -50,13 +50,13 @@ module_05.out : module_05.pzo module_05_.pzo $(TOP)/src/plzlnk
 module_06.out : module_06.p $(TOP)/src/plzc module_06a.pi
 
 module_08.out : module_08.p module_08.c.p module_08.d.p BUILD.plz BINS
-	if $(TOP)/src/plzbuild --rebuild module_08 > $@ 2>&1 ; then \
+	if $(TOP)/src/plzbuild module_08 > $@ 2>&1 ; then \
 		echo "Build succeeded" ; \
 		echo "Build succeeded" >> $@ ; \
 		false ; \
 	fi
 module_08b.out : module_08b.p module_08.c.p module_08.d.p BUILD.plz BINS
-	if $(TOP)/src/plzbuild --rebuild module_08b > $@ 2>&1 ; then \
+	if $(TOP)/src/plzbuild module_08b > $@ 2>&1 ; then \
 		echo "Build succeeded" ; \
 		echo "Build succeeded" >> $@ ; \
 		false ; \
