@@ -9,7 +9,7 @@ TOP=..
 
 .PHONY: all
 all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
-	$(TOP)/src/plzbuild --rebuild
+	$(TOP)/src/plzbuild
 
 fib.pz: all
 hello.pz: all
