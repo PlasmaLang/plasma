@@ -218,6 +218,12 @@ make_target(TOML, TargetStr) = Result :-
         Result = ok(no)
     ).
 
+    % search_toml_q_names(Context, WrapError, Toml, Key) = Result
+    %
+    % Search the toml for the given key, if not found return an error at
+    % Context, if found try to parse it as a list of q_names.  WrapError
+    % lets the caller explain the context of the error.
+    %
 :- func search_toml_q_names(context, func(string) = string, toml, toml_key) =
     result(pair(list(q_name), context), string).
 
