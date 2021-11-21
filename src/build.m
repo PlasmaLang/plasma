@@ -228,13 +228,13 @@ make_target(TOML, TargetStr) = Result :-
     result(pair(list(q_name), context), string).
 
 search_toml_q_names(Context, WrapError, TOML, Key) =
-    search_toml(Context, WrapError, q_name_from_dotted_string, TOML, Key).
+    search_toml_array(Context, WrapError, q_name_from_dotted_string, TOML, Key).
 
-:- func search_toml(context, func(string) = string,
+:- func search_toml_array(context, func(string) = string,
         func(string) = maybe_error(T), toml, toml_key) =
     result(pair(list(T), context), string).
 
-search_toml(NotFoundContext, WrapError, MakeResult, TOML, Key) =
+search_toml_array(NotFoundContext, WrapError, MakeResult, TOML, Key) =
         Result :-
     ( if search(TOML, Key, Value - Context) then
         ( if Value = tv_array(Values) then
