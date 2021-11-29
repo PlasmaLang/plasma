@@ -53,9 +53,14 @@
 
 assemble(PZT, MaybePZ) :-
     some [!PZ, !Errors] (
-        filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
-            ModuleNameStr),
-        ModuleName = q_name_single(ModuleNameStr),
+        ( if
+            filename_extension(constant.pz_text_extension, PZT ^ asm_filename,
+                ModuleNameStr)
+        then
+            ModuleName = q_name_single(ModuleNameStr)
+        else
+            ModuleName = q_name_single(PZT ^ asm_filename)
+        ),
         !:PZ = init_pz([ModuleName], pzft_object),
         Items = PZT ^ asm_items,
 
