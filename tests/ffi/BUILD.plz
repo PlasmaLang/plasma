@@ -8,4 +8,5 @@
 [import_function]
 type = program
 modules = [ImportFunction]
+c_sources = [import_function.cpp]
 

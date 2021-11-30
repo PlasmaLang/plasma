@@ -55,6 +55,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module assoc_list.
 :- import_module bool.
 :- import_module cord.
 :- import_module float.
@@ -165,7 +166,8 @@ build(Options, Result, !IO) :-
 
                 % The modules that make up the program
                 t_modules           :: list(q_name),
-                t_modules_context   :: context
+                t_modules_context   :: context,
+                t_c_sources         :: list(string)
             ).
 
 :- pred read_project(string::in, result(list(target), string)::out,
@@ -202,12 +204,28 @@ make_target(TOML, TargetStr) = Result :-
     then
         TargetResult = nq_name_from_string(TargetStr),
         ( TargetResult = ok(TargetName),
-            ModulesResult = search_toml_q_names(TargetContext,
+            ModulesResult = search_toml_q_names(
+                not_found_error(TargetContext, "modules"),
                 func(E) = "Invalid modules field: " ++ E,
                 Target, "modules"),
-            ( ModulesResult = ok(Modules - ModulesContext),
-                Result = ok(yes(target(TargetName, Modules, ModulesContext)))
-            ; ModulesResult = errors(Errors),
+            CSourcesResult = search_toml_filenames(
+                ok([] - TargetContext),
+                func(E) = "Invalid c_sources field: " ++ E,
+                Target, "c_sources"),
+            (
+                ModulesResult = ok(Modules - ModulesContext),
+                CSourcesResult = ok(CSources - _),
+
+                Result = ok(yes(target(TargetName, Modules, ModulesContext,
+                    CSources)))
+            ;
+                ModulesResult = ok(_),
+                CSourcesResult = errors(Errors),
+
+                Result = errors(Errors)
+            ;
+                ModulesResult = errors(Errors),
+
                 Result = errors(Errors)
             )
         ; TargetResult = error(_),
@@ -218,23 +236,37 @@ make_target(TOML, TargetStr) = Result :-
         Result = ok(no)
     ).
 
-    % search_toml_q_names(Context, WrapError, Toml, Key) = Result
+%-----------------------------------------------------------------------%
+
+:- type search_result(T) == result(pair(list(T), context), string).
+
+    % search_toml_q_names(NotFoundResult, WrapError, Toml, Key) = Result
     %
     % Search the toml for the given key, if not found return an error at
     % Context, if found try to parse it as a list of q_names.  WrapError
     % lets the caller explain the context of the error.
     %
-:- func search_toml_q_names(context, func(string) = string, toml, toml_key) =
-    result(pair(list(q_name), context), string).
+:- func search_toml_q_names(search_result(q_name), func(string) = string,
+    toml, toml_key) = search_result(q_name).
 
-search_toml_q_names(Context, WrapError, TOML, Key) =
-    search_toml_array(Context, WrapError, q_name_from_dotted_string, TOML, Key).
+search_toml_q_names(NotFoundResult, WrapError, TOML, Key) =
+    search_toml_array(NotFoundResult, WrapError, q_name_from_dotted_string,
+        TOML, Key).
 
-:- func search_toml_array(context, func(string) = string,
+    % search_toml_q_names(NotFoundResult, WrapError, Toml, Key) = Result
+    %
+:- func search_toml_filenames(search_result(string), func(string) = string,
+    toml, toml_key) = search_result(string).
+
+search_toml_filenames(NotFoundResult, WrapError, TOML, Key) =
+    search_toml_array(NotFoundResult, WrapError, func(X) = ok(X), TOML, Key).
+
+:- func search_toml_array(result(pair(list(T), context), string),
+        func(string) = string,
         func(string) = maybe_error(T), toml, toml_key) =
-    result(pair(list(T), context), string).
+    search_result(T).
 
-search_toml_array(NotFoundContext, WrapError, MakeResult, TOML, Key) =
+search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
         Result :-
     ( if search(TOML, Key, Value - Context) then
         ( if Value = tv_array(Values) then
@@ -263,9 +295,13 @@ search_toml_array(NotFoundContext, WrapError, MakeResult, TOML, Key) =
                 WrapError("Value is not an array"))
         )
     else
-        Result = return_error(NotFoundContext,
-            WrapError(format("Key not found '%s'", [s(Key)])))
+        Result = NotFoundResult
     ).
+
+:- func not_found_error(context, toml_key) = search_result(T).
+
+not_found_error(Context, Key) =
+    return_error(Context, format("Key not found '%s'", [s(Key)])).
 
 %-----------------------------------------------------------------------%
 
@@ -293,6 +329,15 @@ search_toml_array(NotFoundContext, WrapError, MakeResult, TOML, Key) =
                 dttr_name   :: q_name,
                 dttr_output :: string,
                 dttr_input  :: string
+            )
+    ;       dt_c_link(
+                dtcl_name   :: nq_name,
+                dtcl_output :: string,
+                dtcl_input  :: list(string)
+            )
+    ;       dt_c_compile(
+                ctcc_output :: string,
+                ctcc_input  :: string
             ).
 
 :- pred build_dependency_info(list(target)::in,
@@ -303,6 +348,36 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
+    find_module_files(Targets, MaybeModuleFiles, !DirInfo, !IO),
+    find_foreign_sources(Targets, MaybeForeignSources, !DirInfo, !IO),
+
+    ( MaybeModuleFiles = ok(ModuleFiles),
+      MaybeForeignSources = ok(ForeignSources),
+        ModuleTargets = map(make_module_targets, ModuleFiles),
+        ProgramTargets = map(make_program_target, Targets),
+        ForeignLinkTargets = map(make_foreign_link_target, Targets),
+        ForeignCompileTargets = map(make_foreign_target, ForeignSources),
+
+        MaybeDeps = ok(condense(ModuleTargets) ++
+            ForeignCompileTargets ++
+            list_maybe_to_list(ForeignLinkTargets) ++ ProgramTargets)
+
+    ; MaybeModuleFiles = ok(_),
+      MaybeForeignSources = errors(Errors),
+        MaybeDeps = errors(Errors)
+    ; MaybeModuleFiles = errors(Errors),
+      MaybeForeignSources = ok(_),
+        MaybeDeps = errors(Errors)
+    ; MaybeModuleFiles = errors(ErrorsA),
+      MaybeForeignSources = errors(ErrorsB),
+        MaybeDeps = errors(ErrorsA ++ ErrorsB)
+    ).
+
+:- pred find_module_files(list(target)::in,
+    result(assoc_list(q_name, string), string)::out,
+    dir_info::in, dir_info::out, io::di, io::uo) is det.
+
+find_module_files(Targets, MaybeModuleFiles, !DirInfo, !IO) :-
     ModulesList = condense(map((func(T) = L :-
             C0 = T ^ t_modules_context,
             L = map(func(M0) = M0 - C0, T ^ t_modules)
@@ -336,17 +411,16 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
             )
         ),
         to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo, !IO),
-    MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0),
+    MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0).
 
-    ( MaybeModuleFiles = ok(ModuleFiles),
-        ModuleTargets = map(make_module_targets, ModuleFiles),
-        ProgramTargets = map(make_program_target, Targets),
+:- pred find_foreign_sources(list(target)::in,
+    result(list(string), string)::out,
+    dir_info::in, dir_info::out, io::di, io::uo) is det.
 
-        MaybeDeps = ok(condense(ModuleTargets) ++ ProgramTargets)
-
-    ; MaybeModuleFiles = errors(Errors),
-        MaybeDeps = errors(Errors)
-    ).
+find_foreign_sources(Targets, Result, !DirInfo, !IO) :-
+    SourcesList = condense(map((func(T) = T ^ t_c_sources), Targets)),
+    % We don't do any filesystem checking, but might in the future.
+    Result = ok(SourcesList).
 
 :- func make_program_target(target) = dep_target.
 
@@ -370,6 +444,37 @@ make_module_targets(ModuleName - SourceName) = Targets :-
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
         dt_typeres(ModuleName, TyperesName, SourceName)
     ].
+
+:- func make_foreign_link_target(target) = maybe(dep_target).
+
+make_foreign_link_target(Target) = Dep :-
+    ForeignSources = Target ^ t_c_sources,
+    ( ForeignSources = [],
+        Dep = no
+    ; ForeignSources = [_ | _],
+        Output = make_c_library_name(Target),
+        ( if
+            map(file_change_extension(".cpp", ".o"),
+                ForeignSources, ForeignObjects)
+        then
+            Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects))
+        else
+            compile_error($file, $pred, "Unrecognised source file extension")
+        )
+    ).
+
+:- func make_c_library_name(target) = string.
+
+make_c_library_name(Target) = nq_name_to_string(Target ^ t_name) ++ ".so".
+
+:- func make_foreign_target(string) = dep_target.
+
+make_foreign_target(CFileName) = Target :-
+    ( if file_change_extension(".cpp", ".o", CFileName, ObjectName) then
+        Target = dt_c_compile(ObjectName, CFileName)
+    else
+        compile_error($file, $pred, "Unrecognised source file extension")
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -451,6 +556,20 @@ write_target(File,
         [s(TyperesFile), s(SourceFile)], !IO),
     format(File, "    name = %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO).
+write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
+    format(File, "build %s : c_link %s\n",
+        [s(Output), s(string_join(" ", Inputs))], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ModuleName))], !IO),
+    format(File, "build ../%s : copy_foreign_out %s\n",
+        [s(Output), s(Output)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(nq_name_to_string(ModuleName))], !IO).
+write_target(File, dt_c_compile(Object, Source), !IO) :-
+    format(File, "build %s : c_compile ../%s\n",
+        [s(Object), s(Source)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(Source)], !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -485,7 +604,9 @@ do_write_vars_file(Options, File, !IO) :-
     format(File, "path = %s\n", [s(Path)], !IO),
     format(File, "source_path  = %s\n\n", [s(Options ^ pzb_source_path)], !IO),
     format(File, "pcflags = %s\n", [s(PCFlags)], !IO),
-    format(File, "plflags = %s\n", [s(PLFlags)], !IO).
+    format(File, "plflags = %s\n", [s(PLFlags)], !IO),
+    format(File, "cxx = c++ -fpic\n", [], !IO),
+    format(File, "cc = cc -fpic -shared\n", [], !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -595,9 +716,21 @@ rule plzlink
     command = $path/plzlnk $plflags -n $name -o $out $in
     description = Linking $name
 
+rule c_link
+    command = $cc -o $out $in
+    description = Linking foreign code for $name
+
+rule c_compile
+    command = $cxx -o $out -c $in
+    description = Compiling $name
+
 rule copy_out
     command = cp $in $out
     description = Copying $name bytecode
+
+rule copy_foreign_out
+    command = cp $in $out
+    description = Copying foreign code for $name
 ".
 
 %-----------------------------------------------------------------------%
@@ -609,16 +742,33 @@ invoke_ninja(Options, Proj, Result, !IO) :-
     Verbose = Options ^ pzb_verbose,
     Targets0 = Options ^ pzb_targets,
     ( Targets0 = [_ | _],
-        Targets = Targets0
+        TargetSet = list_to_set(Targets0),
+        Targets = filter(pred(T::in) is semidet :-
+            member(T ^ t_name, TargetSet), Proj)
     ; Targets0 = [],
-        Targets = map(func(T) = T ^ t_name, Proj)
+        Targets = Proj
     ),
-    TargetsStr = string_join(" ", map(
-        func(T) = "../" ++ nq_name_to_string(T) ++ library_extension,
-        Targets)),
+    NinjaTargets = map(
+        (func(T) = [PZTarget] ++ CTarget :-
+            Name = T ^ t_name,
+            PZTarget = ninja_target_path(Name, library_extension),
+            CSources = T ^ t_c_sources,
+            ( CSources = [],
+                CTarget = []
+            ; CSources = [_ | _],
+                % Need to build the foreign code
+                CTarget = [ninja_target_path(Name, ".so")]
+            )
+        ), Targets),
+    NinjaTargetsStr = string_join(" ", condense(NinjaTargets)),
     invoke_command(Verbose, format("ninja %s -C %s %s",
-        [s(verbose_opt_str(Verbose)), s(build_directory), s(TargetsStr)]),
+        [s(verbose_opt_str(Verbose)), s(build_directory), s(NinjaTargetsStr)]),
         Result, !IO).
+
+:- func ninja_target_path(nq_name, string) = string.
+
+ninja_target_path(Name, Extension) =
+    "../" ++ nq_name_to_string(Name) ++ Extension.
 
 :- pred clean(plzbuild_options::in, io::di, io::uo) is det.
 

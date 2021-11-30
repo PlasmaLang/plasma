@@ -37,6 +37,8 @@
 
 :- func maybe_list(maybe(X)) = list(X).
 
+:- func list_maybe_to_list(list(maybe(X))) = list(X).
+
 :- func maybe_cord(maybe(X)) = cord(X).
 
     % Mercury does not provide a map over maybe_error.
@@ -146,6 +148,10 @@ one_item_in_set(Set) = X :-
 
 maybe_list(yes(X)) = [X].
 maybe_list(no) = [].
+
+list_maybe_to_list([]) = [].
+list_maybe_to_list([no | List]) = list_maybe_to_list(List).
+list_maybe_to_list([yes(X) | List]) = [X | list_maybe_to_list(List)].
 
 %-----------------------------------------------------------------------%
 
