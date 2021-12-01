@@ -24,9 +24,9 @@ func example() uses IO -> Int {
     print!("The End" ++ dot ++ nl)
 
     // Or a codepoint (aka character)
-    print!("A codepoint: " ++ Builtin.codepoint_to_string(".") ++ nl)
-    print!("A codepoint: " ++ Builtin.codepoint_to_string("\n") ++ nl)
-    print!("A codepoint: " ++ Builtin.codepoint_to_string(
+    print!("A codepoint: " ++ codepoint_to_string(".") ++ nl)
+    print!("A codepoint: " ++ codepoint_to_string("\n") ++ nl)
+    print!("A codepoint: " ++ codepoint_to_string(
         Builtin.int_to_codepoint(113)) ++ nl)
 
     return 0

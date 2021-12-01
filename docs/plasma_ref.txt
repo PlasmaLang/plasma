@@ -1605,6 +1605,9 @@ type CodepointCategory = Whitespace
 `func codepoint_category(CodePoint) -> CodepointCategory`::
   Return the class of a character.
 
+`func codepoint_to_string(CodePoint) -> String`::
+  Return a string containing only this codepoint.
+
 `func string_begin(String) -> StringPos`::
   Return a `StringPos` of before the beginning of the string.
 
