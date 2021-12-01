@@ -84,8 +84,8 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
     return retcode;
 }
 
-#define RETURN_STACK_SIZE 2048
-#define EXPR_STACK_SIZE   4096
+#define RETURN_STACK_SIZE 2048*4
+#define EXPR_STACK_SIZE   4096*4
 
 Context::Context(GCCapability & gc)
     : AbstractGCTracer(gc)
