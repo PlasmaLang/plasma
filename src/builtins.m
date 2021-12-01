@@ -600,7 +600,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
         _, !Map, !Core),
 
     CPToStringName = nq_name_det("codepoint_to_string"),
-    register_builtin_func_builtin(CPToStringName,
+    register_builtin_func_root(CPToStringName,
         func_init_builtin_rts(
             q_name_append(builtin_module_name, CPToStringName),
             [builtin_type(codepoint)],
