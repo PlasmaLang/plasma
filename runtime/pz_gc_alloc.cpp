@@ -178,14 +178,7 @@ Block * ChunkBOP::allocate_block()
 {
     for (unsigned i = 0; i < m_wilderness; i++) {
         if (!m_blocks[i].is_in_use()) {
-#ifdef PZ_DEV
-            if (!m_heap->options().gc_zealous()) {
-                fprintf(
-                    stderr,
-                    "Running previously-unused code path, "
-                    "see https://github.com/PlasmaLang/plasma/issues/191\n");
-            }
-#endif
+            // TODO https://github.com/PlasmaLang/plasma/issues/191
             return &m_blocks[i];
         }
     }

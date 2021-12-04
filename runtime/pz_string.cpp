@@ -103,6 +103,20 @@ String::length() const {
 }
 
 bool
+String::isEmpty() const {
+    switch (mType) {
+        case ST_CONST:
+            return s.cStr[0] == '\0';
+        case ST_FLAT:
+            return s.baseStr->isEmpty();
+        case ST_EMPTY:
+            return true;
+        default:
+            abort();
+    }
+}
+
+bool
 String::equals(const String &other) const {
     return equals_pointer(other) || (0 == strcmp(c_str(), other.c_str()));
 }
@@ -268,6 +282,11 @@ FlatString::print() const {
 uint32_t
 FlatString::length() const {
     return mLen;
+}
+
+bool
+FlatString::isEmpty() const {
+    return mLen == 0;
 }
 
 uint32_t
