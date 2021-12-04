@@ -15,12 +15,15 @@ func hello() uses IO -> Int {
         print!("What's your name (empty to exit)? ")
         // Readline returns a line from standard input without the newline
         // character.
-        var name = Trim.trim(readline!())
-        if (not string_equals(name, "")) {
-            print!("Hello " ++ name ++ ".\n")
+        var name_res = readline!()
+        match (name_res) {
+          Ok(var name) -> {
+            print!("Hello " ++ Trim.trim(name) ++ ".\n")
             return True
-        } else {
+          }
+          EOF -> {
             return False
+          }
         }
     }
     Util.while!(loop)

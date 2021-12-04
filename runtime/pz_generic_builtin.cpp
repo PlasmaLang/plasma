@@ -21,6 +21,14 @@
 
 namespace pz {
 
+template<typename T>
+static
+uintptr_t Box(T v, GCCapability &gc) {
+    T *ptr = reinterpret_cast<T*>(gc.alloc_bytes(sizeof(T)));
+    *ptr = v;
+    return reinterpret_cast<uintptr_t>(ptr);
+}
+
 /*
  * Imported procedures
  *
@@ -41,6 +49,7 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
     const uint32_t READLINE_BUFFER_SIZE = 128;
     StackValue * stack = static_cast<StackValue *>(void_stack);
     NoGCScope nogc(gc_trace);
+    bool got_eof = false;
 
     String str("");
     do {
@@ -51,6 +60,7 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
                 perror("stdin");
                 exit(PZ_EXIT_RUNTIME_ERROR);
             } else if (feof(stdin)) {
+                got_eof = true;
                 break;
             }
             // unreachable
@@ -80,10 +90,16 @@ unsigned pz_builtin_readline_func(void * void_stack, unsigned sp,
         }
     } while(true);
 
-    stack[++sp].ptr = str.ptr();
-
     nogc.abort_if_oom("reading stdin");
 
+    sp++;
+    if (got_eof && str.isEmpty()) {
+        stack[sp].uptr = 0;
+        return sp;
+    }
+
+    // Tag the pointer for the Ok constructor.
+    stack[sp].uptr = Box(str.ptr(), nogc) | 1;
     return sp;
 }
 
@@ -258,14 +274,6 @@ unsigned pz_builtin_strpos_backward(void * void_stack, unsigned sp,
     stack[sp].ptr = pos->backward(gc);
 
     return sp;
-}
-
-template<typename T>
-static
-uintptr_t Box(T v, GCCapability &gc) {
-    T *ptr = reinterpret_cast<T*>(gc.alloc_bytes(sizeof(T)));
-    *ptr = v;
-    return reinterpret_cast<uintptr_t>(ptr);
 }
 
 unsigned pz_builtin_strpos_next_char(void * void_stack, unsigned sp,

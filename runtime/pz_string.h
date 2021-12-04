@@ -71,6 +71,7 @@ class String {
 
     // Length in code points
     uint32_t length() const;
+    bool isEmpty() const;
 
     // Length in bytes in RAM, including bookkeeping.
     uint32_t storageSize() const;
@@ -119,6 +120,7 @@ class BaseString {
 
     // Length in code points
     virtual uint32_t length() const = 0;
+    virtual bool isEmpty() const = 0;
 
     // Length in bytes in RAM, including bookkeeping.
     virtual uint32_t storageSize() const = 0;
@@ -144,6 +146,7 @@ class FlatString : public BaseString {
 
     virtual void print() const;
     virtual uint32_t length() const;
+    virtual bool isEmpty() const;
     virtual uint32_t storageSize() const;
 
     virtual const char * c_str() const;

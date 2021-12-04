@@ -30,7 +30,7 @@ types.pz: all
 	$(TOP)/runtime/plzrun $< > $@
 
 readline.out : readline.pz $(TOP)/runtime/plzrun
-	echo "Paul Bone\nI am a fish  \n  FISH" | $(TOP)/runtime/plzrun $< > $@
+	echo "Paul Bone\n\n   \nI am a fish  \n  FISH" | $(TOP)/runtime/plzrun $< > $@
 
 .PHONY: clean
 clean:

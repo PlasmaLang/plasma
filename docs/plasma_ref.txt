@@ -1668,13 +1668,18 @@ fields are permitted to be used as functions in the future.
 `resource Environment from IO`::
   A resource to set the environment with `setenv`.
 
+`type IOResult('t)`::
+  A result type for many IO operations that may return end-of-file.
+
+  type IOResult('t) = Ok('t)
+                    | EOF
+
 `func print(String) uses IO`::
   Write the string to standard out.
 
-`func readline() uses IO -> String`::
+`func readline() uses IO -> IOResult(String)`::
   Read a line from standard in, the newline character is not returned.
-  Returns an empty string for the end of input, which is indistinguishable
-  from an empty line.
+  Aborts the program (TODO) on error.
 
 `func Builtin.set_parameter(String, Int) uses IO -> Bool`::
   Set a parameter for the runtime system.  There are currently no settable

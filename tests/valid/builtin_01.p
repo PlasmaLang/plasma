@@ -61,11 +61,20 @@ resource C from Environment
 func test_misc() uses IO {
     print!("Print works, duh\n")
 
-    // Don't actually do it because the test doesn't read any standard
-    // input.  We have other tests for that.
-    if (False) {
-        _ = readline!()
-    } else {}
+    // By using a function we test that `IOResult` can be named.
+    func sink_ioresult(rl : func () uses IO -> IOResult(String)) uses IO {
+        // Don't actually do it because the test doesn't read any standard
+        // input.  We have other tests for that.
+        if (False) {
+            match (rl!()) {
+                Ok(_) -> {}
+                EOF -> {}
+            }
+        } else {}
+    }
+    // The readline function matches
+    sink_ioresult!(readline)
+    
 
     _ = Builtin.set_parameter!("nothing", 2)
     _, _ = Builtin.get_parameter!("heap_usage")

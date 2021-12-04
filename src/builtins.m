@@ -490,10 +490,39 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
             [builtin_type(string)], [], list_to_set([RIO]), init),
         _, !Map, !Core),
 
+    core_allocate_type_id(IOResultType, !Core),
+
+    % There's currently no error constructor. but there should be, currently
+    % the runtime just aborts.
+    OkParamName = "v",
+    OkName = nq_name_det("Ok"),
+    OkQName = q_name_append(builtin_module_name, OkName),
+    core_allocate_ctor_id(OkId, !Core),
+    core_set_constructor(OkId, OkQName, IOResultType,
+        constructor(OkQName, [OkParamName], [
+            type_field(q_name_append_str(builtin_module_name, "value"),
+                type_variable(OkParamName))]), !Core),
+    root_name(OkName, bi_ctor(OkId), !Map),
+
+    EOFName = nq_name_det("EOF"),
+    EOFQName = q_name_append(builtin_module_name, EOFName),
+    core_allocate_ctor_id(EOFId, !Core),
+    core_set_constructor(EOFId, EOFQName, IOResultType,
+        constructor(EOFQName, [OkParamName], []), !Core),
+    root_name(EOFName, bi_ctor(EOFId), !Map),
+
+    IOResultName = nq_name_det("IOResult"),
+    core_set_type(IOResultType,
+        type_init(q_name_append(builtin_module_name, IOResultName),
+            [OkParamName], [OkId, EOFId], st_private),
+        !Core),
+    root_name(IOResultName, bi_type(IOResultType, arity(1)), !Map),
+
     ReadlnName = q_name_append_str(builtin_module_name, "readline"),
     register_builtin_func_root(nq_name_det("readline"),
         func_init_builtin_rts(ReadlnName,
-            [], [builtin_type(string)], list_to_set([RIO]), init),
+            [], [type_ref(IOResultType, [builtin_type(string)])],
+            list_to_set([RIO]), init),
         _, !Map, !Core),
 
     IntToStringName = q_name_append_str(builtin_module_name, "int_to_string"),
