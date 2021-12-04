@@ -214,7 +214,7 @@ setup_core_types(MaybeType, !Map, !Core) :-
         type_init(q_name_append(builtin_module_name, MaybeName),
             [MaybeParamName], [NoneId, SomeId], st_private),
         !Core),
-    root_name(nq_name_det("Maybe"), bi_type(MaybeType, arity(1)), !Map).
+    root_name(MaybeName, bi_type(MaybeType, arity(1)), !Map).
 
     % If a function is implemented by inlining PZ instructions during
     % codegen, then give it a definition that does the same so it can be
