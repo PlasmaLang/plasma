@@ -92,7 +92,7 @@ func test_misc() uses IO {
     do_gettimeofday!()
 
     if (False) {
-        Builtin.die!("Die!")
+        Builtin.die("Die!")
     } else {}
 }
 
