@@ -60,6 +60,7 @@
     ;       ce_match_unreached_cases
     ;       ce_match_duplicate_case
     ;       ce_match_on_function_type
+    ;       ce_case_does_not_define_all_variables(list(string))
 
     % Arity related.
     ;       ce_arity_mismatch_func(arity, arity)
@@ -216,6 +217,12 @@ ce_to_pretty(ce_match_duplicate_case,
     p_words("This case occurs multiple times in this match"), []).
 ce_to_pretty(ce_match_on_function_type,
     p_words("Attempt to pattern match on a function"), []).
+ce_to_pretty(ce_case_does_not_define_all_variables(Vars),
+    p_words("This branch did not initialise variables initialised on other
+        branches, they are:") ++
+    [p_nl_soft, p_str(" "),
+        p_list(pretty_seperated([p_str(", "), p_nl_soft],
+            map(p_str, Vars)))], []).
 
 ce_to_pretty(Error, Pretty, []) :-
     % These to errors are broken and can't be properly distinguished.

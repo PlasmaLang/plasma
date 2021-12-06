@@ -1,6 +1,2 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Case does not define all required variables
-Context:            vars_09.p:15
-plzc location:      predicate `pre.branches.fix_branches_case'/11
-plzc file:          pre.branches.m
+vars_09.p:16: This branch did not initialise variables initialised on other
+              branches, they are: y, y2

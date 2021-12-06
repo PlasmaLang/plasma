@@ -141,8 +141,10 @@ fix_branches_case(DeclVars, SwitchDefVars, pre_case(Pat, Stmts0),
             ; Stmts0 = [],
                 unexpected($file, $pred, "Empty case")
             ),
-            compile_error($file, $pred, Context,
-                "Case does not define all required variables")
+            MissedVars = map(get_var_name_no_suffix(!.Varmap),
+                to_sorted_list(difference(SwitchDefVars, DefVars))),
+            add_error(Context,
+                ce_case_does_not_define_all_variables(MissedVars), !Errors)
         else
             true
         )
