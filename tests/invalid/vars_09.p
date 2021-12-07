@@ -10,16 +10,18 @@ export
 func main() uses IO -> Int {
     var x = 3
     var y
+    var y2
     match (x) {
         3 -> {
             var z = 4
         }
         var yy -> {
             y = yy * 26
+            y2 = y * 2
         }
     }
 
-    print!(int_to_string(y))
+    print!(int_to_string(y + y2))
     return 0
 }
 

@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016, 2019-2020 Plasma Team
+% Copyright (C) 2016, 2019-2021 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module fixes variable usage in branching code.  It:
@@ -33,6 +33,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module cord.
 :- import_module list.
 :- import_module require.
 :- import_module set.
@@ -50,24 +51,31 @@ fix_branches(!.Func) = Result :-
     Varmap0 = !.Func ^ f_varmap,
     Arity = !.Func ^ f_arity,
     Context = !.Func ^ f_context,
-    map_foldl2(fix_branches_stmt, Stmts0, Stmts1, set.init, _, Varmap0, Varmap),
-    ResultStmts = fix_return_stmt(return_info(Context, Arity), Stmts1),
-    ( ResultStmts = ok(Stmts),
-        !Func ^ f_body := Stmts,
-        !Func ^ f_varmap := Varmap,
-        Result = ok(!.Func)
-    ; ResultStmts = errors(Errors),
-        Result = errors(Errors)
+    map_foldl3(fix_branches_stmt, Stmts0, Stmts1, set.init, _,
+        Varmap0, Varmap, init, BranchesErrors),
+    ( if is_empty(BranchesErrors) then
+        ResultStmts = fix_return_stmt(return_info(Context, Arity), Stmts1),
+        ( ResultStmts = ok(Stmts),
+            !Func ^ f_body := Stmts,
+            !Func ^ f_varmap := Varmap,
+            Result = ok(!.Func)
+        ; ResultStmts = errors(Errors),
+            Result = errors(Errors)
+        )
+    else
+        Result = errors(BranchesErrors)
     ).
 
 %-----------------------------------------------------------------------%
 
 :- pred fix_branches_stmt(pre_statement::in, pre_statement::out,
-    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
+    set(var)::in, set(var)::out, varmap::in, varmap::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
-fix_branches_stmt(!Stmt, !DeclVars, !Varmap) :-
+fix_branches_stmt(!Stmt, !DeclVars, !Varmap, !Errors) :-
     Context = !.Stmt ^ s_info ^ si_context,
-    update_lambdas_this_stmt(fix_branches_lambda(Context), !Stmt, !Varmap),
+    update_lambdas_this_stmt_2(fix_branches_lambda(Context),
+        !Stmt, !Varmap, !Errors),
     Type = !.Stmt ^ s_type,
     % Only defined vars that are also non-local can be defined vars.
     (
@@ -84,8 +92,8 @@ fix_branches_stmt(!Stmt, !DeclVars, !Varmap) :-
         Info = !.Stmt ^ s_info,
         DefVars = Info ^ si_def_vars,
         UsedDefVars = DefVars `intersect` !.DeclVars,
-        map2_foldl2(fix_branches_case(!.DeclVars, UsedDefVars), Cases0, Cases,
-            CasesReachable, set.init, _, !Varmap),
+        map2_foldl3(fix_branches_case(!.DeclVars, UsedDefVars), Cases0,
+            Cases, CasesReachable, set.init, _, !Varmap, !Errors),
         Reachable = reachable_branches(CasesReachable),
 
         !Stmt ^ s_type := s_match(Var, Cases),
@@ -106,11 +114,13 @@ fix_branches_stmt(!Stmt, !DeclVars, !Varmap) :-
 
 :- pred fix_branches_case(set(var)::in, set(var)::in,
     pre_case::in, pre_case::out, stmt_reachable::out,
-    set(var)::in, set(var)::out, varmap::in, varmap::out) is det.
+    set(var)::in, set(var)::out, varmap::in, varmap::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
 fix_branches_case(DeclVars, SwitchDefVars, pre_case(Pat, Stmts0),
-        pre_case(Pat, Stmts), Reachable, !CasesVars, !Varmap) :-
-    map_foldl2(fix_branches_stmt, Stmts0, Stmts, DeclVars, _, !Varmap),
+        pre_case(Pat, Stmts), Reachable, !CasesVars, !Varmap, !Errors) :-
+    map_foldl3(fix_branches_stmt, Stmts0, Stmts, DeclVars, _, !Varmap,
+        !Errors),
 
     PatVars = pattern_all_vars(Pat),
 
@@ -131,8 +141,10 @@ fix_branches_case(DeclVars, SwitchDefVars, pre_case(Pat, Stmts0),
             ; Stmts0 = [],
                 unexpected($file, $pred, "Empty case")
             ),
-            compile_error($file, $pred, Context,
-                "Case does not define all required variables")
+            MissedVars = map(get_var_name_no_suffix(!.Varmap),
+                to_sorted_list(difference(SwitchDefVars, DefVars))),
+            add_error(Context,
+                ce_case_does_not_define_all_variables(MissedVars), !Errors)
         else
             true
         )
@@ -182,17 +194,20 @@ reachable_sequence_2(stmt_may_return, stmt_may_return) =
 
 %-----------------------------------------------------------------------%
 
-:- pred fix_branches_lambda(context::in, pre_lambda::in, pre_lambda::out,
-    varmap::in, varmap::out) is det.
+:- pred fix_branches_lambda(context::in,
+    pre_lambda::in, pre_lambda::out, varmap::in, varmap::out,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
-fix_branches_lambda(Context, pre_lambda(Func, Params, Captured, Arity, !.Body),
-        pre_lambda(Func, Params, Captured, Arity, !:Body), !Varmap) :-
-    map_foldl2(fix_branches_stmt, !Body, set.init, _, !Varmap),
-    ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
-    ( ResultStmts = ok(!:Body)
-    ; ResultStmts = errors(_),
-        compile_error($file, $pred, "We need to pass this error to our
-        caller")
+fix_branches_lambda(Context, !Lambda, !Varmap, !Errors) :-
+    some [!Body] (
+        !.Lambda = pre_lambda(Func, Params, Captured, Arity, !:Body),
+        map_foldl3(fix_branches_stmt, !Body, set.init, _, !Varmap, !Errors),
+        ResultStmts = fix_return_stmt(return_info(Context, Arity), !.Body),
+        ( ResultStmts = ok(!:Body),
+            !:Lambda = pre_lambda(Func, Params, Captured, Arity, !.Body)
+        ; ResultStmts = errors(Errors),
+            add_errors(Errors, !Errors)
+        )
     ).
 
 %-----------------------------------------------------------------------%
