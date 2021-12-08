@@ -94,17 +94,20 @@ Context::Context(GCCapability & gc)
     , rsp(0)
     , esp(0)
 {
-    return_stack = new uint8_t *[RETURN_STACK_SIZE];
-    expr_stack   = new StackValue[EXPR_STACK_SIZE];
+    if (!return_stack_mem.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
+        fprintf(stderr, "Unable to allocate stack\n");
+        exit(1);
+    }
+    return_stack = reinterpret_cast<uint8_t**>(return_stack_mem.raw_pointer());
+
+    if (!expr_stack_mem.allocate(EXPR_STACK_SIZE * sizeof(StackValue))) {
+        fprintf(stderr, "Unable to allocate stack\n");
+        exit(1);
+    }
+    expr_stack = reinterpret_cast<StackValue*>(expr_stack_mem.raw_pointer());
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
     memset(expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
 #endif
-}
-
-Context::~Context()
-{
-    delete[] return_stack;
-    delete[] expr_stack;
 }
 
 void Context::do_trace(HeapMarkState * state) const

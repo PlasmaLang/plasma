@@ -13,6 +13,7 @@
 #include "pz_closure.h"
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
+#include "pz_memory.h"
 
 namespace pz {
 
@@ -163,13 +164,14 @@ union StackValue {
 struct Context : public AbstractGCTracer {
     uint8_t *    ip;
     void *       env;
+    Memory       return_stack_mem;
     uint8_t **   return_stack;
     unsigned     rsp;
+    Memory       expr_stack_mem;
     StackValue * expr_stack;
     unsigned     esp;
 
     Context(GCCapability & gc);
-    virtual ~Context();
 
     virtual void do_trace(HeapMarkState * state) const;
 };
