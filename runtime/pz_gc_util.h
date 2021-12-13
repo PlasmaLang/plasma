@@ -223,7 +223,7 @@ class Root
  * seems that it's okay either to throw or use -fno-exceptions.  See:
  * https://blog.mozilla.org/nnethercote/2011/01/18/the-dangers-of-fno-exceptions/
  */
-class NoGCScope : public GCCapability
+class NoGCScope final : public GCCapability
 {
    private:
 #ifdef PZ_DEV
@@ -237,7 +237,7 @@ class NoGCScope : public GCCapability
     // The constructor may use the tracer to perform an immediate
     // collection, or if it is a NoGCScope allow the direct nesting.
     NoGCScope(GCCapability & gc_cap);
-    virtual ~NoGCScope();
+    ~NoGCScope();
 
     void oom(size_t size) override;
 
