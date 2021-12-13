@@ -37,7 +37,7 @@ struct Imported : public GCNewTrace {
         return import_closures.size();
     }
 
-    virtual void do_trace(HeapMarkState * marker) const {
+    void do_trace(HeapMarkState * marker) const override {
         for (Closure *c : import_closures) {
             marker->mark_root(c);
         }

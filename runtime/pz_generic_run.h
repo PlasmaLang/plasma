@@ -171,7 +171,7 @@ struct Context : public AbstractGCTracer {
     Context(GCCapability & gc);
     virtual ~Context();
 
-    virtual void do_trace(HeapMarkState * state) const;
+    void do_trace(HeapMarkState * state) const override;
 };
 
 int

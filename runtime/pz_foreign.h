@@ -45,7 +45,7 @@ class Foreign : public GCNewTrace {
 
     Closure * lookup_foreign_proc(String module, String proc) const;
 
-    virtual void do_trace(HeapMarkState * marker) const;
+    void do_trace(HeapMarkState * marker) const override;
 
     /*
      * These functions help setup foreign code.

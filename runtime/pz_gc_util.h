@@ -99,7 +99,7 @@ class GCThreadHandle : public GCCapability {
   public:
     GCThreadHandle(Heap & heap) : GCCapability(heap, IS_ROOT) {}
 
-    virtual void oom(size_t size_bytes);
+    void oom(size_t size_bytes) override;
 };
 
 /*
@@ -114,7 +114,7 @@ class AbstractGCTracer : public GCCapability
    public:
     AbstractGCTracer(GCCapability & gc) : GCCapability(gc, CAN_GC) {}
 
-    virtual void oom(size_t size);
+    void oom(size_t size) override;
     virtual void do_trace(HeapMarkState *) const = 0;
 
    private:
@@ -147,7 +147,7 @@ class GCTracer : public AbstractGCTracer
     GCTracer(const GCTracer &) = delete;
     GCTracer & operator=(const GCTracer &) = delete;
 
-    virtual void do_trace(HeapMarkState * state) const;
+    void do_trace(HeapMarkState * state) const override;
 };
 
 template <typename T>
@@ -239,7 +239,7 @@ class NoGCScope : public GCCapability
     NoGCScope(GCCapability & gc_cap);
     virtual ~NoGCScope();
 
-    virtual void oom(size_t size);
+    void oom(size_t size) override;
 
     // Assert if there was an OOM.  This is available for inlining because
     // we don't want to leave the fast-path unless the test fails.

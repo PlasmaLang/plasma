@@ -142,14 +142,14 @@ class FlatString : public BaseString {
     // lengths.
     static FlatString* New(GCCapability &gc, uint32_t len);
 
-    virtual StringType type() const;
+    StringType type() const override;
 
-    virtual void print() const;
-    virtual uint32_t length() const;
-    virtual bool isEmpty() const;
-    virtual uint32_t storageSize() const;
+    void print() const override;
+    uint32_t length() const override;
+    bool isEmpty() const override;
+    uint32_t storageSize() const override;
 
-    virtual const char * c_str() const;
+    const char * c_str() const override;
 
     char * buffer() {
         return reinterpret_cast<char*>(mBuffer);
