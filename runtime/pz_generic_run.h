@@ -160,7 +160,7 @@ union StackValue {
     void *    ptr;
 };
 
-struct Context : public AbstractGCTracer {
+struct Context final : public AbstractGCTracer {
     uint8_t *    ip;
     void *       env;
     uint8_t **   return_stack;
@@ -169,7 +169,7 @@ struct Context : public AbstractGCTracer {
     unsigned     esp;
 
     Context(GCCapability & gc);
-    virtual ~Context();
+    ~Context();
 
     void do_trace(HeapMarkState * state) const override;
 };
