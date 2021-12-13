@@ -48,7 +48,6 @@ class LibraryLoading : public GCNewTrace
                    unsigned num_procs,
                    unsigned num_closures,
                    NoGCScope &no_gc);
-    virtual ~LibraryLoading() { }
 
     const Struct * struct_(unsigned id) const
     {
