@@ -48,7 +48,6 @@ class LibraryLoading : public GCNewTrace
                    unsigned num_procs,
                    unsigned num_closures,
                    NoGCScope &no_gc);
-    virtual ~LibraryLoading() { }
 
     const Struct * struct_(unsigned id) const
     {
@@ -93,7 +92,7 @@ class LibraryLoading : public GCNewTrace
     LibraryLoading(LibraryLoading & other) = delete;
     void operator=(LibraryLoading & other) = delete;
 
-    virtual void do_trace(HeapMarkState * marker) const;
+    void do_trace(HeapMarkState * marker) const override;
 };
 
 class Library : public GCNewTrace
@@ -130,7 +129,7 @@ class Library : public GCNewTrace
 
     Optional<Closure *> lookup_symbol(String name) const;
 
-    void do_trace(HeapMarkState * marker) const;
+    void do_trace(HeapMarkState * marker) const override;
 
     Library(Library & other) = delete;
     void operator=(Library & other) = delete;
