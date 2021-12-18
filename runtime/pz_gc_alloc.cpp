@@ -138,7 +138,8 @@ void * Heap::try_small_allocate(size_t size_in_words)
 
 Block * Heap::get_block_for_allocation(size_t size_in_words)
 {
-    return m_chunk_bop->get_block_for_allocation(size_in_words);
+    return reinterpret_cast<ChunkBOP*>(m_chunk_bop.raw_pointer())
+            ->get_block_for_allocation(size_in_words);
 }
 
 Block * ChunkBOP::get_block_for_allocation(size_t size_in_words)
@@ -160,7 +161,8 @@ Block * Heap::allocate_block(size_t size_in_words)
 {
     Block * block;
 
-    block = m_chunk_bop->allocate_block();
+    block = reinterpret_cast<ChunkBOP*>(m_chunk_bop.raw_pointer())
+            ->allocate_block();
     if (!block) return nullptr;
 
 #ifdef PZ_DEV

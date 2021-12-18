@@ -12,6 +12,7 @@
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 #include "pz_util.h"
+#include "pz_memory.h"
 
 namespace pz {
 
@@ -33,7 +34,7 @@ class Heap
     // (big bag of pages aka "bop"), and one for medium sized allocations
     // (best fit with splitting). (Big allocations will be implemented
     // later).
-    ChunkBOP * m_chunk_bop;
+    Memory m_chunk_bop;
     ChunkFit * m_chunk_fit;
 
     size_t   m_usage;

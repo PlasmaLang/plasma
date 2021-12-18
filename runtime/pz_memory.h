@@ -31,6 +31,10 @@ class Memory {
         return m_pointer;
     }
 
+    bool is_mapped() const {
+        return !!m_pointer;
+    }
+
     Memory(Memory && other) = delete;
     Memory(const Memory & other) = delete;
     void operator=(Memory && other) = delete;
