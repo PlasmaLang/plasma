@@ -22,7 +22,7 @@ void Heap::check_heap() const
     assert(s_page_size != 0);
     assert(m_chunk_bop.is_mapped());
 
-    reinterpret_cast<ChunkBOP*>(m_chunk_bop.raw_pointer())->check();
+    const_cast<ChunkBOP*>(m_chunk_bop.ptr())->check();
     m_chunk_fit->check();
 }
 
@@ -139,7 +139,7 @@ void Heap::print_usage_stats(size_t initial_usage) const
 {
     printf("\nHeap usage report\n=================\n");
     printf("Usage: %ldKB -> %ldKB\n", initial_usage / 1024, usage() / 1024);
-    reinterpret_cast<ChunkBOP*>(m_chunk_bop.raw_pointer())->print_usage_stats();
+    m_chunk_bop->print_usage_stats();
     m_chunk_fit->print_usage_stats();
     printf("\n");
 }

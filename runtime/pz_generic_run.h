@@ -161,14 +161,15 @@ union StackValue {
     void *    ptr;
 };
 
+#define RETURN_STACK_SIZE 2048*4
+#define EXPR_STACK_SIZE   4096*4
+
 struct Context : public AbstractGCTracer {
     uint8_t *    ip;
     void *       env;
-    Memory       return_stack_mem;
-    uint8_t **   return_stack;
+    Memory<uint8_t*[RETURN_STACK_SIZE]> return_stack;
     unsigned     rsp;
-    Memory       expr_stack_mem;
-    StackValue * expr_stack;
+    Memory<StackValue[EXPR_STACK_SIZE]> expr_stack;
     unsigned     esp;
 
     Context(GCCapability & gc);

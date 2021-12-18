@@ -84,9 +84,6 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
     return retcode;
 }
 
-#define RETURN_STACK_SIZE 2048*4
-#define EXPR_STACK_SIZE   4096*4
-
 Context::Context(GCCapability & gc)
     : AbstractGCTracer(gc)
     , ip(nullptr)
@@ -94,19 +91,18 @@ Context::Context(GCCapability & gc)
     , rsp(0)
     , esp(0)
 {
-    if (!return_stack_mem.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
+    if (!return_stack.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
         fprintf(stderr, "Unable to allocate stack\n");
         exit(1);
     }
-    return_stack = reinterpret_cast<uint8_t**>(return_stack_mem.raw_pointer());
 
-    if (!expr_stack_mem.allocate(EXPR_STACK_SIZE * sizeof(StackValue))) {
+    if (!expr_stack.allocate(EXPR_STACK_SIZE * sizeof(StackValue))) {
         fprintf(stderr, "Unable to allocate stack\n");
         exit(1);
     }
-    expr_stack = reinterpret_cast<StackValue*>(expr_stack_mem.raw_pointer());
+
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
+    memset(expr_stack.ptr(), 0, sizeof(StackValue) * EXPR_STACK_SIZE);
 #endif
 }
 
@@ -119,8 +115,9 @@ void Context::do_trace(HeapMarkState * state) const
      * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
      * three items.
      */
-    state->mark_root_conservative(expr_stack, (esp + 1) * sizeof(StackValue));
-    state->mark_root_conservative_interior(return_stack,
+    state->mark_root_conservative((void*)expr_stack.ptr(),
+                                  (esp + 1) * sizeof(StackValue));
+    state->mark_root_conservative_interior((void*)return_stack.ptr(),
                                            (rsp + 1) * WORDSIZE_BYTES);
     state->mark_root_interior(ip);
     state->mark_root(env);

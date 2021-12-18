@@ -26,9 +26,8 @@ inline Block * ptr_to_block(void * ptr)
 
 bool Heap::is_heap_address(void * ptr) const
 {
-    ChunkBOP *chunk_bop = reinterpret_cast<ChunkBOP*>(m_chunk_bop.raw_pointer());
-    if (chunk_bop->contains_pointer(ptr)) {
-        Block * block = chunk_bop->ptr_to_block(ptr);
+    if (m_chunk_bop->contains_pointer(ptr)) {
+        Block * block = const_cast<ChunkBOP*>(m_chunk_bop.ptr())->ptr_to_block(ptr);
         if (!block) return false;
         if (!block->is_in_use()) return false;
         return block->is_in_payload(ptr);

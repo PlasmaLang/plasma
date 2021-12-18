@@ -144,7 +144,7 @@ bool Heap::init()
 
     assert(!m_chunk_bop.is_mapped());
     if (m_chunk_bop.allocate(GC_Chunk_Size)) {
-        reinterpret_cast<Chunk*>(m_chunk_bop.raw_pointer())->initialise_as_bop();
+        m_chunk_bop->initialise_as_bop();
     } else {
         return false;
     }

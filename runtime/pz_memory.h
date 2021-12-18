@@ -9,36 +9,67 @@
 #ifndef PZ_MEMORY_H
 #define PZ_MEMORY_H
 
-/*
- * A memory region, the address of the region is the pointer to Memory
- * itself,
- */
-class Memory {
+#include <type_traits>
+
+class MemoryBase {
   private:
     void * m_pointer = nullptr;
     size_t m_size = 0;
 
   public:
-    Memory() {}
-    ~Memory() {
+    MemoryBase() {}
+    ~MemoryBase() {
         release();
-    }
-
-    bool allocate(size_t size);
-    void release();
-
-    void * raw_pointer() const {
-        return m_pointer;
     }
 
     bool is_mapped() const {
         return !!m_pointer;
     }
 
-    Memory(Memory && other) = delete;
-    Memory(const Memory & other) = delete;
-    void operator=(Memory && other) = delete;
-    void operator=(const Memory & other) = delete;
+  protected:
+    bool allocate(size_t size);
+
+    void * raw_pointer() const {
+        return m_pointer;
+    }
+
+  public:
+    void release();
+
+    MemoryBase(MemoryBase && other) = delete;
+    MemoryBase(const MemoryBase & other) = delete;
+    void operator=(MemoryBase && other) = delete;
+    void operator=(const MemoryBase & other) = delete;
+};
+
+/*
+ * A memory region, the address of the region is the pointer to Memory
+ * itself,
+ */
+template<typename T>
+class Memory : public MemoryBase {
+  public:
+    bool allocate(size_t size = sizeof(T)) {
+        return MemoryBase::allocate(size);
+    }
+
+    T * ptr() {
+        return reinterpret_cast<T*>(raw_pointer());
+    }
+    const T * ptr() const {
+        return reinterpret_cast<T*>(raw_pointer());
+    }
+    T * operator->() {
+        return ptr();
+    }
+    const T * operator->() const {
+        return ptr();
+    }
+
+    typedef typename std::remove_all_extents<T>::type Elem;
+    Elem& operator[](unsigned i) {
+        return reinterpret_cast<Elem*>(ptr())[i];
+    }
 };
 
 #endif /* ! PZ_MEMORY_H */

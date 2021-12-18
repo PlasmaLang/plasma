@@ -15,7 +15,7 @@
 #include "pz_memory.h"
 
 bool
-Memory::allocate(size_t size) {
+MemoryBase::allocate(size_t size) {
     void *ptr = mmap(NULL, size, PROT_READ | PROT_WRITE,
                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
@@ -28,7 +28,7 @@ Memory::allocate(size_t size) {
 }
 
 void
-Memory::release() {
+MemoryBase::release() {
     if (m_pointer) {
         if (-1 == munmap(m_pointer, m_size)) {
             perror("munmap");

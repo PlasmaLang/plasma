@@ -34,7 +34,7 @@ class Heap
     // (big bag of pages aka "bop"), and one for medium sized allocations
     // (best fit with splitting). (Big allocations will be implemented
     // later).
-    Memory m_chunk_bop;
+    Memory<ChunkBOP>    m_chunk_bop;
     ChunkFit * m_chunk_fit;
 
     size_t   m_usage;
