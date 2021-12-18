@@ -301,8 +301,10 @@ CellPtrFit Heap::ptr_to_fit_cell(void * ptr) const
 {
     if (m_chunk_fit->contains_pointer(ptr)) {
         // TODO Speed up this search with a crossing-map.
-        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
-                cell = cell.next_in_chunk())
+        for (CellPtrFit cell =
+                const_cast<ChunkFit*>(m_chunk_fit.ptr())->first_cell();
+             cell.is_valid();
+             cell = cell.next_in_chunk())
         {
             if (cell.pointer() == ptr) {
                 return cell;
@@ -322,8 +324,10 @@ CellPtrFit Heap::ptr_to_fit_cell_interior(void * ptr) const
     if (m_chunk_fit->contains_pointer(ptr)) {
         // TODO Speed up this search with a crossing-map.
         CellPtrFit prev = CellPtrFit::Invalid();
-        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
-                cell = cell.next_in_chunk())
+        for (CellPtrFit cell =
+                const_cast<ChunkFit*>(m_chunk_fit.ptr())->first_cell();
+             cell.is_valid();
+             cell = cell.next_in_chunk())
         {
             if (cell.pointer() == ptr) {
                 return cell;

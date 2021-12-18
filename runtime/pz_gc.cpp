@@ -131,7 +131,6 @@ void Heap::init_statics()
 
 Heap::Heap(const Options & options)
     : m_options(options)
-    , m_chunk_fit(nullptr)
     , m_usage(0)
     , m_threshold(GC_Initial_Threshold)
     , m_collections(0)
@@ -149,10 +148,9 @@ bool Heap::init()
         return false;
     }
 
-    assert(!m_chunk_fit);
-    Chunk * chunk = Chunk::new_chunk(this);
-    if (chunk) {
-        m_chunk_fit = chunk->initialise_as_fit();
+    assert(!m_chunk_fit.is_mapped());
+    if (m_chunk_fit.allocate(GC_Chunk_Size)) {
+        m_chunk_fit->initialise_as_fit();
     } else {
         return false;
     }
@@ -210,15 +208,13 @@ bool Heap::finalise()
         m_chunk_bop.release();
     }
 
-    if (m_chunk_fit) {
+    if (m_chunk_fit.is_mapped()) {
         // sweeping first ensures we run finalisers.
         m_chunk_fit->sweep(m_options);
-        if (!m_chunk_fit->destroy()) {
-            result = false;
-        }
-        m_chunk_fit = nullptr;
+        m_chunk_fit.release();
     }
 
+    // Always true
     return result;
 }
 

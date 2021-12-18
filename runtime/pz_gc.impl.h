@@ -35,7 +35,7 @@ class Heap
     // (best fit with splitting). (Big allocations will be implemented
     // later).
     Memory<ChunkBOP>    m_chunk_bop;
-    ChunkFit * m_chunk_fit;
+    Memory<ChunkFit>    m_chunk_fit;
 
     size_t   m_usage;
     size_t   m_threshold;

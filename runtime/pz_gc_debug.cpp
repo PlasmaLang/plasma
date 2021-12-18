@@ -23,7 +23,7 @@ void Heap::check_heap() const
     assert(m_chunk_bop.is_mapped());
 
     const_cast<ChunkBOP*>(m_chunk_bop.ptr())->check();
-    m_chunk_fit->check();
+    const_cast<ChunkFit*>(m_chunk_fit.ptr())->check();
 }
 
 void ChunkBOP::check()
@@ -175,7 +175,7 @@ void Block::print_usage_stats() const
     }
 }
 
-void ChunkFit::print_usage_stats()
+void ChunkFit::print_usage_stats() const
 {
     printf("\nChunkFit\n--------\n");
 
@@ -183,7 +183,7 @@ void ChunkFit::print_usage_stats()
     unsigned num_cells     = 0;
     size_t   allocated     = 0;
 
-    CellPtrFit cell = first_cell();
+    CellPtrFit cell = const_cast<ChunkFit*>(this)->first_cell();
 
     while (cell.is_valid()) {
         if (cell.is_allocated()) {

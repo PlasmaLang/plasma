@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout - fit allocation.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019-2020 Plasma Team
+ * Copyright (C) 2019-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -196,7 +196,7 @@ class ChunkFit : public Chunk
 #ifdef PZ_DEV
     void check();
 
-    void print_usage_stats();
+    void print_usage_stats() const;
 #endif
 };
 
