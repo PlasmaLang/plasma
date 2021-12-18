@@ -171,10 +171,9 @@ class ChunkFit : public Chunk
 
     alignas(WORDSIZE_BYTES) char m_bytes[Payload_Bytes];
 
-    ChunkFit(Heap * heap);
-    friend ChunkFit * Chunk::initialise_as_fit();
-
    public:
+    ChunkFit(Heap * heap);
+
     /*
      * Bytes used in this chunk, including cell headers.
      */

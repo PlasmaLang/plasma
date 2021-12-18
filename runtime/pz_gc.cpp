@@ -143,61 +143,19 @@ bool Heap::init()
 
     assert(!m_chunk_bop.is_mapped());
     if (m_chunk_bop.allocate(GC_Chunk_Size)) {
-        m_chunk_bop->initialise_as_bop();
+        new (m_chunk_bop.ptr()) ChunkBOP(this);
     } else {
         return false;
     }
 
     assert(!m_chunk_fit.is_mapped());
     if (m_chunk_fit.allocate(GC_Chunk_Size)) {
-        m_chunk_fit->initialise_as_fit();
+        new (m_chunk_fit.ptr()) ChunkFit(this);
     } else {
         return false;
     }
 
     return true;
-}
-
-Chunk * Chunk::new_chunk(Heap * heap)
-{
-    Chunk * chunk;
-
-    chunk = static_cast<Chunk *>(mmap(NULL,
-                                      GC_Chunk_Size,
-                                      PROT_READ | PROT_WRITE,
-                                      MAP_PRIVATE | MAP_ANONYMOUS,
-                                      -1,
-                                      0));
-    if (MAP_FAILED == chunk) {
-        perror("mmap");
-        return nullptr;
-    }
-
-    new (chunk) Chunk(heap);
-
-    return chunk;
-}
-
-bool Chunk::destroy()
-{
-    if (-1 == munmap(this, GC_Chunk_Size)) {
-        perror("munmap");
-        return false;
-    }
-
-    return true;
-}
-
-ChunkBOP * Chunk::initialise_as_bop()
-{
-    assert(m_type == CT_INVALID);
-    return new (this) ChunkBOP(m_heap);
-}
-
-ChunkFit * Chunk::initialise_as_fit()
-{
-    assert(m_type == CT_INVALID);
-    return new (this) ChunkFit(m_heap);
 }
 
 bool Heap::finalise()

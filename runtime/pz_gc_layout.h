@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019-2020 Plasma Team
+ * Copyright (C) 2019-2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -118,12 +118,6 @@ class Chunk
     Chunk(Heap * heap, CellType type) : m_heap(heap), m_type(type) {}
 
    public:
-    static Chunk * new_chunk(Heap * heap);
-    bool           destroy();
-
-    ChunkBOP * initialise_as_bop();
-    ChunkFit * initialise_as_fit();
-
     /*
      * True if this pointer lies within the allocated part of this chunk.
      */
