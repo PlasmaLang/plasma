@@ -47,8 +47,8 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
         return PZ_EXIT_RUNTIME_ERROR; 
     }
 
-    ScopeExit finalise([&context, &retcode]{
-        if (!context.release()) {
+    ScopeExit finalise([&context, &retcode, &options]{
+        if (!context.release(options.fast_exit())) {
             fprintf(stderr, "Error releasing memory\n");
             if (retcode == 0) {
                 retcode = PZ_EXIT_RUNTIME_ERROR;
@@ -105,6 +105,12 @@ Context::Context(GCCapability & gc)
     , esp(0)
 {}
 
+Context::~Context()
+{
+    assert(!return_stack.is_mapped());
+    assert(!expr_stack.is_mapped());
+}
+
 bool Context::allocate() {
     if (!return_stack.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
         return false;
@@ -121,17 +127,20 @@ bool Context::allocate() {
     return true;
 }
 
-bool Context::release() {
-    bool result = true;
+bool Context::release(bool fast) {
+    if (fast) {
+        return_stack.forget();
+        expr_stack.forget();
+        return true;
+    }
 
+    bool result = true;
     if (!return_stack.release()) {
         result = false;
     }
-
     if (!expr_stack.release()) {
         result = false;
     }
-
     return result;
 }
 

@@ -137,6 +137,12 @@ Heap::Heap(const Options & options)
     , m_trace_global_roots(nullptr)
 {}
 
+Heap::~Heap()
+{
+    assert(!m_chunk_bop.is_mapped());
+    assert(!m_chunk_fit.is_mapped());
+}
+
 bool Heap::init()
 {
     init_statics();
@@ -158,8 +164,14 @@ bool Heap::init()
     return true;
 }
 
-bool Heap::finalise()
+bool Heap::finalise(bool fast)
 {
+    if (fast) {
+        m_chunk_bop.forget();
+        m_chunk_fit.forget();
+        return true;
+    }
+
     bool result = true;
 
     if (m_chunk_bop.is_mapped()) {

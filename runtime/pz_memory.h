@@ -34,7 +34,11 @@ class MemoryBase {
     }
 
   public:
+    // Release the memory back to the OS
     bool release();
+
+    // Forget the memory mapping, much faster, very leaky.
+    void forget();
 
     MemoryBase(MemoryBase && other) = delete;
     MemoryBase(const MemoryBase & other) = delete;

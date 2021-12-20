@@ -46,7 +46,7 @@ class Heap
 
    public:
     Heap(const Options & options);
-    ~Heap() {}
+    ~Heap();
 
     static void init_statics();
 
@@ -57,9 +57,10 @@ class Heap
     }
 
     // Call finalise to run any objects' finalisers and unmap the "mmaped"
-    // memory.  Or if you're going to exit the program immediately don't
-    // bother, but be aware the destructor will not do this cleanup.
-    bool finalise();
+    // memory.  Or if you're going to exit the program immediately pass
+    // (fast=true) to zero things while skipping the cleanup.
+    // Be aware the destructor will not do this cleanup.
+    bool finalise(bool fast);
 
     const Options & options() const
     {

@@ -63,9 +63,7 @@ static int run(Options & options)
         return EXIT_FAILURE;
     }
     ScopeExit finalise([&heap, &options] {
-        if (!options.fast_exit()) {
-            heap.finalise();
-        }
+        heap.finalise(options.fast_exit());
     });
 
     PZ pz(options, heap);

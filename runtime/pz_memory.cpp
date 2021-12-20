@@ -40,3 +40,8 @@ MemoryBase::release() {
     return true;
 }
 
+void
+MemoryBase::forget() {
+    m_pointer = nullptr;
+}
+
