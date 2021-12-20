@@ -47,6 +47,15 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
         return PZ_EXIT_RUNTIME_ERROR; 
     }
 
+    ScopeExit finalise([&context, &retcode]{
+        if (!context.release()) {
+            fprintf(stderr, "Error releasing memory\n");
+            if (retcode == 0) {
+                retcode = PZ_EXIT_RUNTIME_ERROR;
+            }
+        }
+    });
+
     /*
      * Assemble a special procedure that exits the interpreter and put its
      * address on the call stack.
@@ -110,6 +119,20 @@ bool Context::allocate() {
 #endif
 
     return true;
+}
+
+bool Context::release() {
+    bool result = true;
+
+    if (!return_stack.release()) {
+        result = false;
+    }
+
+    if (!expr_stack.release()) {
+        result = false;
+    }
+
+    return result;
 }
 
 void Context::do_trace(HeapMarkState * state) const
