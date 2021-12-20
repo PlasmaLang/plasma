@@ -60,10 +60,15 @@ static int run(Options & options)
 
     if (!heap.init()) {
         fprintf(stderr, "Couldn't initialise memory.\n");
-        return EXIT_FAILURE;
+        return PZ_EXIT_RUNTIME_ERROR;
     }
-    ScopeExit finalise([&heap, &options] {
-        heap.finalise(options.fast_exit());
+    int retcode = 0;
+    ScopeExit finalise([&heap, &options, &retcode] {
+        if (!heap.finalise(options.fast_exit())) {
+            if (retcode == 0) {
+                retcode = PZ_EXIT_RUNTIME_NONFATAL;
+            }
+        }
     });
 
     PZ pz(options, heap);
@@ -71,10 +76,13 @@ static int run(Options & options)
     GCThreadHandle gc(heap);
 
     if (setup_program(pz, options, gc)) {
-        return run(pz, options, gc);
+        int program_retcode = run(pz, options, gc);
+        retcode = program_retcode ? program_retcode : retcode;
     } else {
-        return EXIT_FAILURE;
+        retcode = PZ_EXIT_RUNTIME_ERROR;
     }
+
+    return retcode;
 }
 
 static void split_filenames(const std::string & filenames,

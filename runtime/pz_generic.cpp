@@ -36,7 +36,7 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
 {
     uint8_t *      wrapper_proc = nullptr;
     unsigned       wrapper_proc_size;
-    int            retcode;
+    int            retcode = 0;
     ImmediateValue imv_none;
 
     assert(PZT_LAST_TOKEN < 256);
@@ -51,7 +51,7 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
         if (!context.release(options.fast_exit())) {
             fprintf(stderr, "Error releasing memory\n");
             if (retcode == 0) {
-                retcode = PZ_EXIT_RUNTIME_ERROR;
+                retcode = PZ_EXIT_RUNTIME_NONFATAL;
             }
         }
     });
@@ -92,7 +92,9 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = generic_main_loop(context, &pz.heap(), entry_closure, pz);
+    int program_retcode =
+        generic_main_loop(context, &pz.heap(), entry_closure, pz);
+    retcode = program_retcode ? program_retcode : retcode;
 
     return retcode;
 }
