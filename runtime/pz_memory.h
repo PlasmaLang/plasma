@@ -34,7 +34,7 @@ class MemoryBase {
     }
 
   public:
-    void release();
+    bool release();
 
     MemoryBase(MemoryBase && other) = delete;
     MemoryBase(const MemoryBase & other) = delete;

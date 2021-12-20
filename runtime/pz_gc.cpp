@@ -163,16 +163,19 @@ bool Heap::finalise()
     bool result = true;
 
     if (m_chunk_bop.is_mapped()) {
-        m_chunk_bop.release();
+        if (!m_chunk_bop.release()) {
+            result = false;
+        }
     }
 
     if (m_chunk_fit.is_mapped()) {
         // sweeping first ensures we run finalisers.
         m_chunk_fit->sweep(m_options);
-        m_chunk_fit.release();
+        if (!m_chunk_fit.release()) {
+            result = false;
+        }
     }
 
-    // Always true
     return result;
 }
 

@@ -27,13 +27,16 @@ MemoryBase::allocate(size_t size) {
     return true;
 }
 
-void
+bool
 MemoryBase::release() {
     if (m_pointer) {
         if (-1 == munmap(m_pointer, m_size)) {
             perror("munmap");
+            return false;
         }
         m_pointer = nullptr;
     }
+
+    return true;
 }
 
