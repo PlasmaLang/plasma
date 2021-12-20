@@ -42,6 +42,10 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
     assert(PZT_LAST_TOKEN < 256);
 
     Context context(gc);
+    if (!context.allocate()) {
+        fprintf(stderr, "Could not allocate context\n");
+        return PZ_EXIT_RUNTIME_ERROR; 
+    }
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -90,20 +94,22 @@ Context::Context(GCCapability & gc)
     , env(nullptr)
     , rsp(0)
     , esp(0)
-{
+{}
+
+bool Context::allocate() {
     if (!return_stack.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
-        fprintf(stderr, "Unable to allocate stack\n");
-        exit(1);
+        return false;
     }
 
     if (!expr_stack.allocate(EXPR_STACK_SIZE * sizeof(StackValue))) {
-        fprintf(stderr, "Unable to allocate stack\n");
-        exit(1);
+        return false;
     }
 
 #if defined(PZ_DEV) || defined(PZ_DEBUG)
     memset(expr_stack.ptr(), 0, sizeof(StackValue) * EXPR_STACK_SIZE);
 #endif
+
+    return true;
 }
 
 void Context::do_trace(HeapMarkState * state) const

@@ -174,6 +174,8 @@ struct Context : public AbstractGCTracer {
 
     Context(GCCapability & gc);
 
+    bool allocate();
+
     virtual void do_trace(HeapMarkState * state) const;
 };
 
