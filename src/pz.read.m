@@ -53,7 +53,6 @@
 read_pz(Filename, Result, !IO) :-
     open_binary_input(Filename, MaybeInput, !IO),
     ( MaybeInput = ok(Input),
-        filename_extension(constant.output_extension, Filename, _ModuleName),
         read_pz_2(Input, ResultPZ, !IO),
         ( ResultPZ = ok(ReadRes),
             Result = ok(ReadRes)

@@ -185,16 +185,16 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
 
     InputFileName = GOptions ^ go_input_file,
     file_part(InputFileName, InputFileNameNoPath),
-    filename_extension(source_extension, InputFileNameNoPath,
-        InputFileNameBase),
     ( if
-        strip_file_name_punctuation(InputFileNameBase) \= ModuleNameStripped
+        filename_extension(source_extension, InputFileNameNoPath,
+            InputFileNameBase),
+        strip_file_name_punctuation(InputFileNameBase) = ModuleNameStripped
     then
+        true
+    else
         add_error(Context,
             ce_source_file_name_not_match_module(ModuleName, InputFileName),
             !Errors)
-    else
-        true
     ),
 
     OutputFileName = GOptions ^ go_output_file,

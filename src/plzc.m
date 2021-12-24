@@ -419,7 +419,7 @@ process_options_general(OptionTable, InputPath, OutputExtension) =
     then
         OutputFile = OutputFile0
     else
-        file_change_extension(constant.source_extension,
+        file_change_extension_det(constant.source_extension,
             OutputExtension, InputFile, OutputFile)
     ),
 

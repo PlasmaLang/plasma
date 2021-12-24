@@ -125,7 +125,7 @@ process_options(Args0, Result, !IO) :-
                 then
                     Output = Output0
                 else
-                    file_change_extension(constant.pz_text_extension,
+                    file_change_extension_det(constant.pz_text_extension,
                         constant.output_extension, InputFile, Output)
                 ),
 

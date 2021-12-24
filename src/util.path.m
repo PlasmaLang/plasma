@@ -37,14 +37,20 @@
     %   Basename ++ ExtB = FileB
     %
 :- pred file_change_extension(string, string, string, string).
-:- mode file_change_extension(in, in, in, out) is det.
+:- mode file_change_extension(in, in, in, out) is semidet.
+
+    % If the original source file doesn't have the right extension, then
+    % simply append the new extension on the end.
+    %
+:- pred file_change_extension_det(string, string, string, string).
+:- mode file_change_extension_det(in, in, in, out) is det.
 
     % filename_extension(Ext, FullName, Base).
     %
     % FullName = Base ++ Ext
     %
 :- pred filename_extension(string, string, string).
-:- mode filename_extension(in, in, out) is det.
+:- mode filename_extension(in, in, out) is semidet.
 
 :- pred is_absolute(string::in) is semidet.
 :- pred is_relative(string::in) is semidet.
@@ -99,12 +105,15 @@ file_change_extension(ExtA, ExtB, FileA, FileB) :-
     filename_extension(ExtA, FileA, Base),
     FileB = Base ++ ExtB.
 
-filename_extension(Ext, File, Base) :-
-    ( if remove_suffix(File, Ext, Base0) then
-        Base = Base0
+file_change_extension_det(ExtA, ExtB, FileA, FileB) :-
+    ( if file_change_extension(ExtA, ExtB, FileA, FileB0) then
+        FileB = FileB0
     else
-        Base = File
+        FileB = FileA ++ ExtB
     ).
+
+filename_extension(Ext, File, Base) :-
+    remove_suffix(File, Ext, Base).
 
 is_absolute(Path) :-
     append("/", _, Path).

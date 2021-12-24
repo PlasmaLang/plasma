@@ -13,17 +13,12 @@ CC=clang
 CXX=clang++
 
 .PHONY: all
-all: $(wildcard *.p) BUILD.plz foreign \
+all: $(wildcard *.p) BUILD.plz \
 		$(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
-	$(TOP)/src/plzbuild --rebuild
-
-.PHONY: foreign
-foreign : import_function.so
+	$(TOP)/src/plzbuild
 
 import_function.pz : all
-
-import_function.so : import_function.o
-	$(CC) -fpic -shared -o $@ $<
+import_function.so : all
 
 import_function.out : import_function.pz import_function.so \
 		$(TOP)/runtime/plzrun
@@ -64,10 +59,4 @@ clean:
 .PHONY: realclean
 realclean: clean
 	rm -rf *.plasma-dump_*
-
-# Temporary
-%.o : %.c
-	$(CC) -fpic -o $@ -c $<
-%.o : %.cpp
-	$(CXX) -fpic -o $@ -c $<
 
