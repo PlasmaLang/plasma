@@ -65,12 +65,6 @@
 :- mode map4_corresponding2(pred(in, in, in, in, out, out) is det, in, in,
     in, in, out, out) is det.
 
-:- pred foldl4_corresponding(pred(X, Y, A, A, B, B, C, C, D, D),
-    list(X), list(Y), A, A, B, B, C, C, D, D).
-:- mode foldl4_corresponding(
-    pred(in, in, in, out, in, out, in, out, in, out) is det,
-    in, in, in, out, in, out, in, out, in, out) is det.
-
 :- pred remove_first_match_map(pred(X, Y), Y, list(X), list(X)).
 :- mode remove_first_match_map(pred(in, out) is semidet, out, in, out)
     is semidet.
@@ -235,22 +229,6 @@ map4_corresponding2(P, As0, Bs0, Cs0, Ds0, Xs, Ys) :-
         Ys = [Y | Ys0]
     else
         unexpected($file, $pred, "Mismatched inputs")
-    ).
-
-foldl4_corresponding(P, Xs0, Ys0, !A, !B, !C, !D) :-
-    ( if
-        Xs0 = [],
-        Ys0 = []
-    then
-        true
-    else if
-        Xs0 = [X | Xs],
-        Ys0 = [Y | Ys]
-    then
-        P(X, Y, !A, !B, !C, !D),
-        foldl4_corresponding(P, Xs, Ys, !A, !B, !C, !D)
-    else
-        unexpected($file, $pred, "Input lists of different lengths")
     ).
 
 %-----------------------------------------------------------------------%
