@@ -116,7 +116,8 @@ process_options(Args0, Result, !IO) :-
             )
         )
     ; MaybeOptions = error(ErrMsg),
-        Result = error("Error processing command line options: " ++ ErrMsg)
+        Result = error("Error processing command line options: " ++ 
+		option_error_to_string(ErrMsg))
     ).
 
 :- func string_to_module_name(string) = maybe_error(nq_name, string).
