@@ -122,10 +122,6 @@ bool Context::allocate() {
         return false;
     }
 
-#if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack.ptr(), 0, sizeof(StackValue) * EXPR_STACK_SIZE);
-#endif
-
     return true;
 }
 
