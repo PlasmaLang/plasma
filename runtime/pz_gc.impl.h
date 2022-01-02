@@ -37,12 +37,12 @@ class Heap
     Memory<ChunkBOP>    m_chunk_bop;
     Memory<ChunkFit>    m_chunk_fit;
 
-    size_t   m_usage;
+    size_t   m_usage = 0;
     size_t   m_threshold;
-    unsigned m_collections;
+    unsigned m_collections = 0;
 
     // May be null if uninitalised
-    AbstractGCTracer * m_trace_global_roots;
+    AbstractGCTracer * m_trace_global_roots = nullptr;
 
    public:
     Heap(const Options & options);

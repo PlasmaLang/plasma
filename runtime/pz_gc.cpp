@@ -131,10 +131,7 @@ void Heap::init_statics()
 
 Heap::Heap(const Options & options)
     : m_options(options)
-    , m_usage(0)
     , m_threshold(GC_Initial_Threshold)
-    , m_collections(0)
-    , m_trace_global_roots(nullptr)
 {}
 
 Heap::~Heap()
