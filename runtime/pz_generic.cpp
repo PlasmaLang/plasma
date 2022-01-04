@@ -114,11 +114,11 @@ Context::~Context()
 }
 
 bool Context::allocate() {
-    if (!return_stack.allocate(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
+    if (!return_stack.allocate_guarded(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
         return false;
     }
 
-    if (!expr_stack.allocate(EXPR_STACK_SIZE * sizeof(StackValue))) {
+    if (!expr_stack.allocate_guarded(EXPR_STACK_SIZE * sizeof(StackValue))) {
         return false;
     }
 

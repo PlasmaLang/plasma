@@ -15,6 +15,7 @@ class MemoryBase {
   private:
     void * m_pointer = nullptr;
     size_t m_size = 0;
+    bool   m_has_guards = false;
 
   public:
     MemoryBase() {}
@@ -27,7 +28,7 @@ class MemoryBase {
     }
 
   protected:
-    bool allocate(size_t size);
+    bool allocate(size_t size, bool guard);
 
     void * raw_pointer() const {
         return m_pointer;
@@ -54,7 +55,12 @@ template<typename T>
 class Memory : public MemoryBase {
   public:
     bool allocate(size_t size = sizeof(T)) {
-        return MemoryBase::allocate(size);
+        return MemoryBase::allocate(size, false);
+    }
+
+    // Allocate with guard pages before and after the allocation.
+    bool allocate_guarded(size_t size = sizeof(T)) {
+        return MemoryBase::allocate(size, true);
     }
 
     T * ptr() {
