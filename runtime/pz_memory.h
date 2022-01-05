@@ -11,6 +11,8 @@
 
 #include <type_traits>
 
+extern const size_t s_page_size;
+
 class MemoryBase {
   private:
     void * m_pointer = nullptr;

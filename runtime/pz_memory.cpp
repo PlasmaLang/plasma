@@ -14,13 +14,13 @@
 
 #include "pz_memory.h"
 
-const static size_t PAGE_SIZE = [] {return sysconf(_SC_PAGESIZE); }();
+const size_t s_page_size = [] {return sysconf(_SC_PAGESIZE); }();
 
 bool
 MemoryBase::allocate(size_t size, bool guarded) {
     size_t mmap_size = size;
     if (guarded) {
-        mmap_size += PAGE_SIZE*2;
+        mmap_size += s_page_size * 2;
     }
 
     void *ptr = mmap(NULL, mmap_size, PROT_READ | PROT_WRITE,
@@ -33,14 +33,14 @@ MemoryBase::allocate(size_t size, bool guarded) {
     if (guarded) {
         void * guard_address_1 = ptr;
         void * guard_address_2 = reinterpret_cast<void*>(
-            reinterpret_cast<uintptr_t>(ptr) + PAGE_SIZE + size);
+            reinterpret_cast<uintptr_t>(ptr) + s_page_size + size);
         ptr = reinterpret_cast<void*>(
-                reinterpret_cast<uintptr_t>(ptr) + PAGE_SIZE);
+                reinterpret_cast<uintptr_t>(ptr) + s_page_size);
 
-        if (0 != mprotect(guard_address_1, PAGE_SIZE, PROT_NONE)) {
+        if (0 != mprotect(guard_address_1, s_page_size, PROT_NONE)) {
             return false;
         }
-        if (0 != mprotect(guard_address_2, PAGE_SIZE, PROT_NONE)) {
+        if (0 != mprotect(guard_address_2, s_page_size, PROT_NONE)) {
             return false;
         }
     }
@@ -58,8 +58,8 @@ MemoryBase::release() {
         size_t size = m_size;
         if (m_has_guards) {
             ptr = reinterpret_cast<void*>(
-                    reinterpret_cast<uintptr_t>(m_pointer) - PAGE_SIZE);
-            size = m_size + PAGE_SIZE*2;
+                    reinterpret_cast<uintptr_t>(m_pointer) - s_page_size);
+            size = m_size + s_page_size*2;
         }
         if (-1 == munmap(ptr, size)) {
             perror("munmap");

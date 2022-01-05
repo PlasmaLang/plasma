@@ -28,8 +28,6 @@ class Heap
    private:
     const Options & m_options;
 
-    static size_t s_page_size;
-
     // For now there's exactly two chunks: one for small allocations
     // (big bag of pages aka "bop"), and one for medium sized allocations
     // (best fit with splitting). (Big allocations will be implemented
@@ -47,8 +45,6 @@ class Heap
    public:
     Heap(const Options & options);
     ~Heap();
-
-    static void init_statics();
 
     bool init();
 

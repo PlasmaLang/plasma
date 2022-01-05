@@ -119,16 +119,6 @@ bool ChunkFit::is_empty()
 
 /***************************************************************************/
 
-size_t Heap::s_page_size;
-
-void Heap::init_statics()
-{
-    if (s_page_size == 0) {
-        s_page_size = sysconf(_SC_PAGESIZE);
-        assert(s_page_size != 0);
-    }
-}
-
 Heap::Heap(const Options & options)
     : m_options(options)
     , m_threshold(GC_Initial_Threshold)
@@ -142,8 +132,6 @@ Heap::~Heap()
 
 bool Heap::init()
 {
-    init_statics();
-
     assert(!m_chunk_bop.is_mapped());
     if (m_chunk_bop.allocate(GC_Chunk_Size)) {
         new (m_chunk_bop.ptr()) ChunkBOP(this);
