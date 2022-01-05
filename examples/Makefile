@@ -12,12 +12,19 @@ all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
 	$(TOP)/src/plzbuild
 
 fib.pz: all
+	touch $@
 hello.pz: all
+	touch $@
 modules.pz: all
+	touch $@
 mr4.pz: all
+	touch $@
 readline.pz: all
+	touch $@
 temperature.pz: all
+	touch $@
 types.pz: all
+	touch $@
 
 .PHONY: %.test
 %.test : %.exp %.outs
