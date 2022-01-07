@@ -56,6 +56,7 @@ static bool setup_program(PZ & pz, Options & options, GCCapability & gc);
 
 static int run(Options & options)
 {
+    MemoryBase::init_statics();
     Heap heap(options);
 
     if (!heap.init()) {

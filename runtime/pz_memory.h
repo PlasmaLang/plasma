@@ -11,9 +11,15 @@
 
 #include <type_traits>
 
-extern const size_t s_page_size;
-
 class MemoryBase {
+  // Static stuff:
+  private:
+    static size_t s_page_size;
+
+  public:
+    static void init_statics();
+
+  // Per memory-mapping stuff:
   private:
     void * m_pointer = nullptr;
     size_t m_size = 0;

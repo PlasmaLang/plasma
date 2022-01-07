@@ -14,10 +14,22 @@
 
 #include "pz_memory.h"
 
-const size_t s_page_size = [] {return sysconf(_SC_PAGESIZE); }();
+size_t MemoryBase::s_page_size = 0;
+
+void
+MemoryBase::init_statics() {
+    if (s_page_size) {
+        // Init is already done.
+        return;
+    }
+
+    s_page_size = sysconf(_SC_PAGESIZE);
+}
 
 bool
 MemoryBase::allocate(size_t size, bool guarded) {
+    assert(s_page_size);
+
     size_t mmap_size = size;
     if (guarded) {
         mmap_size += s_page_size * 2;
