@@ -2,7 +2,7 @@
  * Plasma garbage collector - validation checks & dumping code.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019, 2021 Plasma Team
+ * Copyright (C) 2018-2019, 2021-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -19,7 +19,6 @@ namespace pz {
 
 void Heap::check_heap() const
 {
-    assert(s_page_size != 0);
     assert(m_chunk_bop.is_mapped());
 
     const_cast<ChunkBOP*>(m_chunk_bop.ptr())->check();
