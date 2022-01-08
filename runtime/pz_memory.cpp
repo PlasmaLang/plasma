@@ -11,10 +11,45 @@
 #include <stdio.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <signal.h>
+#include <cstring>
 
 #include "pz_memory.h"
 
 size_t MemoryBase::s_page_size = 0;
+
+static void handler(int sig, siginfo_t *info, void *ucontext) {
+    fprintf(stderr, "Caught signal ");
+    switch (sig) {
+        case SIGSEGV:
+            fprintf(stderr, "SEGV");
+            break;
+        case SIGBUS:
+            fprintf(stderr, "BUS");
+            break;
+        default:
+            fprintf(stderr, "%d.\n", sig);
+            return;
+    }
+    fprintf(stderr, " for address %p\n", info->si_addr);
+
+    exit(PZ_EXIT_RUNTIME_ERROR);
+}
+
+// Ignores errors, because they're not fatal.
+static void setup_handler(int signal) {
+    struct sigaction action;
+    memset(&action, 0, sizeof(action));
+    action.sa_sigaction = handler;
+    sigemptyset(&action.sa_mask);
+    sigaddset(&action.sa_mask, SIGSEGV);
+    sigaddset(&action.sa_mask, SIGBUS);
+    action.sa_flags = SA_SIGINFO;
+
+    if (0 != sigaction(signal, &action, nullptr)) {
+        perror("sigaction");
+    }
+}
 
 void
 MemoryBase::init_statics() {
@@ -24,6 +59,9 @@ MemoryBase::init_statics() {
     }
 
     s_page_size = sysconf(_SC_PAGESIZE);
+
+    setup_handler(SIGSEGV);
+    setup_handler(SIGBUS);
 }
 
 bool
