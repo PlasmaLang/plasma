@@ -33,8 +33,38 @@ static void handler(int sig, siginfo_t *info, void *ucontext) {
             return;
     }
     fprintf(stderr, " for address %p\n", info->si_addr);
+    MemoryBase::fault_handler(info->si_addr);
+}
 
-    exit(PZ_EXIT_RUNTIME_ERROR);
+void MemoryBase::fault_handler(void * fault_addr) {
+    MemoryBase * zone = search(fault_addr);
+
+    if (zone) {
+        switch (zone->is_in(fault_addr)) {
+          case IZ_WITHIN:
+            fprintf(stderr, "The fault occured within the region %p - %p\n",
+                    zone->first_address(), zone->last_address());
+            exit(PZ_EXIT_RUNTIME_ERROR);
+          case IZ_GUARD_BEFORE:
+            fprintf(stderr,
+                    "The fault in the guard page before the region %p - %p\n",
+                    zone->first_address(), zone->last_address());
+            exit(PZ_EXIT_RUNTIME_ERROR);
+          case IZ_GUARD_AFTER:
+            fprintf(stderr,
+                    "The fault in the guard page after the region %p - %p\n",
+                    zone->first_address(), zone->last_address());
+            exit(PZ_EXIT_RUNTIME_ERROR);
+          case IZ_BEFORE:
+          case IZ_AFTER:
+            fprintf(stderr, "Unexpected search result\n");
+            abort();
+        }
+    } else {
+        fprintf(stderr,
+                "The Plasma runtime doesn't know about this memory region.\n");
+        exit(PZ_EXIT_RUNTIME_ERROR);
+    }
 }
 
 MemoryBase::InZone MemoryBase::is_in(void * fault_addr) const {

@@ -77,6 +77,21 @@ class MemoryBase {
     // Describe where this memory address lies compared with the mapped
     // memory region.
     InZone is_in(void * addr) const;
+
+    static void fault_handler(void * fault_addr);
+
+    void * first_address() const {
+        return m_pointer;
+    }
+
+    void * last_address() const {
+        if (m_pointer) {
+            return reinterpret_cast<void*>(
+                    reinterpret_cast<uintptr_t>(m_pointer) + m_size - 1);
+        } else {
+            return nullptr;
+        }
+    }
 };
 
 /*
