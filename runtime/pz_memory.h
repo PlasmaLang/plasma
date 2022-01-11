@@ -2,7 +2,7 @@
  * Plasma large memory region allocation
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2021 Plasma Team
+ * Copyright (C) 2021-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -24,6 +24,18 @@ class MemoryBase {
     void * m_pointer = nullptr;
     size_t m_size = 0;
     bool   m_has_guards = false;
+
+    // Memory mappings are arranged in a tree for signal handlers to find
+    // them.
+    MemoryBase * m_left = nullptr;
+    MemoryBase * m_right = nullptr;
+    MemoryBase * m_parent = nullptr;
+    static MemoryBase * s_root;
+
+    static MemoryBase * search(void * pointer);
+    void insert();
+    void remove();
+    void check_node();
 
   public:
     MemoryBase() {}
@@ -53,6 +65,18 @@ class MemoryBase {
     MemoryBase(const MemoryBase & other) = delete;
     void operator=(MemoryBase && other) = delete;
     void operator=(const MemoryBase & other) = delete;
+
+    enum InZone {
+        IZ_BEFORE,
+        IZ_AFTER,
+        IZ_WITHIN,
+        IZ_GUARD_BEFORE,
+        IZ_GUARD_AFTER,
+    };
+
+    // Describe where this memory address lies compared with the mapped
+    // memory region.
+    InZone is_in(void * addr) const;
 };
 
 /*
