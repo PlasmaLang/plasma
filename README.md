@@ -10,7 +10,7 @@ For a general overview, please visit
 [https://plasmalang.org/](https://plasmalang.org/)
 It is in early development.
 
-It is free software, Copyright (C) 2015-2021 The Plasma Team, distributed
+It is free software, Copyright (C) 2015-2022 The Plasma Team, distributed
 mostly under the MIT license, see [LICENSE](LICENSE) for details.
 
 ![CI](https://github.com/PlasmaLang/plasma/workflows/CI/badge.svg)
