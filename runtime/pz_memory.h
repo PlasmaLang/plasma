@@ -21,6 +21,7 @@ class MemoryBase {
 
   // Per memory-mapping stuff:
   private:
+    const char * m_name;
     void * m_pointer = nullptr;
     size_t m_size = 0;
     bool   m_has_guards = false;
@@ -32,13 +33,16 @@ class MemoryBase {
     MemoryBase * m_parent = nullptr;
     static MemoryBase * s_root;
 
+  public:
     static MemoryBase * search(void * pointer);
+
+  private:
     void insert();
     void remove();
     void check_node();
 
   public:
-    MemoryBase() {}
+    MemoryBase(const char * name) : m_name(name) {}
     ~MemoryBase() {
         release();
     }
@@ -78,7 +82,11 @@ class MemoryBase {
     // memory region.
     InZone is_in(void * addr) const;
 
-    static void fault_handler(void * fault_addr);
+    void fault_handler(void * fault_addr);
+
+    const char * name() const {
+        return m_name;
+    }
 
     void * first_address() const {
         return m_pointer;
@@ -92,6 +100,11 @@ class MemoryBase {
             return nullptr;
         }
     }
+
+    bool is_stack() const {
+        // For now the only memory regions with guard pages are stacks.
+        return m_has_guards;
+    }
 };
 
 /*
@@ -101,6 +114,8 @@ class MemoryBase {
 template<typename T>
 class Memory : public MemoryBase {
   public:
+    Memory(const char *name) : MemoryBase(name) {}
+
     bool allocate(size_t size = sizeof(T)) {
         return MemoryBase::allocate(size, false);
     }

@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2021 Plasma Team
+ * Copyright (C) 2018-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -122,6 +122,8 @@ bool ChunkFit::is_empty()
 Heap::Heap(const Options & options)
     : m_options(options)
     , m_threshold(GC_Initial_Threshold)
+    , m_chunk_bop("GC BOP")
+    , m_chunk_fit("GC fit")
 {}
 
 Heap::~Heap()

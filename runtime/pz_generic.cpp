@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2021 Plasma Team
+ * Copyright (C) 2015-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -105,6 +105,8 @@ Context::Context(GCCapability & gc)
     , env(nullptr)
     , rsp(0)
     , esp(0)
+    , return_stack("return stack")
+    , expr_stack("expression stack")
 {}
 
 Context::~Context()

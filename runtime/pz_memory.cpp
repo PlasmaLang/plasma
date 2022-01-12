@@ -33,38 +33,47 @@ static void handler(int sig, siginfo_t *info, void *ucontext) {
             return;
     }
     fprintf(stderr, " for address %p\n", info->si_addr);
-    MemoryBase::fault_handler(info->si_addr);
-}
 
-void MemoryBase::fault_handler(void * fault_addr) {
-    MemoryBase * zone = search(fault_addr);
-
+    MemoryBase * zone = MemoryBase::search(info->si_addr);
     if (zone) {
-        switch (zone->is_in(fault_addr)) {
-          case IZ_WITHIN:
-            fprintf(stderr, "The fault occured within the region %p - %p\n",
-                    zone->first_address(), zone->last_address());
-            exit(PZ_EXIT_RUNTIME_ERROR);
-          case IZ_GUARD_BEFORE:
-            fprintf(stderr,
-                    "The fault in the guard page before the region %p - %p\n",
-                    zone->first_address(), zone->last_address());
-            exit(PZ_EXIT_RUNTIME_ERROR);
-          case IZ_GUARD_AFTER:
-            fprintf(stderr,
-                    "The fault in the guard page after the region %p - %p\n",
-                    zone->first_address(), zone->last_address());
-            exit(PZ_EXIT_RUNTIME_ERROR);
-          case IZ_BEFORE:
-          case IZ_AFTER:
-            fprintf(stderr, "Unexpected search result\n");
-            abort();
-        }
+        zone->fault_handler(info->si_addr);
     } else {
         fprintf(stderr,
                 "The Plasma runtime doesn't know about this memory region.\n");
         exit(PZ_EXIT_RUNTIME_ERROR);
     }
+}
+
+void MemoryBase::fault_handler(void * fault_addr) {
+    const char * juxt;
+    InZone in = is_in(fault_addr);
+    switch (in) {
+      case IZ_WITHIN:
+        juxt = "within";
+        break;
+      case IZ_GUARD_BEFORE:
+        juxt = "in the guard page before";
+        break;
+      case IZ_GUARD_AFTER:
+        juxt = "in the guard page after";
+        break;
+      case IZ_BEFORE:
+      case IZ_AFTER:
+        fprintf(stderr, "Fault is not in this zone (bad search result?)\n");
+        abort();
+    }
+    fprintf(stderr, "The fault occured %s the %s region (%p - %p)\n",
+            juxt, name(), first_address(), last_address());
+
+    if (is_stack() && in == IZ_GUARD_AFTER) {
+        fprintf(stderr, "This is probably caused by unbounded recursion causing "
+                "a stack overrun\n");
+    } else if (is_stack() && in == IZ_GUARD_BEFORE) {
+        fprintf(stderr, "This could be a stack underrun, "
+                "which is probably caused by a bug in the compiler");
+    }
+
+    exit(PZ_EXIT_RUNTIME_ERROR);
 }
 
 MemoryBase::InZone MemoryBase::is_in(void * fault_addr) const {
