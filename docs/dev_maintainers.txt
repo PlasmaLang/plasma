@@ -2,8 +2,8 @@ Plasma Maintainer's Guide
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: July 2020
-:Copyright: Copyright (C) 2020 Plasma Team
+:Date: July 2022
+:Copyright: Copyright (C) 2020-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -48,10 +48,7 @@ the following files:
  * LICENSE
  * README.md
  * runtime/pz_main.cpp
- * src/plzc.m
- * src/plzasm.m
- * src/plzdisasm.m
- * src/plzlnk.m
+ * src/constant.m
 
 And the copyright statement on the website, in it's repository at:
 
