@@ -32,8 +32,12 @@
 #endif
 
 /*
- * Runtime error exit code
+ * Runtime error exit codes
  */
+// Fatal errors, the program didn't run or was aborted.
 #define PZ_EXIT_RUNTIME_ERROR 255
+// Non-fatal, the program terminated but there was a warning or error during
+// clean-up.
+#define PZ_EXIT_RUNTIME_NONFATAL 254
 
 #endif /* ! PZ_CONFIG_H */

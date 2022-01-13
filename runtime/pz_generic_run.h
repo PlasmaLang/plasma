@@ -13,6 +13,7 @@
 #include "pz_closure.h"
 #include "pz_gc.h"
 #include "pz_generic_closure.h"
+#include "pz_memory.h"
 
 namespace pz {
 
@@ -160,16 +161,22 @@ union StackValue {
     void *    ptr;
 };
 
+#define RETURN_STACK_SIZE 2048*4
+#define EXPR_STACK_SIZE   4096*4
+
 struct Context final : public AbstractGCTracer {
     uint8_t *    ip;
     void *       env;
-    uint8_t **   return_stack;
+    Memory<uint8_t*[RETURN_STACK_SIZE]> return_stack;
     unsigned     rsp;
-    StackValue * expr_stack;
+    Memory<StackValue[EXPR_STACK_SIZE]> expr_stack;
     unsigned     esp;
 
     Context(GCCapability & gc);
     ~Context();
+
+    bool allocate();
+    bool release(bool fast);
 
     void do_trace(HeapMarkState * state) const override;
 };

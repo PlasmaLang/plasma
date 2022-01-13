@@ -2,7 +2,7 @@
  * Plasma garbage collector memory layout
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2019 Plasma Team
+ * Copyright (C) 2019, 2021 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -27,7 +27,7 @@ inline Block * ptr_to_block(void * ptr)
 bool Heap::is_heap_address(void * ptr) const
 {
     if (m_chunk_bop->contains_pointer(ptr)) {
-        Block * block = m_chunk_bop->ptr_to_block(ptr);
+        Block * block = const_cast<ChunkBOP*>(m_chunk_bop.ptr())->ptr_to_block(ptr);
         if (!block) return false;
         if (!block->is_in_use()) return false;
         return block->is_in_payload(ptr);

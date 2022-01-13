@@ -2,7 +2,7 @@
  * Plasma garbage collector
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2021 Plasma Team
+ * Copyright (C) 2018-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -119,42 +119,31 @@ bool ChunkFit::is_empty()
 
 /***************************************************************************/
 
-size_t Heap::s_page_size;
-
-void Heap::init_statics()
-{
-    if (s_page_size == 0) {
-        s_page_size = sysconf(_SC_PAGESIZE);
-        assert(s_page_size != 0);
-    }
-}
-
 Heap::Heap(const Options & options)
     : m_options(options)
-    , m_chunk_bop(nullptr)
-    , m_chunk_fit(nullptr)
-    , m_usage(0)
+    , m_chunk_bop("GC BOP")
+    , m_chunk_fit("GC fit")
     , m_threshold(GC_Initial_Threshold)
-    , m_collections(0)
-    , m_trace_global_roots(nullptr)
 {}
+
+Heap::~Heap()
+{
+    assert(!m_chunk_bop.is_mapped());
+    assert(!m_chunk_fit.is_mapped());
+}
 
 bool Heap::init()
 {
-    init_statics();
-
-    assert(!m_chunk_bop);
-    Chunk * chunk = Chunk::new_chunk(this);
-    if (chunk) {
-        m_chunk_bop = chunk->initialise_as_bop();
+    assert(!m_chunk_bop.is_mapped());
+    if (m_chunk_bop.allocate(GC_Chunk_Size)) {
+        new (m_chunk_bop.ptr()) ChunkBOP(this);
     } else {
         return false;
     }
 
-    assert(!m_chunk_fit);
-    chunk = Chunk::new_chunk(this);
-    if (chunk) {
-        m_chunk_fit = chunk->initialise_as_fit();
+    assert(!m_chunk_fit.is_mapped());
+    if (m_chunk_fit.allocate(GC_Chunk_Size)) {
+        new (m_chunk_fit.ptr()) ChunkFit(this);
     } else {
         return false;
     }
@@ -162,66 +151,28 @@ bool Heap::init()
     return true;
 }
 
-Chunk * Chunk::new_chunk(Heap * heap)
+bool Heap::finalise(bool fast)
 {
-    Chunk * chunk;
-
-    chunk = static_cast<Chunk *>(mmap(NULL,
-                                      GC_Chunk_Size,
-                                      PROT_READ | PROT_WRITE,
-                                      MAP_PRIVATE | MAP_ANONYMOUS,
-                                      -1,
-                                      0));
-    if (MAP_FAILED == chunk) {
-        perror("mmap");
-        return nullptr;
+    if (fast) {
+        m_chunk_bop.forget();
+        m_chunk_fit.forget();
+        return true;
     }
 
-    new (chunk) Chunk(heap);
-
-    return chunk;
-}
-
-bool Chunk::destroy()
-{
-    if (-1 == munmap(this, GC_Chunk_Size)) {
-        perror("munmap");
-        return false;
-    }
-
-    return true;
-}
-
-ChunkBOP * Chunk::initialise_as_bop()
-{
-    assert(m_type == CT_INVALID);
-    return new (this) ChunkBOP(m_heap);
-}
-
-ChunkFit * Chunk::initialise_as_fit()
-{
-    assert(m_type == CT_INVALID);
-    return new (this) ChunkFit(m_heap);
-}
-
-bool Heap::finalise()
-{
     bool result = true;
 
-    if (m_chunk_bop) {
-        if (!m_chunk_bop->destroy()) {
+    if (m_chunk_bop.is_mapped()) {
+        if (!m_chunk_bop.release()) {
             result = false;
         }
-        m_chunk_bop = nullptr;
     }
 
-    if (m_chunk_fit) {
+    if (m_chunk_fit.is_mapped()) {
         // sweeping first ensures we run finalisers.
         m_chunk_fit->sweep(m_options);
-        if (!m_chunk_fit->destroy()) {
+        if (!m_chunk_fit.release()) {
             result = false;
         }
-        m_chunk_fit = nullptr;
     }
 
     return result;

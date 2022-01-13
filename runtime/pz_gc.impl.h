@@ -12,6 +12,7 @@
 #include "pz_gc.h"
 #include "pz_gc_util.h"
 #include "pz_util.h"
+#include "pz_memory.h"
 
 namespace pz {
 
@@ -27,27 +28,23 @@ class Heap
    private:
     const Options & m_options;
 
-    static size_t s_page_size;
-
     // For now there's exactly two chunks: one for small allocations
     // (big bag of pages aka "bop"), and one for medium sized allocations
     // (best fit with splitting). (Big allocations will be implemented
     // later).
-    ChunkBOP * m_chunk_bop;
-    ChunkFit * m_chunk_fit;
+    Memory<ChunkBOP>    m_chunk_bop;
+    Memory<ChunkFit>    m_chunk_fit;
 
-    size_t   m_usage;
+    size_t   m_usage = 0;
     size_t   m_threshold;
-    unsigned m_collections;
+    unsigned m_collections = 0;
 
     // May be null if uninitalised
-    AbstractGCTracer * m_trace_global_roots;
+    AbstractGCTracer * m_trace_global_roots = nullptr;
 
    public:
     Heap(const Options & options);
-    ~Heap() {}
-
-    static void init_statics();
+    ~Heap();
 
     bool init();
 
@@ -56,9 +53,10 @@ class Heap
     }
 
     // Call finalise to run any objects' finalisers and unmap the "mmaped"
-    // memory.  Or if you're going to exit the program immediately don't
-    // bother, but be aware the destructor will not do this cleanup.
-    bool finalise();
+    // memory.  Or if you're going to exit the program immediately pass
+    // (fast=true) to zero things while skipping the cleanup.
+    // Be aware the destructor will not do this cleanup.
+    bool finalise(bool fast);
 
     const Options & options() const
     {

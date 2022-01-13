@@ -266,7 +266,8 @@ void ChunkFit::sweep(const Options & options)
 CellPtrBOP Heap::ptr_to_bop_cell(void * ptr) const
 {
     if (m_chunk_bop->contains_pointer(ptr)) {
-        Block * block = m_chunk_bop->ptr_to_block(ptr);
+        Block * block =
+            const_cast<ChunkBOP*>(m_chunk_bop.ptr())->ptr_to_block(ptr);
         if (block && block->is_in_use() && block->is_valid_address(ptr)) {
             return CellPtrBOP(block, block->index_of(ptr), ptr);
         } else {
@@ -280,7 +281,8 @@ CellPtrBOP Heap::ptr_to_bop_cell(void * ptr) const
 CellPtrBOP Heap::ptr_to_bop_cell_interior(void * ptr) const
 {
     if (m_chunk_bop->contains_pointer(ptr)) {
-        Block * block = m_chunk_bop->ptr_to_block(ptr);
+        Block * block = 
+            const_cast<ChunkBOP*>(m_chunk_bop.ptr())->ptr_to_block(ptr);
         if (block && block->is_in_use()) {
             // Compute index then re-compute pointer to find the true
             // beginning of the cell.
@@ -299,8 +301,10 @@ CellPtrFit Heap::ptr_to_fit_cell(void * ptr) const
 {
     if (m_chunk_fit->contains_pointer(ptr)) {
         // TODO Speed up this search with a crossing-map.
-        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
-                cell = cell.next_in_chunk())
+        for (CellPtrFit cell =
+                const_cast<ChunkFit*>(m_chunk_fit.ptr())->first_cell();
+             cell.is_valid();
+             cell = cell.next_in_chunk())
         {
             if (cell.pointer() == ptr) {
                 return cell;
@@ -320,8 +324,10 @@ CellPtrFit Heap::ptr_to_fit_cell_interior(void * ptr) const
     if (m_chunk_fit->contains_pointer(ptr)) {
         // TODO Speed up this search with a crossing-map.
         CellPtrFit prev = CellPtrFit::Invalid();
-        for (CellPtrFit cell = m_chunk_fit->first_cell(); cell.is_valid();
-                cell = cell.next_in_chunk())
+        for (CellPtrFit cell =
+                const_cast<ChunkFit*>(m_chunk_fit.ptr())->first_cell();
+             cell.is_valid();
+             cell = cell.next_in_chunk())
         {
             if (cell.pointer() == ptr) {
                 return cell;

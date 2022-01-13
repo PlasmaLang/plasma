@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2021 Plasma Team
+ * Copyright (C) 2015-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -36,12 +36,25 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
 {
     uint8_t *      wrapper_proc = nullptr;
     unsigned       wrapper_proc_size;
-    int            retcode;
+    int            retcode = 0;
     ImmediateValue imv_none;
 
     assert(PZT_LAST_TOKEN < 256);
 
     Context context(gc);
+    if (!context.allocate()) {
+        fprintf(stderr, "Could not allocate context\n");
+        return PZ_EXIT_RUNTIME_ERROR; 
+    }
+
+    ScopeExit finalise([&context, &retcode, &options]{
+        if (!context.release(options.fast_exit())) {
+            fprintf(stderr, "Error releasing memory\n");
+            if (retcode == 0) {
+                retcode = PZ_EXIT_RUNTIME_NONFATAL;
+            }
+        }
+    });
 
     /*
      * Assemble a special procedure that exits the interpreter and put its
@@ -79,32 +92,56 @@ int run(PZ & pz, const Options & options, GCCapability &gc)
 #ifdef PZ_DEV
     trace_enabled = options.interp_trace();
 #endif
-    retcode = generic_main_loop(context, &pz.heap(), entry_closure, pz);
+    int program_retcode =
+        generic_main_loop(context, &pz.heap(), entry_closure, pz);
+    retcode = program_retcode ? program_retcode : retcode;
 
     return retcode;
 }
-
-#define RETURN_STACK_SIZE 2048*4
-#define EXPR_STACK_SIZE   4096*4
 
 Context::Context(GCCapability & gc)
     : AbstractGCTracer(gc)
     , ip(nullptr)
     , env(nullptr)
+    , return_stack("return stack")
     , rsp(0)
+    , expr_stack("expression stack")
     , esp(0)
-{
-    return_stack = new uint8_t *[RETURN_STACK_SIZE];
-    expr_stack   = new StackValue[EXPR_STACK_SIZE];
-#if defined(PZ_DEV) || defined(PZ_DEBUG)
-    memset(expr_stack, 0, sizeof(StackValue) * EXPR_STACK_SIZE);
-#endif
-}
+{}
 
 Context::~Context()
 {
-    delete[] return_stack;
-    delete[] expr_stack;
+    assert(!return_stack.is_mapped());
+    assert(!expr_stack.is_mapped());
+}
+
+bool Context::allocate() {
+    if (!return_stack.allocate_guarded(RETURN_STACK_SIZE * sizeof(uint8_t*))) {
+        return false;
+    }
+
+    if (!expr_stack.allocate_guarded(EXPR_STACK_SIZE * sizeof(StackValue))) {
+        return false;
+    }
+
+    return true;
+}
+
+bool Context::release(bool fast) {
+    if (fast) {
+        return_stack.forget();
+        expr_stack.forget();
+        return true;
+    }
+
+    bool result = true;
+    if (!return_stack.release()) {
+        result = false;
+    }
+    if (!expr_stack.release()) {
+        result = false;
+    }
+    return result;
 }
 
 void Context::do_trace(HeapMarkState * state) const
@@ -116,8 +153,9 @@ void Context::do_trace(HeapMarkState * state) const
      * top-of-stack.  Then we need (2+1)*sizeof(...) to ensure we mark all
      * three items.
      */
-    state->mark_root_conservative(expr_stack, (esp + 1) * sizeof(StackValue));
-    state->mark_root_conservative_interior(return_stack,
+    state->mark_root_conservative((void*)expr_stack.ptr(),
+                                  (esp + 1) * sizeof(StackValue));
+    state->mark_root_conservative_interior((void*)return_stack.ptr(),
                                            (rsp + 1) * WORDSIZE_BYTES);
     state->mark_root_interior(ip);
     state->mark_root(env);

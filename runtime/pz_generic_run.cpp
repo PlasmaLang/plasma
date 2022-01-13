@@ -32,7 +32,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                    context.env,
                    context.rsp,
                    context.esp,
-                   (uint64_t *)context.expr_stack);
+                   (uint64_t *)context.expr_stack.ptr());
     while (true) {
         InstructionToken token = (InstructionToken)(*(context.ip));
 
@@ -622,14 +622,14 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                                context.env,
                                context.rsp,
                                context.esp,
-                               (uint64_t *)context.expr_stack);
+                               (uint64_t *)context.expr_stack.ptr());
                 return retcode;
             case PZT_CCALL: {
                 context.ip =
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
                 pz_foreign_c_func callee = 
                     *reinterpret_cast<pz_foreign_c_func*>(context.ip);
-                context.esp = callee(context.expr_stack, context.esp);
+                context.esp = callee(context.expr_stack.ptr(), context.esp);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
@@ -639,7 +639,8 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
                 pz_foreign_c_alloc_func callee = 
                     *reinterpret_cast<pz_foreign_c_alloc_func*>(context.ip);
-                context.esp = callee(context.expr_stack, context.esp, context);
+                context.esp = callee(context.expr_stack.ptr(), context.esp, 
+                    context);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
@@ -649,7 +650,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                     (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
                 pz_foreign_c_special_func callee =
                     *reinterpret_cast<pz_foreign_c_special_func*>(context.ip);
-                context.esp = callee(context.expr_stack, context.esp, pz);
+                context.esp = callee(context.expr_stack.ptr(), context.esp, pz);
                 context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
@@ -668,7 +669,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                        context.env,
                        context.rsp,
                        context.esp,
-                       (uint64_t *)context.expr_stack);
+                       (uint64_t *)context.expr_stack.ptr());
     }
 }
 
