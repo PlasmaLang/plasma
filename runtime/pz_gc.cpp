@@ -121,9 +121,9 @@ bool ChunkFit::is_empty()
 
 Heap::Heap(const Options & options)
     : m_options(options)
-    , m_threshold(GC_Initial_Threshold)
     , m_chunk_bop("GC BOP")
     , m_chunk_fit("GC fit")
+    , m_threshold(GC_Initial_Threshold)
 {}
 
 Heap::~Heap()

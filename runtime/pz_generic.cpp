@@ -103,10 +103,10 @@ Context::Context(GCCapability & gc)
     : AbstractGCTracer(gc)
     , ip(nullptr)
     , env(nullptr)
-    , rsp(0)
-    , esp(0)
     , return_stack("return stack")
+    , rsp(0)
     , expr_stack("expression stack")
+    , esp(0)
 {}
 
 Context::~Context()
