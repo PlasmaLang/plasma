@@ -7,7 +7,7 @@ You will need a working copy of AsciiDoc on your PC to build the documentation.
 For Ubuntu, it is simply a matter of typing
 
 ```shell
-sudo apt-get install asciidoc
+sudo apt-get install asciidoc source-highlight
 ```
 
 For Fedora: 
