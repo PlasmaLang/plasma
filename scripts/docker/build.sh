@@ -2,7 +2,17 @@
 
 set -e
 
-docker build -t paulbone/plasma-dep:rotd -t paulbone/plasma-dep:latest .
-docker push paulbone/plasma-dep:rotd
-docker push paulbone/plasma-dep:latest
+# Set this to your dockerhub name.
+USER=paulbone
+
+# The name of the docker image
+IMAGE=plasma-dep
+
+# The version string
+VERSION=latest
+
+docker build -t $USER/$IMAGE:$VERSION .
+
+# Comment these out if you don't wish to upload the image.
+docker push $USER/$IMAGE:$VERSION
 
