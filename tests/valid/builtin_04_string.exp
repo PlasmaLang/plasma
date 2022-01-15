@@ -4,3 +4,4 @@ world == world = True
 cl1 is Whitespace
 cl2 is Whitespace
 Check codepoint_to_number('a') = 97
+Check int_to_codepoint(112) = p

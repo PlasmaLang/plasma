@@ -1611,6 +1611,9 @@ type CodepointCategory = Whitespace
 `func codepoint_to_number(CodePoint) -> Int`::
   Return the codepoint number for this codepoint.
 
+`func Builtin.int_to_codepoint(Int) -> CodePoint`::
+  Make a codepoint from this integer.
+
 `func string_begin(String) -> StringPos`::
   Return a `StringPos` of before the beginning of the string.
 
