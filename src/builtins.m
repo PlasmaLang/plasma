@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module builtins.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma builtins.
@@ -635,6 +635,16 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
             [builtin_type(codepoint)],
             [builtin_type(string)],
             init, init),
+        _, !Map, !Core),
+
+
+    CPToNumName = nq_name_det("codepoint_to_number"),
+    register_builtin_func_root(CPToNumName,
+        func_init_builtin_inline_pz(
+            q_name_append(builtin_module_name, CPToNumName),
+            [builtin_type(codepoint)],
+            [builtin_type(int)],
+            init, init, [pzi_ze(pzw_32, pzw_fast)]),
         _, !Map, !Core),
 
     IntToCPName = nq_name_det("int_to_codepoint"),

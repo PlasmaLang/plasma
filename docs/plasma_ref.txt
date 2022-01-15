@@ -2,7 +2,7 @@ Plasma Language Reference
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: May 2020
+:Date: January 2022
 :Copyright: Copyright (C) 2015-2020 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -1607,6 +1607,9 @@ type CodepointCategory = Whitespace
 
 `func codepoint_to_string(CodePoint) -> String`::
   Return a string containing only this codepoint.
+
+`func codepoint_to_number(CodePoint) -> Int`::
+  Return the codepoint number for this codepoint.
 
 `func string_begin(String) -> StringPos`::
   Return a `StringPos` of before the beginning of the string.
