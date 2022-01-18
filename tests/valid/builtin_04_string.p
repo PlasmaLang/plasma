@@ -62,6 +62,11 @@ func main() uses IO -> Int {
             }
         }
     }
+
+    print!("Check codepoint_to_number('a') = " ++
+        int_to_string(codepoint_to_number("a")) ++ "\n")
+    print!("Check int_to_codepoint(112) = " ++
+        codepoint_to_string(Builtin.int_to_codepoint(112)) ++ "\n")
  
     return 0
 }

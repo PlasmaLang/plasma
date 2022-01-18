@@ -11,6 +11,8 @@ TOP=..
 all: $(wildcard *.p) $(TOP)/src/plzbuild $(TOP)/src/plzc $(TOP)/src/plzlnk
 	$(TOP)/src/plzbuild
 
+change.pz: all
+	touch $@
 fib.pz: all
 	touch $@
 hello.pz: all
@@ -35,6 +37,9 @@ types.pz: all
 
 %.out : %.pz $(TOP)/runtime/plzrun
 	$(TOP)/runtime/plzrun $< > $@
+
+change.out : change.pz $(TOP)/runtime/plzrun
+	echo "1234\n 4321 \n7" | $(TOP)/runtime/plzrun $< > $@
 
 readline.out : readline.pz $(TOP)/runtime/plzrun
 	echo "Paul Bone\n\n   \nI am a fish  \n  FISH" | $(TOP)/runtime/plzrun $< > $@

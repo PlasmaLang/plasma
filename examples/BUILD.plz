@@ -5,6 +5,10 @@
 # in Makefile
 #
 
+[change]
+type = program
+modules = [ Change, String, Util ]
+
 [fib]
 type = program
 modules = [ Fib ]
@@ -23,7 +27,7 @@ modules = [ Mr4 ]
 
 [readline]
 type = program
-modules = [ Readline, Trim, Util ]
+modules = [ Readline, String, Util ]
 
 [temperature]
 type = program
