@@ -6,7 +6,7 @@
 
 module Readline
 
-import Trim
+import String
 import Util
 
 entrypoint
@@ -18,7 +18,7 @@ func hello() uses IO -> Int {
         var name_res = readline!()
         match (name_res) {
           Ok(var name) -> {
-            print!("Hello " ++ Trim.trim(name) ++ ".\n")
+            print!("Hello " ++ String.trim(name) ++ ".\n")
             return True
           }
           EOF -> {
@@ -33,7 +33,7 @@ func hello() uses IO -> Int {
         print!("Trim of '" ++
             s ++ 
             "' is '" ++
-            Trim.trim(s) ++
+            String.trim(s) ++
             "'\n")
     }
     map!(do_ex, ["", "   ", "  Paul", "Paul   ", " Paul Bone ",

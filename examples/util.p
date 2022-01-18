@@ -15,3 +15,14 @@ func while(f : func() uses IO -> Bool) uses IO {
     }
 }
 
+export
+func do_for(f : func('x) uses IO, l : List('x)) uses IO {
+    match (l) {
+        [] -> {}
+        [var x | var xs] -> {
+            f!(x)
+            do_for!(f, xs)
+        }
+    }
+}
+

@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Trim
+module String
 
 export
 func trim(s : String) -> String {
@@ -82,5 +82,45 @@ func trim_right(s : String) -> String {
     }
 
     return string_substring(string_begin(s), find_last(is_not_whitespace, s))
+}
+
+export
+func str_to_num(s : String) -> Int {
+    var base = 10
+
+    func loop(pos : StringPos, num : Int) -> Int {
+        var maybe_cp = strpos_next(pos)
+        match (maybe_cp) {
+            None -> {
+                // End of input.
+                return num
+            }
+            Some(var cp) -> {
+                var maybe_digit = codepoint_to_digit(cp)
+                match (maybe_digit) {
+                    Some(var digit) -> {
+                        return loop(strpos_forward(pos), num * base + digit)
+                    }
+                    None -> {
+                        // Could make this function return a maybe.
+                        Builtin.die("Bad number")
+                        return 0
+                    }
+                }
+            }
+        }
+    }
+    return loop(string_begin(s), 0)
+}
+
+func codepoint_to_digit(cp : CodePoint) -> Maybe(Int) {
+    var num = codepoint_to_number(cp)
+    // Recognise the digits range within ASCII, I don't know if there are
+    // other ranges for numbers in Unicode.
+    if num <= 57 and num >= 48 {
+        return Some(num - 48)
+    } else {
+        return None
+    }
 }
 
