@@ -2,7 +2,7 @@
  * PZ C++ future library functions.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019, 2021 Plasma Team
+ * Copyright (C) 2018-2019, 2021-2022 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file contains library code that has been added to a more recent C++
@@ -16,6 +16,7 @@
 #define PZ_CXX_FUTURE_H
 
 #include <string>
+#include <functional>
 
 /*
  * C++17 libraries don't seem to be on my dev system,
@@ -139,6 +140,19 @@ class Optional
     const T & raw() const {
         return reinterpret_cast<const T &>(m_data);
     }
+};
+
+class ScopeExit
+{
+   public:
+    explicit ScopeExit(std::function<void()> && f) : m_f(f) {}
+    ~ScopeExit()
+    {
+        m_f();
+    }
+
+   private:
+    std::function<void()> m_f;
 };
 
 #endif  // ! PZ_CXX_FUTURE_H
