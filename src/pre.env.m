@@ -2,7 +2,7 @@
 % Plasma AST Environment manipulation routines
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module contains code to track the environment of a statement in the
@@ -278,7 +278,7 @@
 :- import_module maybe.
 :- import_module require.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 
 :- import_module builtins.
 
@@ -554,7 +554,7 @@ env_operator_entry(Env, Op, Entry) :-
     ; Op = b_list_cons,
         Entry = ee_constructor(make_singleton_set(Ops ^ o_list_cons))
     ; Op = b_array_subscript,
-        util.exception.sorry($file, $pred, "Array subscript")
+        my_exception.sorry($file, $pred, "Array subscript")
     ).
 
 env_unary_operator_func(Env, UOp) = FuncId :-

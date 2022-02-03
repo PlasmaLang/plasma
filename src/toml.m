@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020 Plasma Team
+% Copyright (C) 2020, 2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This library parses a reduced version of toml syntax.
@@ -43,7 +43,7 @@
 :- import_module int.
 :- import_module string.
 
-:- import_module util.exception.
+:- import_module util.my_exception.
 
 %-----------------------------------------------------------------------%
 
@@ -141,7 +141,7 @@ parse_value(String) = Value :-
         ( if contains_char(Rest, '[') then
             % We actually need a proper parser here to do nested structures.
             % So we don't support nested lists.
-            util.exception.sorry($file, $pred,
+            my_exception.sorry($file, $pred,
                 "Nested arrays")
         else
             Value = tv_array(map(parse_value, map(strip,

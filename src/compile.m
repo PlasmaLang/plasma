@@ -2,7 +2,7 @@
 % Plasma compilation process
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module drives the compilation process.  It sits between plzc.m which
@@ -79,7 +79,7 @@
 :- import_module pre.env.
 :- import_module pre.import.
 :- import_module pz.pretty.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.log.
 :- import_module util.path.
 

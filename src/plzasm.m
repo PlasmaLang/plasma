@@ -2,7 +2,7 @@
 % Plasma assembler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015, 2017-2021 Plasma Team
+% Copyright (C) 2015, 2017-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program assembles and links the pz intermediate representation.
@@ -36,7 +36,7 @@
 :- import_module pz.write.
 :- import_module pzt_parse.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 :- import_module util.path.
 :- import_module util.result.

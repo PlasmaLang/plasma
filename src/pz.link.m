@@ -2,7 +2,7 @@
 % Plasma linking code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program links the pz intermediate representation.
@@ -50,7 +50,7 @@
 :- import_module pz.code.
 :- import_module pz.bytecode.
 :- import_module pz.pz_ds.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
@@ -175,7 +175,7 @@ build_export_map(PZ, IdMap, Input, InputNum, InputNum+1, !Exports) :-
     ( if [ModuleName] = pz_get_module_names(Input) then
         det_insert(ModuleName, Exports, !Exports)
     else
-        util.exception.sorry($file, $pred, "Multiple module names")
+        util.my_exception.sorry($file, $pred, "Multiple module names")
     ).
 
 :- pred link_imports(export_map::in, pz::in, int::in, int::out,

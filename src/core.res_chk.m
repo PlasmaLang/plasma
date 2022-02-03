@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.res_chk.
 %
-% Copyright (C) 2018-2020 Plasma Team
+% Copyright (C) 2018-2020, 2022 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma resource checking - post typechecking
@@ -293,7 +293,7 @@ res_check_call_arg_types(Core, Context, func_type(_ParamInputs, _ParamOutputs,
             ),
             is_or_has_function_type_with_resource(Type)
         then
-            util.exception.sorry($file, $pred, Context, "Nested function types")
+            my_exception.sorry($file, $pred, Context, "Nested function types")
         else
             true
         ),

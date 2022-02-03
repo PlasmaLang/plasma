@@ -2,7 +2,7 @@
 % Plasma assembler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program disassembles pz intermediate representation.
@@ -35,7 +35,7 @@
 :- import_module pz.pretty.
 :- import_module pz.read.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%

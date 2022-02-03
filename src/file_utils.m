@@ -67,7 +67,7 @@
 
 :- import_module constant.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.my_io.
 :- import_module util.path.
 

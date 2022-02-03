@@ -10,7 +10,7 @@
 
 :- interface.
 
-:- include_module util.exception.
+:- include_module util.my_exception.
 :- include_module util.my_io.
 :- include_module util.log.
 :- include_module util.mercury.

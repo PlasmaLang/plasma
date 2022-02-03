@@ -71,7 +71,7 @@
 :- import_module constant.
 :- import_module context.
 :- import_module file_utils.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.my_io.
 :- import_module util.mercury.
 :- import_module util.path.

@@ -2,7 +2,7 @@
 % Plasma linker
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program links the pz intermediate representation.
@@ -38,7 +38,7 @@
 :- import_module pz.link.
 :- import_module q_name.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 :- import_module util.result.
 :- import_module util.time.
@@ -112,7 +112,7 @@ read_inputs([InputFilename | InputFilenames], PZs0, Result, !IO) :-
         ; Type = pzft_program,
             Result = error("Expected Plasma Object, not Plasma program")
         ; Type = pzft_library,
-            Result = util.exception.sorry($file, $pred,
+            Result = my_exception.sorry($file, $pred,
                 "Maybe allow static-linking with libraries in the future?")
         )
     ; MaybeInput = error(Error),
