@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma core representation
@@ -139,7 +139,7 @@
 
 :- import_module core.code.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 
 %-----------------------------------------------------------------------%
 

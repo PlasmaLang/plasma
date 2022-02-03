@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module common_types.
 %
-% Copyright (C) 2015-2018, 2020 Plasma Team
+% Copyright (C) 2015-2018, 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines types useful to multiple Plasma tools.
@@ -107,7 +107,7 @@
 :- import_module int.
 :- import_module string.
 
-:- import_module util.string.
+:- import_module util.my_string.
 
 %-----------------------------------------------------------------------%
 

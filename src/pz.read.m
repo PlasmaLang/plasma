@@ -5,7 +5,7 @@
 %
 % Read the PZ bytecode.
 %
-% Copyright (C) 2015, 2020-2021 Plasma Team
+% Copyright (C) 2015, 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -44,7 +44,7 @@
 :- import_module pz.pz_ds.
 :- import_module q_name.
 :- import_module util.
-:- import_module util.io.
+:- import_module util.my_io.
 :- import_module util.mercury.
 :- import_module util.path.
 
@@ -70,9 +70,9 @@ read_pz(Filename, Result, !IO) :-
     io::di, io::uo) is det.
 
 read_pz_2(Input, Result, !IO) :-
-    util.io.read_uint32(Input, MaybeMagic, !IO),
+    my_io.read_uint32(Input, MaybeMagic, !IO),
     read_len_string(Input, MaybeObjectIdString, !IO),
-    util.io.read_uint16(Input, MaybeVersion, !IO),
+    my_io.read_uint16(Input, MaybeVersion, !IO),
     MaybeHeader = combine_read_3(MaybeMagic, MaybeObjectIdString, MaybeVersion),
     ( MaybeHeader = ok({Magic, ObjectIdString, Version}),
         check_file_type(Magic, ObjectIdString, Version, ResultCheck),
@@ -143,7 +143,7 @@ check_file_type(Magic, String, Version, Result) :-
     is det.
 
 read_options(Input, Result, !IO) :-
-    util.io.read_uint16(Input, MaybeNumOptions, !IO),
+    my_io.read_uint16(Input, MaybeNumOptions, !IO),
     ( MaybeNumOptions = ok(NumOptions),
         % The file format currently only has one possible option, so just
         % read it if it's there.
@@ -173,8 +173,8 @@ read_options_2(Input, Num, RevList0, Result, !IO) :-
     maybe_error(pz_options_entry)::out, io::di, io::uo) is det.
 
 read_option_entry(Input, Result, !IO) :-
-    util.io.read_uint16(Input, MaybeType, !IO),
-    util.io.read_uint16(Input, MaybeLen, !IO),
+    my_io.read_uint16(Input, MaybeType, !IO),
+    my_io.read_uint16(Input, MaybeLen, !IO),
     MaybeTypeLen = combine_read_2(MaybeType, MaybeLen),
     ( MaybeTypeLen = ok({Type, Len}),
         ( if
@@ -198,8 +198,8 @@ read_option_entry(Input, Result, !IO) :-
     maybe_error(pz_options_entry)::out, io::di, io::uo) is det.
 
 read_opt_entrypoint(Input, Type, Result, !IO) :-
-    util.io.read_uint8(Input, MaybeSignatureByte, !IO),
-    util.io.read_uint32(Input, MaybeClosure, !IO),
+    my_io.read_uint8(Input, MaybeSignatureByte, !IO),
+    my_io.read_uint32(Input, MaybeClosure, !IO),
     ReadRes = combine_read_2(MaybeSignatureByte, MaybeClosure),
     ( ReadRes = ok({SignatureByte, Closure}),
         ( if pz_signature_byte(Signature, SignatureByte) then
@@ -234,15 +234,15 @@ process_options([Option | Options], !.PZ, Result) :-
     maybe_error(pz)::out, io::di, io::uo) is det.
 
 read_pz_3(Input, FileType, Result, !IO) :-
-    util.io.read_uint32(Input, MaybeNumModuleNames, !IO),
+    my_io.read_uint32(Input, MaybeNumModuleNames, !IO),
     ( MaybeNumModuleNames = ok(NumModuleNames),
         read_module_names(Input, NumModuleNames, [], MaybeModuleNames, !IO),
-        util.io.read_uint32(Input, MaybeNumImports, !IO),
-        util.io.read_uint32(Input, MaybeNumStructs, !IO),
-        util.io.read_uint32(Input, MaybeNumDatas, !IO),
-        util.io.read_uint32(Input, MaybeNumProcs, !IO),
-        util.io.read_uint32(Input, MaybeNumClosures, !IO),
-        util.io.read_uint32(Input, MaybeNumExports, !IO),
+        my_io.read_uint32(Input, MaybeNumImports, !IO),
+        my_io.read_uint32(Input, MaybeNumStructs, !IO),
+        my_io.read_uint32(Input, MaybeNumDatas, !IO),
+        my_io.read_uint32(Input, MaybeNumProcs, !IO),
+        my_io.read_uint32(Input, MaybeNumClosures, !IO),
+        my_io.read_uint32(Input, MaybeNumExports, !IO),
         MaybeNums = combine_read_7(MaybeModuleNames, MaybeNumImports,
             MaybeNumStructs, MaybeNumDatas, MaybeNumProcs, MaybeNumClosures,
             MaybeNumExports),

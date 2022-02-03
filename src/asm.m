@@ -5,7 +5,7 @@
 %
 % Assemble a PZ bytecode file.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -46,7 +46,7 @@
 :- import_module common_types.
 :- import_module pz.code.
 :- import_module q_name.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.path.
 
 %-----------------------------------------------------------------------%
@@ -238,7 +238,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
                 then
                     pz_export_closure(CID, Name, !PZ)
                 else
-                    util.exception.sorry($file, $pred,
+                    my_exception.sorry($file, $pred,
                         "Module can't yet export other modules' symbols")
                 )
             ; Sharing = s_private

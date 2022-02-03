@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2020, 2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -39,7 +39,7 @@
 :- import_module pre.util.
 :- import_module varmap.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 
 %-----------------------------------------------------------------------%
 
@@ -126,7 +126,7 @@ pre_to_core_stmt(Stmt, Expr, DefnVars, !DeclVars, !Varmap) :-
         ( Reachable = stmt_always_fallsthrough
         ; Reachable = stmt_always_returns
         ; Reachable = stmt_may_return,
-            util.exception.sorry($file, $pred, Context,
+            my_exception.sorry($file, $pred, Context,
                 "Cannot handle some branches returning and others " ++
                 "falling-through")
         ),
@@ -183,10 +183,10 @@ pre_to_core_pattern(p_constr(Constrs, Args0),
     varmap::in, varmap::out) is det.
 
 make_pattern_arg_var(p_number(_), _, !Varmap) :-
-    util.exception.sorry($file, $pred,
+    my_exception.sorry($file, $pred,
         "Nested pattern matching (number within other pattern)").
 make_pattern_arg_var(p_constr(_, _), _, !Varmap) :-
-    util.exception.sorry($file, $pred,
+    my_exception.sorry($file, $pred,
         "Nested pattern matching (constructor within other pattern)").
 make_pattern_arg_var(p_var(Var), Var, !Varmap).
 make_pattern_arg_var(p_wildcard, Var, !Varmap) :-

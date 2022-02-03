@@ -2,11 +2,11 @@
 % Exception utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2020 Plasma Team
+% Copyright (C) 2015-2020, 2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
-:- module util.exception.
+:- module util.my_exception.
 
 :- interface.
 
@@ -91,9 +91,9 @@ sorry(File, Pred, Message) :-
 sorry(File, Pred, Context, Message) :-
     throw(unimplemented_exception(File, Pred, yes(Context), Message)).
 sorry(File, Pred, Message) = _ :-
-    util.exception.sorry(File, Pred, Message).
+    my_exception.sorry(File, Pred, Message).
 sorry(File, Pred, Context, Message) = _ :-
-    util.exception.sorry(File, Pred, Context, Message).
+    my_exception.sorry(File, Pred, Context, Message).
 
 limitation(File, Pred, Message) :-
     throw(design_limitation_exception(File, Pred, Message)).

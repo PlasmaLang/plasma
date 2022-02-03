@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program starts the build process for Plasma projects
@@ -33,7 +33,7 @@
 :- import_module constant.
 :- import_module q_name.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 :- import_module util.path.
 :- import_module util.result.
@@ -99,7 +99,7 @@ process_options(Args0, Result, !IO) :-
             discover_tools_path(MaybeToolsPath, !IO),
             ( MaybeToolsPath = yes(ToolsPath)
             ; MaybeToolsPath = no,
-                util.exception.sorry($file, $pred,
+                my_exception.sorry($file, $pred,
                   "We don't know how to determine plzbuild's path " ++
                     "(OS incompatibility?)")
             ),

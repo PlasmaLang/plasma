@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core_to_pz.code.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma core to pz conversion - code generation.
@@ -44,7 +44,7 @@
 :- import_module core.pretty.
 :- import_module core_to_pz.closure.
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 
 %-----------------------------------------------------------------------%
@@ -274,7 +274,7 @@ gen_instrs(CGInfo, Expr, Depth, LocnMap, Continuation, CtxtInstrs ++ Instrs,
                     ])
                 )
             ; Const = c_ctor(_),
-                util.exception.sorry($file, $pred, Context,
+                my_exception.sorry($file, $pred, Context,
                     "Type constructor as higher order value")
             )
         ; ExprType = e_construction(CtorIds, Args),
@@ -569,7 +569,7 @@ var_type_switch_type(_, builtin_type(Builtin)) = SwitchType :-
     ; ( Builtin = string
       ; Builtin = codepoint
       ),
-        util.exception.sorry($file, $pred,
+        my_exception.sorry($file, $pred,
             "Cannot switch on strings/codepoints")
     ; Builtin = string_pos,
         unexpected($file, $pred, "Cannot switch on string_pos")
@@ -817,7 +817,7 @@ find_matching_case([Case | Cases], ThisCaseNum, CtorId, Vars, Expr, CaseNum) :-
         unexpected($file, $pred,
             "Type error: A number can't match a constructor")
     ; Pattern = p_variable(_),
-        util.exception.sorry($file, $pred, "How to set vars"),
+        my_exception.sorry($file, $pred, "How to set vars"),
         Vars = [],
         Expr = Expr0,
         CaseNum = ThisCaseNum
@@ -883,7 +883,7 @@ gen_match_ctor(CGInfo, TypeId, Type, CtorId) = Instrs :-
                     im_u32(cast_from_int(to_int(PTag))))),
                 pzio_instr(pzi_eq(pzw_ptr))])
         ; MaybeSTag = yes(_),
-            util.exception.sorry($file, $pred, "Secondary tags")
+            my_exception.sorry($file, $pred, "Secondary tags")
         )
     ).
 
@@ -1012,7 +1012,7 @@ gen_construction(CGInfo, Type, CtorId) = Instrs :-
             pzio_comment("Call constructor"),
             pzio_instr(pzi_call(pzc_proc_opt(CtorProc)))])
     ; Type = func_type(_, _, _, _),
-        util.exception.sorry($file, $pred, "Function type")
+        my_exception.sorry($file, $pred, "Function type")
     ).
 
 %-----------------------------------------------------------------------%

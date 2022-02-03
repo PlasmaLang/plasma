@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module file_utils.
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % File handling utils specific to Plasma.  These are general for the
@@ -67,8 +67,8 @@
 
 :- import_module constant.
 :- import_module util.
-:- import_module util.exception.
-:- import_module util.io.
+:- import_module util.my_exception.
+:- import_module util.my_io.
 :- import_module util.path.
 
 %-----------------------------------------------------------------------%

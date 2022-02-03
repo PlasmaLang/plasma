@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2021 Plasma Team
+% Copyright (C) 2016-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -50,8 +50,8 @@
 :- import_module lex.
 :- import_module parsing.
 :- import_module q_name.
-:- import_module util.exception.
-:- import_module util.string.
+:- import_module util.my_exception.
+:- import_module util.my_string.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -118,7 +118,7 @@
 :- import_module pre.pre_ds.
 :- import_module pre.pretty.
 :- import_module pre.to_core.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.log.
 :- import_module util.path.
 :- import_module varmap.

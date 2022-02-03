@@ -1,11 +1,11 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module util.string.
+:- module util.my_string.
 %
 % String manipulation utils.
 %
-% Copyright (C) 2016, 2020 Plasma Team
+% Copyright (C) 2016, 2020, 2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Routines for escaping and unescaping strings.
@@ -28,7 +28,7 @@
 :- import_module list.
 :- import_module string.
 
-:- import_module util.exception.
+:- import_module util.my_exception.
 
 %-----------------------------------------------------------------------%
 
@@ -66,7 +66,7 @@ unescape_string_loop([C | Cs0]) = Cs :-
 :- func unescape_string_loop_do_escape(list(char)) = list(char).
 
 unescape_string_loop_do_escape([]) =
-    util.exception.sorry($file, $pred,
+    util.my_exception.sorry($file, $pred,
         "Lexer does not support escaping the double quote").
 unescape_string_loop_do_escape([C0 | Cs0]) = Cs :-
     ( if escape_char(C0, C1) then

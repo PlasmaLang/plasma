@@ -5,7 +5,7 @@
 %
 % Write the PZ bytecode.
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) 2015-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -45,7 +45,7 @@
 :- import_module pz.format.
 :- import_module q_name.
 :- import_module util.
-:- import_module util.io.
+:- import_module util.my_io.
 
 %-----------------------------------------------------------------------%
 

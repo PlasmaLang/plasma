@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2017, 2019-2021 Plasma Team
+% Copyright (C) 2015-2017, 2019-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module resolves symbols within the Plasma AST returning the pre-core
@@ -41,7 +41,7 @@
 :- import_module string.
 
 :- import_module util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module util.mercury.
 :- import_module varmap.
 
@@ -228,7 +228,7 @@ ast_to_pre_stmt(Info, ast_statement(StmtType0, Context), Stmts,
         ast_to_pre_stmt_assign(Context, Patterns, Exprs, Stmts,
             UseVars, DefVars, !Env, !Varmap)
     ; StmtType0 = s_array_set_statement(_, _, _),
-        util.exception.sorry($file, $pred, Context, "Arrays")
+        my_exception.sorry($file, $pred, Context, "Arrays")
     ; StmtType0 = s_return_statement(Exprs),
         ast_to_pre_stmt_return(Info, !.Env, Context, Exprs, Stmts, UseVars,
             DefVars, !Varmap)
@@ -293,7 +293,7 @@ ast_to_pre_stmt_assign(Context, Patterns, Exprs0, Stmts, UseVars, DefVars,
             UsedVars0, DefVars, !Env, !Varmap),
         UseVars = ExprsUseVars `union` UsedVars0
     else
-        util.exception.sorry($file, $pred, Context,
+        my_exception.sorry($file, $pred, Context,
             "Can't unpack more than one pattern")
     ).
 
@@ -647,7 +647,7 @@ ast_to_pre_expr_2(Context, Env, e_symbol(Symbol), Expr, Vars, !Varmap) :-
             format("Variable not initalised: %s",
                 [s(q_name_to_string(Symbol))]))
     ; Result = maybe_cyclic_retlec,
-        util.exception.sorry($file, $pred, Context,
+        my_exception.sorry($file, $pred, Context,
             format("%s is possibly involved in a mutual recursion of " ++
                 "closures. If they're not mutually recursive try " ++
                 "re-ordering them.",
@@ -663,7 +663,7 @@ ast_to_pre_expr_2(_, Env, e_const(Const0), e_constant((Const)), init,
         Const = c_ctor(make_singleton_set(env_operators(Env) ^ o_list_nil))
     ).
 ast_to_pre_expr_2(Context, _, e_array(_), _, _, !Varmap) :-
-    util.exception.sorry($file, $pred, Context, "Arrays").
+    my_exception.sorry($file, $pred, Context, "Arrays").
 
 :- type pre_call_like
     --->    pcl_call(pre_call)

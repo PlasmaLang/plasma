@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016, 2019-2021 Plasma Team
+% Copyright (C) 2016, 2019-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module fixes variable usage in branching code.  It:
@@ -41,7 +41,7 @@
 :- import_module context.
 :- import_module common_types.
 :- import_module pre.util.
-:- import_module util.exception.
+:- import_module util.my_exception.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%
