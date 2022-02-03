@@ -6,3 +6,7 @@ modules = [Module_08, Module_08.C, Module_08.D]
 type = program
 modules = [Module_08b, Module_08.C, Module_08.D]
 
+[module_09_ref_unexported]
+type = program
+modules = [Module_09_RefUnexported, Module_09_RefUnexported_a]
+

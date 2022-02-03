@@ -61,6 +61,12 @@ module_08b.out : module_08b.p module_08.c.p module_08.d.p BUILD.plz BINS
 		echo "Build succeeded" >> $@ ; \
 		false ; \
 	fi
+module_09_ref_unexported.out : module_09_ref_unexported.p module_09_ref_unexported_a.p BUILD.plz BINS
+	if $(TOP)/src/plzbuild module_09_ref_unexported > $@ 2>&1 ; then \
+		echo "Build succeeded" ; \
+		echo "Build succeeded" >> $@ ; \
+		false ; \
+	fi
 
 .PHONY: BINS
 BINS: $(TOP)/src/plzc $(TOP)/src/plzlnk $(TOP)/src/plzbuild
