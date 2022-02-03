@@ -1,11 +1,11 @@
 %-----------------------------------------------------------------------%
 % vim: ts=4 sw=4 et
 %-----------------------------------------------------------------------%
-:- module util.io.
+:- module util.my_io.
 %
 % Tag Length Value serialisation.
 %
-% Copyright (C) 2015, 2020 Plasma Team
+% Copyright (C) 2015, 2020, 2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%

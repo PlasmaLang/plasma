@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.import.
 %
-% Copyright (C) 2020-2021 Plasma Team
+% Copyright (C) 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Process imports by reading interface files.
@@ -99,7 +99,7 @@
 :- import_module parse_util.
 :- import_module pre.ast_to_core.
 :- import_module util.exception.
-:- import_module util.io.
+:- import_module util.my_io.
 :- import_module util.mercury.
 :- import_module util.path.
 
