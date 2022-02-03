@@ -51,7 +51,7 @@
 :- import_module parsing.
 :- import_module q_name.
 :- import_module util.my_exception.
-:- import_module util.string.
+:- import_module util.my_string.
 :- import_module varmap.
 
 %-----------------------------------------------------------------------%

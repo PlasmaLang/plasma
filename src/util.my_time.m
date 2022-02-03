@@ -2,11 +2,11 @@
 % Timing utility code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2021 Plasma Team
+% Copyright (C) 2021-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
-:- module util.time.
+:- module util.my_time.
 
 :- interface.
 

@@ -41,7 +41,7 @@
 :- import_module util.my_exception.
 :- import_module util.mercury.
 :- import_module util.result.
-:- import_module util.time.
+:- import_module util.my_time.
 
 %-----------------------------------------------------------------------%
 

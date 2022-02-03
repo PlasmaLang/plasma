@@ -5,7 +5,7 @@
 %
 % Pretty printer utils.
 %
-% Copyright (C) 2019-2021 Plasma Team
+% Copyright (C) 2019-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -136,7 +136,7 @@
 :- import_module string.
 
 :- import_module util.mercury.
-:- import_module util.string.
+:- import_module util.my_string.
 
 %-----------------------------------------------------------------------%
 

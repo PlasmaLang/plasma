@@ -61,7 +61,7 @@
 :- import_module util.mercury.
 :- import_module util.path.
 :- import_module util.result.
-:- import_module util.time.
+:- import_module util.my_time.
 :- import_module write_interface.
 
 %-----------------------------------------------------------------------%
