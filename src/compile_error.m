@@ -147,7 +147,7 @@ ce_to_pretty(ce_interface_contains_wrong_module(File, Expect, Got), Para, []) :-
         [p_str("expected:")] ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Expect))].
 ce_to_pretty(ce_import_would_clobber(ModuleName, MaybeAsName), Para, []) :-
-    ParaA = p_words("Thie import of") ++ p_spc_nl ++
+    ParaA = p_words("The import of") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(ModuleName))] ++ p_spc_nl,
     ( MaybeAsName = no,
         ParaB = p_words("clobbers a previous import to that name")
@@ -158,7 +158,7 @@ ce_to_pretty(ce_import_would_clobber(ModuleName, MaybeAsName), Para, []) :-
     ),
     Para = ParaA ++ ParaB.
 ce_to_pretty(ce_import_duplicate(ModuleName), Para, []) :-
-    Para = p_words("Thie import of") ++ p_spc_nl ++
+    Para = p_words("The import of") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(ModuleName))] ++ p_spc_nl ++
     p_words("is redundant, this module is already imported").
 

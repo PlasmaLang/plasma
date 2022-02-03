@@ -1,6 +1,6 @@
 module_07.p:9: The interface file for the imported module (Foo) cannot be
                found. Was the module listed in BUILD.plz?
-module_07.p:10: Thie import of 'Bar' clobbers 'F' which is used by a previous
+module_07.p:10: The import of 'Bar' clobbers 'F' which is used by a previous
                 import
 module_07.p:10: The interface file for the imported module (Bar) cannot be
                 found. Was the module listed in BUILD.plz?
