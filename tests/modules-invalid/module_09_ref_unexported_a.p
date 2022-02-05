@@ -14,3 +14,8 @@ resource R0 from IO
 export
 resource R1 from R0
 
+// Plasma used to generate a 2nd error because of this indirect usage of R0.
+// We want to check that it does not generate a 2nd error.
+export
+resource R2 from R1
+

@@ -688,20 +688,19 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
         Errors = init
     ; Res = r_other(Name, FromId, _, _, Context),
         From = core_get_resource(Core, FromId),
-        Errors = check_resource_exports_3(Core, Name, Context, From)
+        Errors = check_resource_exports_3(Name, Context, From)
     ; Res = r_abstract(_),
         Errors = init
     ).
 
-:- func check_resource_exports_3(core, q_name, context, resource) =
+:- func check_resource_exports_3(q_name, context, resource) =
     errors(compile_error).
 
-check_resource_exports_3(_, _, _, r_io) = init.
-check_resource_exports_3(Core, Name, Context,
-        r_other(RName, FromId, Sharing, Imported, RContext)) = Errors :-
+check_resource_exports_3(_, _, r_io) = init.
+check_resource_exports_3(Name, Context,
+        r_other(RName, _, Sharing, Imported, _)) = Errors :-
     ( Sharing = s_public,
-        From = core_get_resource(Core, FromId),
-        Errors = check_resource_exports_3(Core, RName, RContext, From)
+        Errors = init
     ; Sharing = s_private,
         ( Imported = i_imported,
             Errors = init
@@ -711,7 +710,7 @@ check_resource_exports_3(Core, Name, Context,
                 q_name_unqual(RName)))
         )
     ).
-check_resource_exports_3(_, _, _, r_abstract(_)) = init.
+check_resource_exports_3(_, _, r_abstract(_)) = init.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
