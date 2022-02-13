@@ -1,2 +1,0 @@
-module_09_ref_unexported_a.p:15: The resource R1 is exported, but it depends on
-                                 R0 which is not
