@@ -22,6 +22,10 @@ resource Bar from Foo
 export
 resource Bar2 from Foo
 
+// Not an error
+export
+resource BarBar from Bar
+
 // No error.
 resource Baz from Foo
 
@@ -35,6 +39,7 @@ export
 func zort() uses Baz {
 }
 
+// No error.
 func zort2() uses Baz {
 }
 
