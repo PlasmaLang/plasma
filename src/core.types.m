@@ -2,7 +2,7 @@
 % Plasma types representation
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2018, 2020-2021 Plasma Team
+% Copyright (C) 2015-2018, 2020-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -16,9 +16,13 @@
 :- type type_
     --->    builtin_type(builtin_type)
     ;       func_type(
+                % Arg types
                 list(type_),
+                % Return types
                 list(type_),
+                % Uses
                 set(resource_id),
+                % Observes
                 set(resource_id)
             )
     ;       type_variable(type_var)
