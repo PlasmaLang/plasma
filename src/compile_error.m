@@ -77,7 +77,7 @@
     ;       ce_resource_unavailable_output
     ;       ce_resource_unknown(q_name)
     ;       ce_resource_not_public_in_resource(nq_name, nq_name)
-    ;       ce_resource_not_public(q_name)
+    ;       ce_resource_not_public(nq_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang.
@@ -293,7 +293,7 @@ ce_to_pretty(ce_resource_not_public_in_resource(Res, From), Para, []) :-
 ce_to_pretty(ce_resource_not_public(Res), Para, []) :-
     Para = p_words("This function or type is exported, " ++
             "but it depends on the resource") ++ p_spc_nl ++
-        [q_name_pretty(Res)] ++ p_spc_nl ++
+        [nq_name_pretty(Res)] ++ p_spc_nl ++
         p_words("which is not").
 ce_to_pretty(ce_too_many_bangs_in_statement,
     p_words("Statement has more than one ! call"), []).

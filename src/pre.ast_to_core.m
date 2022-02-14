@@ -139,8 +139,9 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
         !IO),
     foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
 
-    verbose_output(Verbose, "pre_to_core: Checking resources\n", !IO),
-    add_errors(check_resource_exports(!.Core), !Errors).
+    verbose_output(Verbose, "pre_to_core: Checking exports\n", !IO),
+    add_errors(check_resource_exports(!.Core), !Errors),
+    add_errors(check_function_exports(!.Core), !Errors).
 
 %-----------------------------------------------------------------------%
 
@@ -415,7 +416,7 @@ ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
         build_type_ref(Core, Env, Sharing, dont_check_type_vars),
         Returns),
     ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0, ResourceErrorss,
+    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
         set.init, Uses, set.init, Observes),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     IntersectUsesObserves = intersect(Uses, Observes),
@@ -587,7 +588,7 @@ build_type_ref(Core, Env, Sharing, MaybeCheckVars, Func) = Result :-
         map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
         map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Returns0)),
-    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0,
+    map_foldl2(build_uses(Context, Env), Uses0,
         ResourceErrorss, set.init, UsesSet, set.init, ObservesSet),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     ( if
@@ -616,39 +617,19 @@ build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, Context)) =
         Result = return_error(Context, ce_type_var_unknown(Name))
     ).
 
-:- pred build_uses(context::in, env::in, core::in, sharing::in, ast_uses::in,
+:- pred build_uses(context::in, env::in, ast_uses::in,
     errors(compile_error)::out,
     set(resource_id)::in, set(resource_id)::out,
     set(resource_id)::in, set(resource_id)::out) is det.
 
-build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
-        !:Errors, !Uses, !Observes) :-
+build_uses(Context, Env, ast_uses(Type, ResourceName), !:Errors,
+        !Uses, !Observes) :-
     !:Errors = init,
     ( if env_search_resource(Env, ResourceName, ResourceId) then
         ( Type = ut_uses,
             !:Uses = set.insert(!.Uses, ResourceId)
         ; Type = ut_observes,
             !:Observes = set.insert(!.Observes, ResourceId)
-        ),
-
-        % For exported functions we check that any resources it uses are
-        % also public.
-        ( FuncSharing = s_public,
-            Resource = core_get_resource(Core, ResourceId),
-            ( Resource = r_io
-            ; Resource = r_abstract(_)
-            ; Resource = r_other(_, _, Sharing, Imported, _),
-                ( if
-                    Imported = i_local,
-                    Sharing = s_private
-                then
-                    add_error(Context, ce_resource_not_public(ResourceName),
-                        !Errors)
-                else
-                    true
-                )
-            )
-        ; FuncSharing = s_private
         )
     else
         add_error(Context, ce_resource_unknown(ResourceName), !Errors)
@@ -687,30 +668,83 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
     ( Res = r_io,
         Errors = init
     ; Res = r_other(Name, FromId, _, _, Context),
-        From = core_get_resource(Core, FromId),
-        Errors = check_resource_exports_3(Name, Context, From)
+        Errors = check_resource_exports_3(Name, Context, Core, FromId)
     ; Res = r_abstract(_),
         Errors = init
     ).
 
-:- func check_resource_exports_3(q_name, context, resource) =
+:- func check_resource_exports_3(q_name, context, core, resource_id) =
     errors(compile_error).
 
-check_resource_exports_3(_, _, r_io) = init.
-check_resource_exports_3(Name, Context,
-        r_other(RName, _, Sharing, Imported, _)) = Errors :-
-    ( Sharing = s_public,
+check_resource_exports_3(Name, Context, Core, Res) = Errors :-
+    resource_is_private(Core, Res) = IsPrivate,
+    ( IsPrivate = res_is_private(RName),
+        Errors = error(Context, ce_resource_not_public_in_resource(
+            q_name_unqual(Name),
+            q_name_unqual(RName)))
+    ; IsPrivate = res_is_not_private,
         Errors = init
+    ).
+
+:- type res_is_private
+    --->    res_is_private(q_name)
+            % could be public, abstract or imported.
+    ;       res_is_not_private.
+
+:- func resource_is_private(core, resource_id) = res_is_private.
+
+resource_is_private(Core, ResId) =
+    resource_is_private_2(core_get_resource(Core, ResId)).
+
+:- func resource_is_private_2(resource) = res_is_private.
+
+resource_is_private_2(r_io) = res_is_not_private.
+resource_is_private_2(r_other(RName, _, Sharing, Imported, _))
+        = Private :-
+    ( Sharing = s_public,
+        Private = res_is_not_private
     ; Sharing = s_private,
         ( Imported = i_imported,
-            Errors = init
+            Private = res_is_not_private
         ; Imported = i_local,
-            Errors = error(Context, ce_resource_not_public_in_resource(
-                q_name_unqual(Name),
-                q_name_unqual(RName)))
+            Private = res_is_private(RName)
         )
     ).
-check_resource_exports_3(_, _, r_abstract(_)) = init.
+resource_is_private_2(r_abstract(_)) = res_is_not_private.
+
+%-----------------------------------------------------------------------%
+
+:- func check_function_exports(core) = errors(compile_error).
+
+check_function_exports(Core) = Errors :-
+    Functions = core_all_exported_functions(Core),
+    Errors = cord_list_to_cord(
+        map(check_function_exports_2(Core), Functions)).
+
+:- func check_function_exports_2(core, pair(func_id, function)) =
+    errors(compile_error).
+
+check_function_exports_2(Core, _ - Func) = Errors :-
+    Context = func_get_context(Func),
+    func_get_resource_signature(Func, Uses, Observes),
+    func_get_type_signature(Func, Params, Returns, _),
+    ParamsRes = union_list(map(type_get_resources, Params)),
+    ReturnsRes = union_list(map(type_get_resources, Returns)),
+    Ids = set.to_sorted_list(Uses `set.union` Observes `set.union`
+        ParamsRes `set.union` ReturnsRes),
+    Errors = cord_list_to_cord(
+        map(check_function_resource(Core, Context), Ids)).
+
+:- func check_function_resource(core, context, resource_id) =
+    errors(compile_error).
+
+check_function_resource(Core, Context, ResId) = Errors :-
+    resource_is_private(Core, ResId) = Private,
+    ( Private = res_is_private(RName),
+        Errors = error(Context, ce_resource_not_public(q_name_unqual(RName)))
+    ; Private = res_is_not_private,
+        Errors = init
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

@@ -1,10 +1,10 @@
+export_bad_resource.p:19: The resource Bar is exported, but it depends on Foo
+                          which is not
+export_bad_resource.p:23: The resource Bar2 is exported, but it depends on Foo
+                          which is not
 export_bad_resource.p:34: This function or type is exported, but it depends on
                           the resource Foo which is not
 export_bad_resource.p:39: This function or type is exported, but it depends on
                           the resource Baz which is not
 export_bad_resource.p:48: This function or type is exported, but it depends on
                           the resource Baz which is not
-export_bad_resource.p:19: The resource Bar is exported, but it depends on Foo
-                          which is not
-export_bad_resource.p:23: The resource Bar2 is exported, but it depends on Foo
-                          which is not

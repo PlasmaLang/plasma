@@ -49,6 +49,10 @@
     %
 :- func type_get_ctors(core, type_) = maybe(list(ctor_id)).
 
+    % Return all the resources that appear in this type.
+    %
+:- func type_get_resources(type_) = set(resource_id).
+
 %-----------------------------------------------------------------------%
 
 :- type user_type.
@@ -129,6 +133,15 @@ type_get_ctors(_, func_type(_, _, _, _)) = no.
 type_get_ctors(_, type_variable(_)) = no.
 type_get_ctors(Core, type_ref(TypeId, _)) =
     utype_get_ctors(core_get_type(Core, TypeId)).
+
+%-----------------------------------------------------------------------%
+
+type_get_resources(builtin_type(_)) = set.init.
+type_get_resources(func_type(_, _, Uses, Observes)) = Uses `set.union`
+    Observes.
+type_get_resources(type_variable(_)) = set.init.
+type_get_resources(type_ref(_, Args)) = set.union_list(
+    map(type_get_resources, Args)).
 
 %-----------------------------------------------------------------------%
 
