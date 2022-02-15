@@ -28,6 +28,7 @@ resource BarBar from Bar
 
 // No error.
 resource Baz from Foo
+resource Baz2 from Foo
 
 // Error Foo is not exported
 export
@@ -46,5 +47,17 @@ func zort2() uses Baz {
 // This time the error is in a type used by a function.
 export
 func silly_sound(x : func(Int) uses Baz) {
+}
+
+// Should have two errors, one for each resource.
+export
+func silly_sound2(x : func(Int) uses (Bar, Baz, Baz2)) {
+}
+
+// Should have only one error (same resource twice)
+export
+func silly_sound3(x : func(Int) uses (Baz, Bar), y : func(String) uses Baz)
+    uses Baz
+{
 }
 
