@@ -141,6 +141,7 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
 
     verbose_output(Verbose, "pre_to_core: Checking exports\n", !IO),
     add_errors(check_resource_exports(!.Core), !Errors),
+    add_errors(check_type_exports(!.Core), !Errors),
     add_errors(check_function_exports(!.Core), !Errors).
 
 %-----------------------------------------------------------------------%
@@ -711,6 +712,30 @@ resource_is_private_2(r_other(RName, _, Sharing, Imported, _))
         )
     ).
 resource_is_private_2(r_abstract(_)) = res_is_not_private.
+
+%-----------------------------------------------------------------------%
+
+:- func check_type_exports(core) = errors(compile_error).
+
+check_type_exports(Core) = Errors :-
+    Types = core_all_exported_types(Core),
+    Errors = cord_list_to_cord(
+        map(check_type_exports_2(Core), Types)).
+
+:- func check_type_exports_2(core, pair(type_id, user_type)) =
+    errors(compile_error).
+
+check_type_exports_2(Core, _ - Type) = Errors :-
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_public,
+        Errors = cord_list_to_cord(
+            map(check_function_resource(Core, utype_get_context(Type)),
+                set.to_sorted_list(utype_get_resources(Core, Type))))
+    ; ( Sharing = st_public_abstract
+      ; Sharing = st_private
+      ),
+      Errors = init
+    ).
 
 %-----------------------------------------------------------------------%
 

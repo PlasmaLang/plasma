@@ -76,6 +76,8 @@
 
 :- func utype_get_context(user_type) = context.
 
+:- func utype_get_resources(core, user_type) = set(resource_id).
+
 %-----------------------------------------------------------------------%
 
 :- type constructor
@@ -189,6 +191,24 @@ utype_get_arity(abstract_type(_, Arity, _)) = Arity.
 
 utype_get_context(user_type(_, _, _, _, Context)) = Context.
 utype_get_context(abstract_type(_, _, Context)) = Context.
+
+%-----------------------------------------------------------------------%
+
+utype_get_resources(Core, user_type(_, _, Ctors, _, _)) =
+    union_list(map(ctor_get_resources(Core), Ctors)).
+utype_get_resources(_, abstract_type(_, _, _)) = set.init.
+
+:- func ctor_get_resources(core, ctor_id) = set(resource_id).
+
+ctor_get_resources(Core, CtorId) = Res :-
+    core_get_constructor_det(Core, CtorId, Ctor),
+    Ctor = constructor(_, _, Fields),
+    Res = union_list(map(field_get_resources, Fields)).
+
+:- func field_get_resources(type_field) = set(resource_id).
+
+field_get_resources(type_field(_, Type)) =
+    type_get_resources(Type).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

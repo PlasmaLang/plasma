@@ -49,7 +49,7 @@ export
 func silly_sound(x : func(Int) uses Baz) {
 }
 
-// Should have two errors, one for each resource.
+// Should have two errors, for Baz and Baz2
 export
 func silly_sound2(x : func(Int) uses (Bar, Baz, Baz2)) {
 }
@@ -60,4 +60,30 @@ func silly_sound3(x : func(Int) uses (Baz, Bar), y : func(String) uses Baz)
     uses Baz
 {
 }
+
+// Error
+export
+type Type1 = Type1(
+    a : func(Int) uses Baz
+)
+
+// Multiple errors.
+export
+type Type2 = Type2(
+    b : func(Int) uses (Baz, Bar),
+    c : List(func(Int) uses Baz2)
+)
+
+// No errors.
+type Type3 = Type3(
+    d : func(Int) uses (Baz, Bar),
+    e : List(func(Int) uses Baz2)
+)
+
+// No errors.
+export abstract
+type Type4 = Type4(
+    f : func(Int) uses (Baz, Bar),
+    g : List(func(Int) uses Baz2)
+)
 
