@@ -172,7 +172,7 @@ ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
     ).
 
 ast_to_core_type_i(GetName, Env, Name, TypeId,
-        ast_type(Params, Constrs0, Sharing, _Context), Result, !Core) :-
+        ast_type(Params, Constrs0, Sharing, Context), Result, !Core) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
@@ -182,13 +182,13 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
         CtorIds = map(func(C) = C ^ cb_id, Ctors),
-        Result = ok({type_init(Name, Params, CtorIds, Sharing), Ctors})
+        Result = ok({type_init(Name, Params, CtorIds, Sharing, Context), Ctors})
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, _Context),
+ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, Context),
         Result, !Core) :-
-    Result = ok({type_init_abstract(Name, Arity), []}).
+    Result = ok({type_init_abstract(Name, Arity, Context), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 

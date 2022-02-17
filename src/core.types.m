@@ -11,6 +11,8 @@
 
 :- interface.
 
+:- import_module context.
+
 %-----------------------------------------------------------------------%
 
 :- type type_
@@ -57,10 +59,10 @@
 
 :- type user_type.
 
-:- func type_init(q_name, list(string), list(ctor_id), sharing_type) =
+:- func type_init(q_name, list(string), list(ctor_id), sharing_type, context) =
     user_type.
 
-:- func type_init_abstract(q_name, arity) = user_type.
+:- func type_init_abstract(q_name, arity, context) = user_type.
 
 :- func utype_get_name(user_type) = q_name.
 
@@ -71,6 +73,8 @@
 :- func utype_get_sharing(user_type) = sharing_type.
 
 :- func utype_get_arity(user_type) = arity.
+
+:- func utype_get_context(user_type) = context.
 
 %-----------------------------------------------------------------------%
 
@@ -150,23 +154,25 @@ type_get_resources(type_ref(_, Args)) = set.union_list(
                 t_symbol        :: q_name,
                 t_params        :: list(string),
                 t_ctors         :: list(ctor_id),
-                t_sharing       :: sharing_type
+                t_sharing       :: sharing_type,
+                t_context       :: context
             )
     ;       abstract_type(
                 at_symbol       :: q_name,
-                at_arity        :: arity
+                at_arity        :: arity,
+                at_context      :: context
             ).
 
-type_init(Name, Params, Ctors, Sharing) =
-    user_type(Name, Params, Ctors, Sharing).
+type_init(Name, Params, Ctors, Sharing, Context) =
+    user_type(Name, Params, Ctors, Sharing, Context).
 
-type_init_abstract(Name, Arity) = abstract_type(Name, Arity).
+type_init_abstract(Name, Arity, Context) = abstract_type(Name, Arity, Context).
 
-utype_get_name(user_type(S, _, _, _)) = S.
-utype_get_name(abstract_type(S, _)) = S.
+utype_get_name(user_type(S, _, _, _, _)) = S.
+utype_get_name(abstract_type(S, _, _)) = S.
 
-utype_get_params(user_type(_, Params, _, _)) = yes(Params).
-utype_get_params(abstract_type(_, _)) = no.
+utype_get_params(user_type(_, Params, _, _, _)) = yes(Params).
+utype_get_params(abstract_type(_, _, _)) = no.
 
 utype_get_ctors(Type) =
     ( if Ctors = Type ^ t_ctors then
@@ -175,11 +181,14 @@ utype_get_ctors(Type) =
         no
     ).
 
-utype_get_sharing(user_type(_, _, _, Sharing)) = Sharing.
-utype_get_sharing(abstract_type(_, _)) = st_private.
+utype_get_sharing(user_type(_, _, _, Sharing, _)) = Sharing.
+utype_get_sharing(abstract_type(_, _, _)) = st_private.
 
-utype_get_arity(user_type(_, Params, _, _)) = arity(length(Params)).
-utype_get_arity(abstract_type(_, Arity)) = Arity.
+utype_get_arity(user_type(_, Params, _, _, _)) = arity(length(Params)).
+utype_get_arity(abstract_type(_, Arity, _)) = Arity.
+
+utype_get_context(user_type(_, _, _, _, Context)) = Context.
+utype_get_context(abstract_type(_, _, Context)) = Context.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

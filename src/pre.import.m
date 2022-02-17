@@ -456,7 +456,8 @@ process_typeres_import(ModuleName, ImportAST, Result, !Core) :-
                             "Imported module exports symbols of other module")
                     ),
                     core_allocate_type_id(Type, C0, C1),
-                    core_set_type(Type, type_init_abstract(Name, Arity), C1, C)
+                    core_set_type(Type,
+                        type_init_abstract(Name, Arity, nil_context), C1, C)
                 ), Types, NamePairsB, !Core),
             Result = ok(NamePairsA ++ NamePairsB)
         )
@@ -546,7 +547,8 @@ maybe_add_implicit_type({Name, Arity}, !Env, !Core) :-
     else
         core_allocate_type_id(TypeId, !Core),
         env_add_type_det(Name, Arity, TypeId, !Env),
-        core_set_type(TypeId, type_init_abstract(Name, Arity), !Core)
+        core_set_type(TypeId, type_init_abstract(Name, Arity, nil_context),
+            !Core)
     ).
 
 %-----------------------------------------------------------------------%
