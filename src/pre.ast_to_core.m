@@ -729,12 +729,26 @@ check_type_exports_2(Core, _ - Type) = Errors :-
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_public,
         Errors = cord_list_to_cord(
-            map(check_function_resource(Core, utype_get_context(Type)),
+            map(check_type_resource(Core, Type),
                 set.to_sorted_list(utype_get_resources(Core, Type))))
     ; ( Sharing = st_public_abstract
       ; Sharing = st_private
       ),
       Errors = init
+    ).
+
+:- func check_type_resource(core, user_type, resource_id) =
+    errors(compile_error).
+
+check_type_resource(Core, Type, ResId) = Errors :-
+    resource_is_private(Core, ResId) = Private,
+    ( Private = res_is_private(RName),
+        Name = utype_get_name(Type),
+        Context = utype_get_context(Type),
+        Errors = error(Context, ce_resource_not_public_in_type(
+            q_name_unqual(Name), q_name_unqual(RName)))
+    ; Private = res_is_not_private,
+        Errors = init
     ).
 
 %-----------------------------------------------------------------------%
@@ -750,7 +764,6 @@ check_function_exports(Core) = Errors :-
     errors(compile_error).
 
 check_function_exports_2(Core, _ - Func) = Errors :-
-    Context = func_get_context(Func),
     func_get_resource_signature(Func, Uses, Observes),
     func_get_type_signature(Func, Params, Returns, _),
     ParamsRes = union_list(map(type_get_resources, Params)),
@@ -758,15 +771,18 @@ check_function_exports_2(Core, _ - Func) = Errors :-
     Ids = set.to_sorted_list(Uses `set.union` Observes `set.union`
         ParamsRes `set.union` ReturnsRes),
     Errors = cord_list_to_cord(
-        map(check_function_resource(Core, Context), Ids)).
+        map(check_function_resource(Core, Func), Ids)).
 
-:- func check_function_resource(core, context, resource_id) =
+:- func check_function_resource(core, function, resource_id) =
     errors(compile_error).
 
-check_function_resource(Core, Context, ResId) = Errors :-
+check_function_resource(Core, Func, ResId) = Errors :-
     resource_is_private(Core, ResId) = Private,
     ( Private = res_is_private(RName),
-        Errors = error(Context, ce_resource_not_public(q_name_unqual(RName)))
+        Name = func_get_name(Func),
+        Context = func_get_context(Func),
+        Errors = error(Context, ce_resource_not_public_in_function(
+            q_name_unqual(Name), q_name_unqual(RName)))
     ; Private = res_is_not_private,
         Errors = init
     ).

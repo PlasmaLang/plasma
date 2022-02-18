@@ -2,21 +2,21 @@ export_bad_resource.p:19: The resource Bar is exported, but it depends on Foo
                           which is not
 export_bad_resource.p:23: The resource Bar2 is exported, but it depends on Foo
                           which is not
-export_bad_resource.p:66: This function or type is exported, but it depends on
-                          the resource Baz which is not
-export_bad_resource.p:72: This function or type is exported, but it depends on
-                          the resource Baz which is not
-export_bad_resource.p:72: This function or type is exported, but it depends on
-                          the resource Baz2 which is not
-export_bad_resource.p:35: This function or type is exported, but it depends on
-                          the resource Foo which is not
-export_bad_resource.p:40: This function or type is exported, but it depends on
-                          the resource Baz which is not
-export_bad_resource.p:49: This function or type is exported, but it depends on
-                          the resource Baz which is not
-export_bad_resource.p:54: This function or type is exported, but it depends on
-                          the resource Baz which is not
-export_bad_resource.p:54: This function or type is exported, but it depends on
-                          the resource Baz2 which is not
-export_bad_resource.p:59: This function or type is exported, but it depends on
-                          the resource Baz which is not
+export_bad_resource.p:66: The type Type1 is exported, but it refers to the
+                          resource Baz which is not exported
+export_bad_resource.p:72: The type Type2 is exported, but it refers to the
+                          resource Baz which is not exported
+export_bad_resource.p:72: The type Type2 is exported, but it refers to the
+                          resource Baz2 which is not exported
+export_bad_resource.p:35: The function troz is exported, but it refers to the
+                          resource Foo which is not exported
+export_bad_resource.p:40: The function zort is exported, but it refers to the
+                          resource Baz which is not exported
+export_bad_resource.p:49: The function silly_sound is exported, but it refers
+                          to the resource Baz which is not exported
+export_bad_resource.p:54: The function silly_sound2 is exported, but it refers
+                          to the resource Baz which is not exported
+export_bad_resource.p:54: The function silly_sound2 is exported, but it refers
+                          to the resource Baz2 which is not exported
+export_bad_resource.p:59: The function silly_sound3 is exported, but it refers
+                          to the resource Baz which is not exported

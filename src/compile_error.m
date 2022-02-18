@@ -77,7 +77,8 @@
     ;       ce_resource_unavailable_output
     ;       ce_resource_unknown(q_name)
     ;       ce_resource_not_public_in_resource(nq_name, nq_name)
-    ;       ce_resource_not_public(nq_name)
+    ;       ce_resource_not_public_in_type(nq_name, nq_name)
+    ;       ce_resource_not_public_in_function(nq_name, nq_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
     ;       ce_unnecessary_bang.
@@ -290,11 +291,18 @@ ce_to_pretty(ce_resource_not_public_in_resource(Res, From), Para, []) :-
         p_words("is exported, but it depends on") ++
         p_spc_nl ++ [nq_name_pretty(From)] ++ p_spc_nl ++
         p_words("which is not").
-ce_to_pretty(ce_resource_not_public(Res), Para, []) :-
-    Para = p_words("This function or type is exported, " ++
-            "but it depends on the resource") ++ p_spc_nl ++
+ce_to_pretty(ce_resource_not_public_in_type(Type, Res), Para, []) :-
+    Para = p_words("The type") ++
+        p_spc_nl ++ [nq_name_pretty(Type)] ++ p_spc_nl ++
+        p_words("is exported, but it refers to the resource") ++ p_spc_nl ++
         [nq_name_pretty(Res)] ++ p_spc_nl ++
-        p_words("which is not").
+        p_words("which is not exported").
+ce_to_pretty(ce_resource_not_public_in_function(Func, Res), Para, []) :-
+    Para = p_words("The function") ++
+        p_spc_nl ++ [nq_name_pretty(Func)] ++ p_spc_nl ++
+        p_words("is exported, but it refers to the resource") ++ p_spc_nl ++
+        [nq_name_pretty(Res)] ++ p_spc_nl ++
+        p_words("which is not exported").
 ce_to_pretty(ce_too_many_bangs_in_statement,
     p_words("Statement has more than one ! call"), []).
 ce_to_pretty(ce_no_bang,
