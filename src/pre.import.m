@@ -705,7 +705,8 @@ do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
     ),
     NamePair = NQName - ie_type(type_arity(ASTType), TypeId),
 
-    ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
+    ast_to_core_type_i(func(N) = N, i_imported, Env, Name, TypeId, ASTType, 
+        Result, !Core),
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
         CtorNamePairs = map(

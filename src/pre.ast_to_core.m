@@ -69,8 +69,8 @@
     % turn it into the actual q_name used within the core representation
     % (not the environment).
     %
-:- pred ast_to_core_type_i((func(Name) = q_name)::in, env::in, q_name::in,
-    type_id::in, ast_type(Name)::in,
+:- pred ast_to_core_type_i((func(Name) = q_name)::in, imported::in,
+    env::in, q_name::in, type_id::in, ast_type(Name)::in,
     result({user_type, list(ctor_binding(Name))}, compile_error)::out,
     core::in, core::out) is det.
 
@@ -158,7 +158,7 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
 
 ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
     ModuleName = module_name(!.Core),
-    ast_to_core_type_i(q_name_append(ModuleName), !.Env,
+    ast_to_core_type_i(q_name_append(ModuleName), i_local, !.Env,
         q_name_append(ModuleName, Name),
         TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
@@ -172,7 +172,7 @@ ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
         add_errors(Errors, !Errors)
     ).
 
-ast_to_core_type_i(GetName, Env, Name, TypeId,
+ast_to_core_type_i(GetName, Imported, Env, Name, TypeId,
         ast_type(Params, Constrs0, Sharing, Context), Result, !Core) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
@@ -183,11 +183,13 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
         CtorIds = map(func(C) = C ^ cb_id, Ctors),
-        Result = ok({type_init(Name, Params, CtorIds, Sharing, Context), Ctors})
+        Result = ok({
+            type_init(Name, Params, CtorIds, Sharing, Imported, Context),
+            Ctors})
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, Context),
+ast_to_core_type_i(_, _, _, Name, _, ast_type_abstract(Arity, Context),
         Result, !Core) :-
     Result = ok({type_init_abstract(Name, Arity, Context), []}).
 
@@ -679,39 +681,63 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
 
 check_resource_exports_3(Name, Context, Core, Res) = Errors :-
     resource_is_private(Core, Res) = IsPrivate,
-    ( IsPrivate = res_is_private(RName),
+    ( IsPrivate = is_private(RName),
         Errors = error(Context, ce_resource_not_public_in_resource(
             q_name_unqual(Name),
             q_name_unqual(RName)))
-    ; IsPrivate = res_is_not_private,
+    ; IsPrivate = is_not_private,
         Errors = init
     ).
 
-:- type res_is_private
-    --->    res_is_private(q_name)
-            % could be public, abstract or imported.
-    ;       res_is_not_private.
+%-----------------------------------------------------------------------%
 
-:- func resource_is_private(core, resource_id) = res_is_private.
+:- type is_private
+    --->    is_private(q_name)
+            % could be public, abstract or imported.
+    ;       is_not_private.
+
+:- func resource_is_private(core, resource_id) = is_private.
 
 resource_is_private(Core, ResId) =
     resource_is_private_2(core_get_resource(Core, ResId)).
 
-:- func resource_is_private_2(resource) = res_is_private.
+:- func resource_is_private_2(resource) = is_private.
 
-resource_is_private_2(r_io) = res_is_not_private.
+resource_is_private_2(r_io) = is_not_private.
 resource_is_private_2(r_other(RName, _, Sharing, Imported, _))
         = Private :-
     ( Sharing = s_public,
-        Private = res_is_not_private
+        Private = is_not_private
     ; Sharing = s_private,
         ( Imported = i_imported,
-            Private = res_is_not_private
+            Private = is_not_private
         ; Imported = i_local,
-            Private = res_is_private(RName)
+            Private = is_private(RName)
         )
     ).
-resource_is_private_2(r_abstract(_)) = res_is_not_private.
+resource_is_private_2(r_abstract(_)) = is_not_private.
+
+:- func type_is_private(core, type_id) = is_private.
+
+type_is_private(Core, TypeId) =
+    type_is_private_2(core_get_type(Core, TypeId)).
+
+:- func type_is_private_2(user_type) = is_private.
+
+type_is_private_2(Type) = Private :-
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_private,
+        Imported = utype_get_imported(Type),
+        ( Imported = i_imported,
+            Private = is_not_private
+        ; Imported = i_local,
+            Private = is_private(utype_get_name(Type))
+        )
+    ; Sharing = st_public,
+        Private = is_not_private
+    ; Sharing = st_public_abstract,
+        Private = is_not_private
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -728,9 +754,13 @@ check_type_exports(Core) = Errors :-
 check_type_exports_2(Core, _ - Type) = Errors :-
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_public,
-        Errors = cord_list_to_cord(
+        ResourceErrors = cord_list_to_cord(
             map(check_type_resource(Core, Type),
-                set.to_sorted_list(utype_get_resources(Core, Type))))
+                set.to_sorted_list(utype_get_resources(Core, Type)))),
+        TypeErrors = cord_list_to_cord(
+            map(check_type_type(Core, Type),
+                set.to_sorted_list(utype_get_types(Core, Type)))),
+        Errors = ResourceErrors ++ TypeErrors
     ; ( Sharing = st_public_abstract
       ; Sharing = st_private
       ),
@@ -742,12 +772,26 @@ check_type_exports_2(Core, _ - Type) = Errors :-
 
 check_type_resource(Core, Type, ResId) = Errors :-
     resource_is_private(Core, ResId) = Private,
-    ( Private = res_is_private(RName),
+    ( Private = is_private(RName),
         Name = utype_get_name(Type),
         Context = utype_get_context(Type),
         Errors = error(Context, ce_resource_not_public_in_type(
             q_name_unqual(Name), q_name_unqual(RName)))
-    ; Private = res_is_not_private,
+    ; Private = is_not_private,
+        Errors = init
+    ).
+
+:- func check_type_type(core, user_type, type_id) =
+    errors(compile_error).
+
+check_type_type(Core, Type, TypeId) = Errors :-
+    type_is_private(Core, TypeId) = Private,
+    ( Private = is_private(TName),
+        Name = utype_get_name(Type),
+        Context = utype_get_context(Type),
+        Errors = error(Context, ce_type_not_public_in_type(
+            q_name_unqual(Name), q_name_unqual(TName)))
+    ; Private = is_not_private,
         Errors = init
     ).
 
@@ -778,12 +822,12 @@ check_function_exports_2(Core, _ - Func) = Errors :-
 
 check_function_resource(Core, Func, ResId) = Errors :-
     resource_is_private(Core, ResId) = Private,
-    ( Private = res_is_private(RName),
+    ( Private = is_private(RName),
         Name = func_get_name(Func),
         Context = func_get_context(Func),
         Errors = error(Context, ce_resource_not_public_in_function(
             q_name_unqual(Name), q_name_unqual(RName)))
-    ; Private = res_is_not_private,
+    ; Private = is_not_private,
         Errors = init
     ).
 

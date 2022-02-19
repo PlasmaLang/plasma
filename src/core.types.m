@@ -59,8 +59,8 @@
 
 :- type user_type.
 
-:- func type_init(q_name, list(string), list(ctor_id), sharing_type, context) =
-    user_type.
+:- func type_init(q_name, list(string), list(ctor_id), sharing_type,
+    imported, context) = user_type.
 
 :- func type_init_abstract(q_name, arity, context) = user_type.
 
@@ -72,11 +72,15 @@
 
 :- func utype_get_sharing(user_type) = sharing_type.
 
+:- func utype_get_imported(user_type) = imported.
+
 :- func utype_get_arity(user_type) = arity.
 
 :- func utype_get_context(user_type) = context.
 
 :- func utype_get_resources(core, user_type) = set(resource_id).
+
+:- func utype_get_types(core, user_type) = set(type_id).
 
 %-----------------------------------------------------------------------%
 
@@ -157,6 +161,7 @@ type_get_resources(type_ref(_, Args)) = set.union_list(
                 t_params        :: list(string),
                 t_ctors         :: list(ctor_id),
                 t_sharing       :: sharing_type,
+                t_imported      :: imported,
                 t_context       :: context
             )
     ;       abstract_type(
@@ -165,15 +170,15 @@ type_get_resources(type_ref(_, Args)) = set.union_list(
                 at_context      :: context
             ).
 
-type_init(Name, Params, Ctors, Sharing, Context) =
-    user_type(Name, Params, Ctors, Sharing, Context).
+type_init(Name, Params, Ctors, Sharing, Imported, Context) =
+    user_type(Name, Params, Ctors, Sharing, Imported, Context).
 
 type_init_abstract(Name, Arity, Context) = abstract_type(Name, Arity, Context).
 
-utype_get_name(user_type(S, _, _, _, _)) = S.
+utype_get_name(user_type(S, _, _, _, _, _)) = S.
 utype_get_name(abstract_type(S, _, _)) = S.
 
-utype_get_params(user_type(_, Params, _, _, _)) = yes(Params).
+utype_get_params(user_type(_, Params, _, _, _, _)) = yes(Params).
 utype_get_params(abstract_type(_, _, _)) = no.
 
 utype_get_ctors(Type) =
@@ -183,18 +188,21 @@ utype_get_ctors(Type) =
         no
     ).
 
-utype_get_sharing(user_type(_, _, _, Sharing, _)) = Sharing.
+utype_get_sharing(user_type(_, _, _, Sharing, _, _)) = Sharing.
 utype_get_sharing(abstract_type(_, _, _)) = st_private.
 
-utype_get_arity(user_type(_, Params, _, _, _)) = arity(length(Params)).
+utype_get_imported(user_type(_, _, _, _, Imported, _)) = Imported.
+utype_get_imported(abstract_type(_, _, _)) = i_imported.
+
+utype_get_arity(user_type(_, Params, _, _, _, _)) = arity(length(Params)).
 utype_get_arity(abstract_type(_, Arity, _)) = Arity.
 
-utype_get_context(user_type(_, _, _, _, Context)) = Context.
+utype_get_context(user_type(_, _, _, _, _, Context)) = Context.
 utype_get_context(abstract_type(_, _, Context)) = Context.
 
 %-----------------------------------------------------------------------%
 
-utype_get_resources(Core, user_type(_, _, Ctors, _, _)) =
+utype_get_resources(Core, user_type(_, _, Ctors, _, _, _)) =
     union_list(map(ctor_get_resources(Core), Ctors)).
 utype_get_resources(_, abstract_type(_, _, _)) = set.init.
 
@@ -209,6 +217,35 @@ ctor_get_resources(Core, CtorId) = Res :-
 
 field_get_resources(type_field(_, Type)) =
     type_get_resources(Type).
+
+%-----------------------------------------------------------------------%
+
+utype_get_types(Core, user_type(_, _, Ctors, _, _, _)) =
+    union_list(map(ctor_get_types(Core), Ctors)).
+utype_get_types(_, abstract_type(_, _, _)) = set.init.
+
+:- func ctor_get_types(core, ctor_id) = set(type_id).
+
+ctor_get_types(Core, CtorId) = Types :-
+    core_get_constructor_det(Core, CtorId, Ctor),
+    Ctor = constructor(_, _, Fields),
+    Types = union_list(map(field_get_types, Fields)).
+
+:- func field_get_types(type_field) = set(type_id).
+
+field_get_types(type_field(_, TypeExpr)) =
+    type_expr_get_types(TypeExpr).
+
+:- func type_expr_get_types(type_) = set(type_id).
+
+type_expr_get_types(builtin_type(_)) = set.init.
+type_expr_get_types(func_type(Params, Returns, _, _)) =
+    union_list(map(type_expr_get_types, Params)) `union`
+    union_list(map(type_expr_get_types, Returns)).
+type_expr_get_types(type_variable(_)) = set.init.
+type_expr_get_types(type_ref(TypeId, Args)) =
+    set.make_singleton_set(TypeId) `union`
+        union_list(map(type_expr_get_types, Args)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
