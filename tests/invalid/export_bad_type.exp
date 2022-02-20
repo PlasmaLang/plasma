@@ -2,3 +2,7 @@ export_bad_type.p:20: The type T1 is exported, but it refers to another type T0
                       which is not.
 export_bad_type.p:26: The type T2 is exported, but it refers to another type T0
                       which is not.
+export_bad_type.p:62: The function fun1 is exported, but it refers to the type
+                      T0 which is not.
+export_bad_type.p:67: The function fun2 is exported, but it refers to the type
+                      T0 which is not.

@@ -48,6 +48,7 @@
     ;       ce_type_duplicate_constructor(q_name)
     ;       ce_type_not_known(q_name)
     ;       ce_type_not_public_in_type(nq_name, nq_name)
+    ;       ce_type_not_public_in_func(nq_name, nq_name)
     ;       ce_type_var_unknown(string)
     ;       ce_type_has_incorrect_num_of_args(q_name, int, int)
     ;       ce_builtin_type_with_args(q_name)
@@ -185,6 +186,12 @@ ce_to_pretty(ce_type_not_public_in_type(Referer, Referee), Para, []) :-
         [nq_name_pretty(Referer)] ++ p_spc_nl ++
         p_words("is exported, but it refers to another type") ++ p_spc_nl ++
         [nq_name_pretty(Referee)] ++ p_spc_nl ++
+        p_words("which is not.").
+ce_to_pretty(ce_type_not_public_in_func(Func, Type), Para, []) :-
+    Para = p_words("The function") ++ p_spc_nl ++
+        [nq_name_pretty(Func)] ++ p_spc_nl ++
+        p_words("is exported, but it refers to the type") ++ p_spc_nl ++
+        [nq_name_pretty(Type)] ++ p_spc_nl ++
         p_words("which is not.").
 ce_to_pretty(ce_type_var_unknown(Name), Para, []) :-
     Para = p_words("Type variable") ++ p_spc_nl ++

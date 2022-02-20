@@ -812,10 +812,16 @@ check_function_exports_2(Core, _ - Func) = Errors :-
     func_get_type_signature(Func, Params, Returns, _),
     ParamsRes = union_list(map(type_get_resources, Params)),
     ReturnsRes = union_list(map(type_get_resources, Returns)),
-    Ids = set.to_sorted_list(Uses `set.union` Observes `set.union`
+    ResIds = set.to_sorted_list(Uses `set.union` Observes `set.union`
         ParamsRes `set.union` ReturnsRes),
-    Errors = cord_list_to_cord(
-        map(check_function_resource(Core, Func), Ids)).
+    ResErrors = cord_list_to_cord(
+        map(check_function_resource(Core, Func), ResIds)),
+    TypeIds = set.to_sorted_list(
+        union_list(map(type_get_types, Params)) `set.union`
+        union_list(map(type_get_types, Returns))),
+    TypeErrors = cord_list_to_cord(
+        map(check_function_type(Core, Func), TypeIds)),
+    Errors = ResErrors ++ TypeErrors.
 
 :- func check_function_resource(core, function, resource_id) =
     errors(compile_error).
@@ -827,6 +833,20 @@ check_function_resource(Core, Func, ResId) = Errors :-
         Context = func_get_context(Func),
         Errors = error(Context, ce_resource_not_public_in_function(
             q_name_unqual(Name), q_name_unqual(RName)))
+    ; Private = is_not_private,
+        Errors = init
+    ).
+
+:- func check_function_type(core, function, type_id) =
+    errors(compile_error).
+
+check_function_type(Core, Func, TypeId) = Errors :-
+    Private = type_is_private(Core, TypeId),
+    ( Private = is_private(TName),
+        FName = func_get_name(Func),
+        Context = func_get_context(Func),
+        Errors = error(Context, ce_type_not_public_in_func(
+            q_name_unqual(FName), q_name_unqual(TName)))
     ; Private = is_not_private,
         Errors = init
     ).

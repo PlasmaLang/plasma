@@ -55,6 +55,8 @@
     %
 :- func type_get_resources(type_) = set(resource_id).
 
+:- func type_get_types(type_) = set(type_id).
+
 %-----------------------------------------------------------------------%
 
 :- type user_type.
@@ -234,18 +236,16 @@ ctor_get_types(Core, CtorId) = Types :-
 :- func field_get_types(type_field) = set(type_id).
 
 field_get_types(type_field(_, TypeExpr)) =
-    type_expr_get_types(TypeExpr).
+    type_get_types(TypeExpr).
 
-:- func type_expr_get_types(type_) = set(type_id).
-
-type_expr_get_types(builtin_type(_)) = set.init.
-type_expr_get_types(func_type(Params, Returns, _, _)) =
-    union_list(map(type_expr_get_types, Params)) `union`
-    union_list(map(type_expr_get_types, Returns)).
-type_expr_get_types(type_variable(_)) = set.init.
-type_expr_get_types(type_ref(TypeId, Args)) =
+type_get_types(builtin_type(_)) = set.init.
+type_get_types(func_type(Params, Returns, _, _)) =
+    union_list(map(type_get_types, Params)) `union`
+    union_list(map(type_get_types, Returns)).
+type_get_types(type_variable(_)) = set.init.
+type_get_types(type_ref(TypeId, Args)) =
     set.make_singleton_set(TypeId) `union`
-        union_list(map(type_expr_get_types, Args)).
+        union_list(map(type_get_types, Args)).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

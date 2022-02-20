@@ -57,3 +57,21 @@ type T2a = T2a (
     f2a : List(T0)
 )
 
+// Error
+export
+func fun1(a : T0) uses IO {
+}
+
+// Error
+export
+func fun2(a : List(T0)) uses IO { 
+}
+
+// No-error
+func fun3(a : T0, b : List(T0)) uses IO {
+}
+
+// No-error
+func fun4(a : T0a, b : List(T0a)) uses IO {
+}
+
