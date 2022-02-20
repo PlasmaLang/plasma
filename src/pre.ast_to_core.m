@@ -69,8 +69,8 @@
     % turn it into the actual q_name used within the core representation
     % (not the environment).
     %
-:- pred ast_to_core_type_i((func(Name) = q_name)::in, env::in, q_name::in,
-    type_id::in, ast_type(Name)::in,
+:- pred ast_to_core_type_i((func(Name) = q_name)::in, imported::in,
+    env::in, q_name::in, type_id::in, ast_type(Name)::in,
     result({user_type, list(ctor_binding(Name))}, compile_error)::out,
     core::in, core::out) is det.
 
@@ -139,8 +139,10 @@ ast_to_core_declarations(GOptions, Resources, Types, Funcs, !Env,
         !IO),
     foldl3(gather_funcs, Funcs, !Core, !Env, !Errors),
 
-    verbose_output(Verbose, "pre_to_core: Checking resources\n", !IO),
-    add_errors(check_resource_exports(!.Core), !Errors).
+    verbose_output(Verbose, "pre_to_core: Checking exports\n", !IO),
+    add_errors(check_resource_exports(!.Core), !Errors),
+    add_errors(check_type_exports(!.Core), !Errors),
+    add_errors(check_function_exports(!.Core), !Errors).
 
 %-----------------------------------------------------------------------%
 
@@ -156,7 +158,7 @@ ast_to_core_types(Types, !Env, !Core, !Errors) :-
 
 ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
     ModuleName = module_name(!.Core),
-    ast_to_core_type_i(q_name_append(ModuleName), !.Env,
+    ast_to_core_type_i(q_name_append(ModuleName), i_local, !.Env,
         q_name_append(ModuleName, Name),
         TypeId, ASTType, Result, !Core),
     ( Result = ok({Type, Ctors}),
@@ -170,8 +172,8 @@ ast_to_core_type(a2c_type(Name, TypeId, ASTType), !Env, !Core, !Errors) :-
         add_errors(Errors, !Errors)
     ).
 
-ast_to_core_type_i(GetName, Env, Name, TypeId,
-        ast_type(Params, Constrs0, Sharing, _Context), Result, !Core) :-
+ast_to_core_type_i(GetName, Imported, Env, Name, TypeId,
+        ast_type(Params, Constrs0, Sharing, Context), Result, !Core) :-
     % Check that each parameter is unique.
     foldl(check_param, Params, init, ParamsSet),
 
@@ -181,13 +183,15 @@ ast_to_core_type_i(GetName, Env, Name, TypeId,
     CtorsResult = result_list_to_result(CtorResults),
     ( CtorsResult = ok(Ctors),
         CtorIds = map(func(C) = C ^ cb_id, Ctors),
-        Result = ok({type_init(Name, Params, CtorIds, Sharing), Ctors})
+        Result = ok({
+            type_init(Name, Params, CtorIds, Sharing, Imported, Context),
+            Ctors})
     ; CtorsResult = errors(Errors),
         Result = errors(Errors)
     ).
-ast_to_core_type_i(_, _, Name, _, ast_type_abstract(Arity, _Context),
+ast_to_core_type_i(_, _, _, Name, _, ast_type_abstract(Arity, Context),
         Result, !Core) :-
-    Result = ok({type_init_abstract(Name, Arity), []}).
+    Result = ok({type_init_abstract(Name, Arity, Context), []}).
 
 :- pred check_param(string::in, set(string)::in, set(string)::out) is det.
 
@@ -415,7 +419,7 @@ ast_to_func_decl(Core, Env, Name, Decl, Sharing, Result) :-
         build_type_ref(Core, Env, Sharing, dont_check_type_vars),
         Returns),
     ReturnTypesResult = result_list_to_result(ReturnTypeResults),
-    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0, ResourceErrorss,
+    map_foldl2(build_uses(Context, Env), Uses0, ResourceErrorss,
         set.init, Uses, set.init, Observes),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     IntersectUsesObserves = intersect(Uses, Observes),
@@ -587,7 +591,7 @@ build_type_ref(Core, Env, Sharing, MaybeCheckVars, Func) = Result :-
         map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Args0)),
     ReturnsResult = result_list_to_result(
         map(build_type_ref(Core, Env, Sharing, MaybeCheckVars), Returns0)),
-    map_foldl2(build_uses(Context, Env, Core, Sharing), Uses0,
+    map_foldl2(build_uses(Context, Env), Uses0,
         ResourceErrorss, set.init, UsesSet, set.init, ObservesSet),
     ResourceErrors = cord_list_to_cord(ResourceErrorss),
     ( if
@@ -616,39 +620,19 @@ build_type_ref(_, _, _, MaybeCheckVars, ast_type_var(Name, Context)) =
         Result = return_error(Context, ce_type_var_unknown(Name))
     ).
 
-:- pred build_uses(context::in, env::in, core::in, sharing::in, ast_uses::in,
+:- pred build_uses(context::in, env::in, ast_uses::in,
     errors(compile_error)::out,
     set(resource_id)::in, set(resource_id)::out,
     set(resource_id)::in, set(resource_id)::out) is det.
 
-build_uses(Context, Env, Core, FuncSharing, ast_uses(Type, ResourceName),
-        !:Errors, !Uses, !Observes) :-
+build_uses(Context, Env, ast_uses(Type, ResourceName), !:Errors,
+        !Uses, !Observes) :-
     !:Errors = init,
     ( if env_search_resource(Env, ResourceName, ResourceId) then
         ( Type = ut_uses,
             !:Uses = set.insert(!.Uses, ResourceId)
         ; Type = ut_observes,
             !:Observes = set.insert(!.Observes, ResourceId)
-        ),
-
-        % For exported functions we check that any resources it uses are
-        % also public.
-        ( FuncSharing = s_public,
-            Resource = core_get_resource(Core, ResourceId),
-            ( Resource = r_io
-            ; Resource = r_abstract(_)
-            ; Resource = r_other(_, _, Sharing, Imported, _),
-                ( if
-                    Imported = i_local,
-                    Sharing = s_private
-                then
-                    add_error(Context, ce_resource_not_public(ResourceName),
-                        !Errors)
-                else
-                    true
-                )
-            )
-        ; FuncSharing = s_private
         )
     else
         add_error(Context, ce_resource_unknown(ResourceName), !Errors)
@@ -687,31 +671,185 @@ check_resource_exports_2(Core, _ - Res) = Errors :-
     ( Res = r_io,
         Errors = init
     ; Res = r_other(Name, FromId, _, _, Context),
-        From = core_get_resource(Core, FromId),
-        Errors = check_resource_exports_3(Core, Name, Context, From)
+        Errors = check_resource_exports_3(Name, Context, Core, FromId)
     ; Res = r_abstract(_),
         Errors = init
     ).
 
-:- func check_resource_exports_3(core, q_name, context, resource) =
+:- func check_resource_exports_3(q_name, context, core, resource_id) =
     errors(compile_error).
 
-check_resource_exports_3(_, _, _, r_io) = init.
-check_resource_exports_3(Core, Name, Context,
-        r_other(RName, FromId, Sharing, Imported, RContext)) = Errors :-
+check_resource_exports_3(Name, Context, Core, Res) = Errors :-
+    resource_is_private(Core, Res) = IsPrivate,
+    ( IsPrivate = is_private(RName),
+        Errors = error(Context, ce_resource_not_public_in_resource(
+            q_name_unqual(Name),
+            q_name_unqual(RName)))
+    ; IsPrivate = is_not_private,
+        Errors = init
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- type is_private
+    --->    is_private(q_name)
+            % could be public, abstract or imported.
+    ;       is_not_private.
+
+:- func resource_is_private(core, resource_id) = is_private.
+
+resource_is_private(Core, ResId) =
+    resource_is_private_2(core_get_resource(Core, ResId)).
+
+:- func resource_is_private_2(resource) = is_private.
+
+resource_is_private_2(r_io) = is_not_private.
+resource_is_private_2(r_other(RName, _, Sharing, Imported, _))
+        = Private :-
     ( Sharing = s_public,
-        From = core_get_resource(Core, FromId),
-        Errors = check_resource_exports_3(Core, RName, RContext, From)
+        Private = is_not_private
     ; Sharing = s_private,
         ( Imported = i_imported,
-            Errors = init
+            Private = is_not_private
         ; Imported = i_local,
-            Errors = error(Context, ce_resource_not_public_in_resource(
-                q_name_unqual(Name),
-                q_name_unqual(RName)))
+            Private = is_private(RName)
         )
     ).
-check_resource_exports_3(_, _, _, r_abstract(_)) = init.
+resource_is_private_2(r_abstract(_)) = is_not_private.
+
+:- func type_is_private(core, type_id) = is_private.
+
+type_is_private(Core, TypeId) =
+    type_is_private_2(core_get_type(Core, TypeId)).
+
+:- func type_is_private_2(user_type) = is_private.
+
+type_is_private_2(Type) = Private :-
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_private,
+        Imported = utype_get_imported(Type),
+        ( Imported = i_imported,
+            Private = is_not_private
+        ; Imported = i_local,
+            Private = is_private(utype_get_name(Type))
+        )
+    ; Sharing = st_public,
+        Private = is_not_private
+    ; Sharing = st_public_abstract,
+        Private = is_not_private
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- func check_type_exports(core) = errors(compile_error).
+
+check_type_exports(Core) = Errors :-
+    Types = core_all_exported_types(Core),
+    Errors = cord_list_to_cord(
+        map(check_type_exports_2(Core), Types)).
+
+:- func check_type_exports_2(core, pair(type_id, user_type)) =
+    errors(compile_error).
+
+check_type_exports_2(Core, _ - Type) = Errors :-
+    Sharing = utype_get_sharing(Type),
+    ( Sharing = st_public,
+        ResourceErrors = cord_list_to_cord(
+            map(check_type_resource(Core, Type),
+                set.to_sorted_list(utype_get_resources(Core, Type)))),
+        TypeErrors = cord_list_to_cord(
+            map(check_type_type(Core, Type),
+                set.to_sorted_list(utype_get_types(Core, Type)))),
+        Errors = ResourceErrors ++ TypeErrors
+    ; ( Sharing = st_public_abstract
+      ; Sharing = st_private
+      ),
+      Errors = init
+    ).
+
+:- func check_type_resource(core, user_type, resource_id) =
+    errors(compile_error).
+
+check_type_resource(Core, Type, ResId) = Errors :-
+    resource_is_private(Core, ResId) = Private,
+    ( Private = is_private(RName),
+        Name = utype_get_name(Type),
+        Context = utype_get_context(Type),
+        Errors = error(Context, ce_resource_not_public_in_type(
+            q_name_unqual(Name), q_name_unqual(RName)))
+    ; Private = is_not_private,
+        Errors = init
+    ).
+
+:- func check_type_type(core, user_type, type_id) =
+    errors(compile_error).
+
+check_type_type(Core, Type, TypeId) = Errors :-
+    type_is_private(Core, TypeId) = Private,
+    ( Private = is_private(TName),
+        Name = utype_get_name(Type),
+        Context = utype_get_context(Type),
+        Errors = error(Context, ce_type_not_public_in_type(
+            q_name_unqual(Name), q_name_unqual(TName)))
+    ; Private = is_not_private,
+        Errors = init
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- func check_function_exports(core) = errors(compile_error).
+
+check_function_exports(Core) = Errors :-
+    Functions = core_all_exported_functions(Core),
+    Errors = cord_list_to_cord(
+        map(check_function_exports_2(Core), Functions)).
+
+:- func check_function_exports_2(core, pair(func_id, function)) =
+    errors(compile_error).
+
+check_function_exports_2(Core, _ - Func) = Errors :-
+    func_get_resource_signature(Func, Uses, Observes),
+    func_get_type_signature(Func, Params, Returns, _),
+    ParamsRes = union_list(map(type_get_resources, Params)),
+    ReturnsRes = union_list(map(type_get_resources, Returns)),
+    ResIds = set.to_sorted_list(Uses `set.union` Observes `set.union`
+        ParamsRes `set.union` ReturnsRes),
+    ResErrors = cord_list_to_cord(
+        map(check_function_resource(Core, Func), ResIds)),
+    TypeIds = set.to_sorted_list(
+        union_list(map(type_get_types, Params)) `set.union`
+        union_list(map(type_get_types, Returns))),
+    TypeErrors = cord_list_to_cord(
+        map(check_function_type(Core, Func), TypeIds)),
+    Errors = ResErrors ++ TypeErrors.
+
+:- func check_function_resource(core, function, resource_id) =
+    errors(compile_error).
+
+check_function_resource(Core, Func, ResId) = Errors :-
+    resource_is_private(Core, ResId) = Private,
+    ( Private = is_private(RName),
+        Name = func_get_name(Func),
+        Context = func_get_context(Func),
+        Errors = error(Context, ce_resource_not_public_in_function(
+            q_name_unqual(Name), q_name_unqual(RName)))
+    ; Private = is_not_private,
+        Errors = init
+    ).
+
+:- func check_function_type(core, function, type_id) =
+    errors(compile_error).
+
+check_function_type(Core, Func, TypeId) = Errors :-
+    Private = type_is_private(Core, TypeId),
+    ( Private = is_private(TName),
+        FName = func_get_name(Func),
+        Context = func_get_context(Func),
+        Errors = error(Context, ce_type_not_public_in_func(
+            q_name_unqual(FName), q_name_unqual(TName)))
+    ; Private = is_not_private,
+        Errors = init
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

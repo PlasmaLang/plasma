@@ -456,7 +456,8 @@ process_typeres_import(ModuleName, ImportAST, Result, !Core) :-
                             "Imported module exports symbols of other module")
                     ),
                     core_allocate_type_id(Type, C0, C1),
-                    core_set_type(Type, type_init_abstract(Name, Arity), C1, C)
+                    core_set_type(Type,
+                        type_init_abstract(Name, Arity, nil_context), C1, C)
                 ), Types, NamePairsB, !Core),
             Result = ok(NamePairsA ++ NamePairsB)
         )
@@ -546,7 +547,8 @@ maybe_add_implicit_type({Name, Arity}, !Env, !Core) :-
     else
         core_allocate_type_id(TypeId, !Core),
         env_add_type_det(Name, Arity, TypeId, !Env),
-        core_set_type(TypeId, type_init_abstract(Name, Arity), !Core)
+        core_set_type(TypeId, type_init_abstract(Name, Arity, nil_context),
+            !Core)
     ).
 
 %-----------------------------------------------------------------------%
@@ -703,7 +705,8 @@ do_import_type(ModuleName, Env, {Name, ASTType, TypeId}, NamePairs, Errors,
     ),
     NamePair = NQName - ie_type(type_arity(ASTType), TypeId),
 
-    ast_to_core_type_i(func(N) = N, Env, Name, TypeId, ASTType, Result, !Core),
+    ast_to_core_type_i(func(N) = N, i_imported, Env, Name, TypeId, ASTType, 
+        Result, !Core),
     ( Result = ok({Type, Ctors}),
         core_set_type(TypeId, Type, !Core),
         CtorNamePairs = map(
