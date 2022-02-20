@@ -1,4 +1,4 @@
-export_bad_type.p:15: The type T1 is exported, but it refers to another type T0
+export_bad_type.p:20: The type T1 is exported, but it refers to another type T0
                       which is not.
-export_bad_type.p:21: The type T2 is exported, but it refers to another type T0
+export_bad_type.p:26: The type T2 is exported, but it refers to another type T0
                       which is not.
