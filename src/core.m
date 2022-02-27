@@ -281,7 +281,7 @@ core_all_exported_types(Core) =
 type_is_exported(_ - Type) :-
     Sharing = utype_get_sharing(Type),
     ( Sharing = st_public
-    ; Sharing = st_public_abstract
+    ; Sharing = st_public_opaque
     ).
 
 core_get_type(Core, TypeId) = Type :-

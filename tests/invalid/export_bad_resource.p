@@ -81,7 +81,7 @@ type Type3 = Type3(
 )
 
 // No errors.
-export abstract
+export opaque 
 type Type4 = Type4(
     f : func(Int) uses (Baz, Bar),
     g : List(func(Int) uses Baz2)

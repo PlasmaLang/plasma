@@ -10,7 +10,7 @@ type T0 = T0 (
     f1 : Int
 )
 
-export abstract
+export opaque
 type T0a = T0a (
     f1a : Int
 )
@@ -47,12 +47,12 @@ type T2ia = T2ia (
 
 // No error, because importing libraries don't need to know what this refers
 // to.
-export abstract
+export opaque
 type T1a = T1a (
     f2a : T0
 )
 
-export abstract
+export opaque
 type T2a = T2a (
     f2a : List(T0)
 )

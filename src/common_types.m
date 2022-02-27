@@ -28,7 +28,7 @@
 :- type sharing_type
     --->    st_private
     ;       st_public
-    ;       st_public_abstract.
+    ;       st_public_opaque.
 
     % Is an exported function an entrypoint.
     %

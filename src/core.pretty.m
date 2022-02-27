@@ -2,7 +2,7 @@
 % Plasma code pretty printer
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2021 Plasma Team
+% Copyright (C) 2016-2022 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -112,7 +112,7 @@ type_decl_pretty(Core, Type) = p_expr(Pretty) :-
             unexpected($file, $pred, "Public type without constructors")
         ),
         Pretty = PrettyHead ++ PrettyBody
-    ; Sharing = st_public_abstract,
+    ; Sharing = st_public_opaque,
         Pretty = [p_str("type "),
             q_name_pretty(utype_get_name(Type)),
             p_str("/"),

@@ -6,7 +6,7 @@
 
 module Module_07a
 
-export abstract
+export opaque
 type Foo = Foo ( a : Int )
 
 export

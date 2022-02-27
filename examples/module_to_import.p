@@ -18,8 +18,8 @@ export
 type MyMaybe('x) = Nothing
                  | Some(x : 'x)
 
-// Or abstract-exported (the constructors and fields are not exported)
-export abstract
+// Or opaque-exported (the constructors and fields are not exported)
+export opaque
 type Tree('k, 'v) = Empty 
                   | Node(
                         k : 'k,

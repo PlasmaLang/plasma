@@ -2,8 +2,8 @@ Plasma Language Reference
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: January 2022
-:Copyright: Copyright (C) 2015-2020 Plasma Team
+:Date: February 2022
+:Copyright: Copyright (C) 2015-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -334,10 +334,10 @@ func myFunc() uses IO {
 }
 ----
 
-Types may additionally be abstract-exported:
+Types may additionally be opaque-exported:
 
 ----
-export abstract
+export opaque
 type Tree('k, 'v) = Empty 
                   | Node(
                       k : 'k,
@@ -354,7 +354,7 @@ balanced is in a single module.
 
 An exported thing may only refer to types and resources that are also
 exported.
-More precisely. a non-abstract exported thing may only refer, in its
+More precisely. a non-opaque exported thing may only refer, in its
 declaration but not its body, to types and resources that are either
 exported.
 
@@ -379,7 +379,7 @@ Likewise:
 ----
 type A = ...
 
-export abstract
+export opauqe
 type B = ...
 
 export
@@ -390,7 +390,7 @@ type D = D(b : B)
 ----
 
 `C` cannot be exported because `A` is not exported.  `D` may be exported
-because `A` ls /abstract exported/.
+because `A` ls /opaque exported/.
 
 Future work:
 
@@ -459,7 +459,7 @@ TypeVar := ident
 We can define new types using type definitions
 
 ----
-TypeDefinition := ('export' 'abstract'?)?
+TypeDefinition := ('export' 'opaque'?)?
     'type' ident TypeParams? = OrTypeDefn ( '|' OrTypeDefn )*
 
 TypeParams := '(' ( '\'' Ident )* ')'
@@ -532,7 +532,7 @@ TODO: Syntax will probably change, I don't like +,+ as a separator, I prefer
 a terminator, or nothing to match the rest of the language.  Curly braces?
 +|+ is also used as a separator here.
 
-Types may also be defined abstractly, with their details hidden behind module
+Types may also be defined opaquely, with their details hidden behind module
 abstraction.
 
 [[interfaces]]

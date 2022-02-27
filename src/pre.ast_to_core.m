@@ -735,7 +735,7 @@ type_is_private_2(Type) = Private :-
         )
     ; Sharing = st_public,
         Private = is_not_private
-    ; Sharing = st_public_abstract,
+    ; Sharing = st_public_opaque,
         Private = is_not_private
     ).
 
@@ -761,7 +761,7 @@ check_type_exports_2(Core, _ - Type) = Errors :-
             map(check_type_type(Core, Type),
                 set.to_sorted_list(utype_get_types(Core, Type)))),
         Errors = ResourceErrors ++ TypeErrors
-    ; ( Sharing = st_public_abstract
+    ; ( Sharing = st_public_opaque
       ; Sharing = st_private
       ),
       Errors = init

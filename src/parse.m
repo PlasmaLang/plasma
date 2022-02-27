@@ -74,7 +74,6 @@ parse_typeres(Filename, Result, !IO) :-
 :- type token_type
     --->    module_
     ;       export
-    ;       abstract
     ;       entrypoint
     ;       import
     ;       type_
@@ -83,6 +82,7 @@ parse_typeres(Filename, Result, !IO) :-
     ;       from
     ;       uses
     ;       observes
+    ;       opaque
     ;       as
     ;       foreign
     ;       var
@@ -142,7 +142,6 @@ parse_typeres(Filename, Result, !IO) :-
 lexemes = [
         ("module"           -> return(module_)),
         ("export"           -> return(export)),
-        ("abstract"         -> return(abstract)),
         ("entrypoint"       -> return(entrypoint)),
         ("import"           -> return(import)),
         ("type"             -> return(type_)),
@@ -151,6 +150,7 @@ lexemes = [
         ("from"             -> return(from)),
         ("uses"             -> return(uses)),
         ("observes"         -> return(observes)),
+        ("opaque"           -> return(opaque)),
         ("as"               -> return(as)),
         ("foreign"          -> return(foreign)),
         ("var"              -> return(var)),
@@ -423,9 +423,9 @@ parse_type(ParseName, Result, !Tokens) :-
 parse_export_type(Result, !Tokens) :-
     match_token(export, ExportResult, !Tokens),
     ( ExportResult = ok(_),
-        optional(match_token(abstract), ok(Abstract), !Tokens),
+        optional(match_token(opaque), ok(Abstract), !Tokens),
         ( Abstract = yes(_),
-            Result = ok(st_public_abstract)
+            Result = ok(st_public_opaque)
         ; Abstract = no,
             Result = ok(st_public)
         )
