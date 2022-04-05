@@ -101,6 +101,8 @@ CFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(C_ONLY_FLAGS)
 CXXFLAGS=$(DEPFLAGS) $(C_CXX_FLAGS) $(CXX_ONLY_FLAGS)
 $(shell mkdir -p $(DEPDIR)/runtime >/dev/null)
 
+.SUFFIXES:
+
 .PHONY: all
 all : progs docs
 
