@@ -27,6 +27,7 @@
                 pzb_verbose         :: verbose,
                 pzb_rebuild         :: rebuild,
                 pzb_build_file      :: string,
+                pzb_build_dir       :: string,
                 pzb_report_timing   :: report_timing,
 
                 % Path to the plasma tools
@@ -79,6 +80,7 @@
 %-----------------------------------------------------------------------%
 
 build(Options, Result, !IO) :-
+    BuildDir = Options ^ pzb_build_dir,
     % This code would make an interesting concurrency example.  There's:
     % + Several calls to fsstat() and readdir() that can occur independent
     %   of anything else.
@@ -110,7 +112,8 @@ build(Options, Result, !IO) :-
                 setup_build_dir(Options, PlzBuildMTime, SetupDirRes, !IO),
                 ( SetupDirRes = ok
                 ; SetupDirRes = error(SetupDirError),
-                    add_error(context(build_directory), SetupDirError, !Errors)
+                    add_error(context(Options ^ pzb_build_dir),
+                        SetupDirError, !Errors)
                 ),
 
                 % For now we have no detection of when the vars file
@@ -118,8 +121,9 @@ build(Options, Result, !IO) :-
                 write_vars_file(Options, WriteVarsRes, !IO),
                 ( WriteVarsRes = ok
                 ; WriteVarsRes = error(WriteVarsError),
-                    add_error(context(ninja_vars_file_path), WriteVarsError,
-                        !Errors)
+                    add_error(
+                        context(BuildDir ++ "/" ++ ninja_vars_file),
+                        WriteVarsError, !Errors)
                 ),
 
                 ProjMTime = latest(ProjFileMTime, PlzBuildMTime),
@@ -127,13 +131,13 @@ build(Options, Result, !IO) :-
                     WriteDepsRes, !IO),
                 ( WriteDepsRes = ok
                 ; WriteDepsRes = error(WriteNinjaBuildError),
-                    add_error(context(ninja_build_file), WriteNinjaBuildError,
-                        !Errors)
+                    add_error(context(BuildDir ++ "/" ++ ninja_build_file),
+                        WriteNinjaBuildError, !Errors)
                 ),
 
                 ImportWhitelist = compute_import_whitelist(Proj),
-                maybe_write_import_whitelist(Options ^ pzb_verbose,
-                    ProjMTime, ImportWhitelist, WhitelistRes, !IO),
+                maybe_write_import_whitelist(Options, ProjMTime,
+                    ImportWhitelist, WhitelistRes, !IO),
                 ( WhitelistRes = ok
                 ; WhitelistRes = error(WriteWhitelistError),
                     add_error(nil_context, WriteWhitelistError, !Errors)
@@ -484,14 +488,16 @@ make_foreign_target(CFileName) = Target :-
     dep_info::in, maybe_error::out, io::di, io::uo) is det.
 
 maybe_write_dependency_file(Options, ProjMTime, DepInfo, Result, !IO) :-
-    update_if_stale(Options ^ pzb_verbose, ProjMTime, ninja_build_file,
+    update_if_stale(Options ^ pzb_verbose, ProjMTime,
+        Options ^ pzb_build_dir ++ "/" ++ ninja_build_file,
         write_dependency_file(Options, DepInfo), Result, !IO).
 
 :- pred write_dependency_file(plzbuild_options::in, dep_info::in,
     maybe_error::out, io::di, io::uo) is det.
 
 write_dependency_file(Options, DepInfo, Result, !IO) :-
-    write_file(Options ^ pzb_verbose, ninja_build_file,
+    write_file(Options ^ pzb_verbose,
+        Options ^ pzb_build_dir ++ "/" ++ ninja_build_file,
         do_write_dependency_file(DepInfo), Result, !IO).
 
 :- pred do_write_dependency_file(dep_info::in, output_stream::in,
@@ -577,7 +583,8 @@ write_target(File, dt_c_compile(Object, Source), !IO) :-
     io::di, io::uo) is det.
 
 write_vars_file(Options, Result, !IO) :-
-    write_file(Options ^ pzb_verbose, ninja_vars_file_path,
+    write_file(Options ^ pzb_verbose,
+        Options ^ pzb_build_dir ++ "/" ++ ninja_vars_file,
         do_write_vars_file(Options), Result, !IO).
 
 :- pred do_write_vars_file(plzbuild_options::in, output_stream::in,
@@ -626,18 +633,20 @@ do_write_vars_file(Options, File, !IO) :-
 compute_import_whitelist(Proj) =
     list_to_set(map(func(T) = list_to_set(T ^ t_modules), Proj)).
 
-:- pred maybe_write_import_whitelist(verbose::in, time_t::in, whitelist::in,
+:- pred maybe_write_import_whitelist(plzbuild_options::in, time_t::in,
+    whitelist::in, maybe_error::out, io::di, io::uo) is det.
+
+maybe_write_import_whitelist(Options, ProjMTime, DepInfo, Result, !IO) :-
+    update_if_stale(Options ^ pzb_verbose, ProjMTime,
+        Options ^ pzb_build_dir ++ "/" ++ import_whitelist_file_no_directroy,
+        write_import_whitelist(Options, DepInfo), Result, !IO).
+
+:- pred write_import_whitelist(plzbuild_options::in, whitelist::in,
     maybe_error::out, io::di, io::uo) is det.
 
-maybe_write_import_whitelist(Verbose, ProjMTime, DepInfo, Result, !IO) :-
-    update_if_stale(Verbose, ProjMTime, import_whitelist_file,
-        write_import_whitelist(Verbose, DepInfo), Result, !IO).
-
-:- pred write_import_whitelist(verbose::in, whitelist::in, maybe_error::out,
-    io::di, io::uo) is det.
-
-write_import_whitelist(Verbose, Whitelist, Result, !IO) :-
-    write_file(Verbose, import_whitelist_file,
+write_import_whitelist(Options, Whitelist, Result, !IO) :-
+    write_file(Options ^ pzb_verbose,
+        Options ^ pzb_build_dir ++ "/" ++ import_whitelist_file_no_directroy,
         do_write_import_whitelist(Whitelist), Result, !IO).
 
 :- pred do_write_import_whitelist(whitelist::in, text_output_stream::in,
@@ -655,19 +664,20 @@ do_write_import_whitelist(Whitelist, File, !IO) :-
 
 ensure_ninja_rules_file(Options, MTime, Result, !IO) :-
     Rebuild = Options ^ pzb_rebuild,
-    Verbose = Options ^ pzb_verbose,
     ( Rebuild = need_rebuild,
-        write_ninja_rules_file(Verbose, Result, !IO)
+        write_ninja_rules_file(Options, Result, !IO)
     ; Rebuild = dont_rebuild,
-        update_if_stale(Verbose, MTime, ninja_rules_file_path,
-            write_ninja_rules_file(Verbose), Result, !IO)
+        update_if_stale(Options ^ pzb_verbose, MTime,
+            Options ^ pzb_build_dir ++ "/" ++ ninja_rules_file,
+            write_ninja_rules_file(Options), Result, !IO)
     ).
 
-:- pred write_ninja_rules_file(verbose::in, maybe_error::out, io::di, io::uo)
-    is det.
+:- pred write_ninja_rules_file(plzbuild_options::in, maybe_error::out,
+    io::di, io::uo) is det.
 
-write_ninja_rules_file(Verbose, Result, !IO) :-
-    write_file(Verbose, ninja_rules_file_path,
+write_ninja_rules_file(Options, Result, !IO) :-
+    write_file(Options ^ pzb_verbose,
+        Options ^ pzb_build_dir ++ "/" ++ ninja_rules_file,
         (pred(File::in, IO0::di, IO::uo) is det :-
             write_string(File, rules_contents, IO0, IO)
         ),
@@ -762,7 +772,8 @@ invoke_ninja(Options, Proj, Result, !IO) :-
         ), Targets),
     NinjaTargetsStr = string_join(" ", condense(NinjaTargets)),
     invoke_command(Verbose, format("ninja %s -C %s %s",
-        [s(verbose_opt_str(Verbose)), s(build_directory), s(NinjaTargetsStr)]),
+        [s(verbose_opt_str(Verbose)), s(Options ^ pzb_build_dir),
+            s(NinjaTargetsStr)]),
         Result, !IO).
 
 :- func ninja_target_path(nq_name, string) = string.
@@ -774,16 +785,17 @@ ninja_target_path(Name, Extension) =
 
 clean(Options, !IO) :-
     Verbose = Options ^ pzb_verbose,
+    BuildDir = Options ^ pzb_build_dir,
     ( Verbose = verbose,
         format("Removing build directory %s\n",
-            [s(build_directory)], !IO)
+            [s(BuildDir)], !IO)
     ; Verbose = terse
     ),
-    remove_file_recursively(build_directory, Result, !IO),
+    remove_file_recursively(BuildDir, Result, !IO),
     ( Result = ok
     ; Result = error(Error),
         format("%s: %s",
-            [s(build_directory), s(error_message(Error))], !IO)
+            [s(BuildDir), s(error_message(Error))], !IO)
     ).
 
 :- func verbose_opt_str(verbose) = string.
@@ -828,7 +840,7 @@ setup_build_dir(Options, MTime, Result, !IO) :-
         ( FreshBuildDir = fresh,
             % We know that we ust mkdir'd the build directory, so we can
             % skip a stat() call.
-            write_ninja_rules_file(Options ^ pzb_verbose, Result, !IO)
+            write_ninja_rules_file(Options, Result, !IO)
         ; FreshBuildDir = stale,
             ensure_ninja_rules_file(Options, MTime, Result, !IO)
         )
@@ -845,7 +857,8 @@ setup_build_dir(Options, MTime, Result, !IO) :-
 
 ensure_directory(Options, Result, Fresh, !IO) :-
     Rebuild = Options ^ pzb_rebuild,
-    file_type(yes, build_directory, StatResult, !IO),
+    BuildDir = Options ^ pzb_build_dir,
+    file_type(yes, BuildDir, StatResult, !IO),
     ( StatResult = ok(Stat),
         ( Stat = directory,
             ( Rebuild = need_rebuild,
@@ -876,7 +889,7 @@ ensure_directory(Options, Result, Fresh, !IO) :-
                 Result = error(format(
                     "Cannot create build directory, " ++
                         "'%s' already exists as non-directory",
-                    [s(build_directory)])),
+                    [s(BuildDir)])),
                 Fresh = stale
             )
         )
@@ -890,17 +903,18 @@ ensure_directory(Options, Result, Fresh, !IO) :-
 
 mkdir_build_directory(Options, Result, !IO) :-
     Verbose = Options ^ pzb_verbose,
+    BuildDir = Options ^ pzb_build_dir,
     ( Verbose = verbose,
-        format(stderr_stream, "mkdir %s\n", [s(build_directory)], !IO)
+        format(stderr_stream, "mkdir %s\n", [s(BuildDir)], !IO)
     ; Verbose = terse
     ),
-    mkdir(build_directory, MkdirResult, Error, !IO),
+    mkdir(BuildDir, MkdirResult, Error, !IO),
     ( MkdirResult = yes,
         Result = ok
     ; MkdirResult = no,
         Result = error(
             format("Cannot create build directory '%s': %s",
-                [s(build_directory), s(Error)]))
+                [s(BuildDir), s(Error)]))
     ).
 
 :- pragma foreign_decl("C", local,

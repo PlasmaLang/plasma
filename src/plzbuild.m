@@ -88,6 +88,7 @@ process_options(Args0, Result, !IO) :-
             Rebuild = handle_bool_option(OptionTable, rebuild,
                 need_rebuild, dont_rebuild),
             lookup_string_option(OptionTable, build_file, BuildFile),
+            lookup_string_option(OptionTable, build_dir, BuildDir),
             lookup_bool_option(OptionTable, report_timing,
                 ReportTimingBool),
             ( ReportTimingBool = yes,
@@ -108,7 +109,8 @@ process_options(Args0, Result, !IO) :-
                 string_to_module_name, Args)),
             ( MaybeModuleNames = ok(ModuleNames),
                 Result = ok(build(plzbuild_options(ModuleNames, Verbose,
-                    Rebuild, BuildFile, ReportTiming, ToolsPath, "../")))
+                    Rebuild, BuildFile, BuildDir, ReportTiming, ToolsPath, 
+                    "../")))
             ; MaybeModuleNames = error(Errors),
                 Result = error(string_join("\n", Errors))
             )
@@ -193,6 +195,7 @@ usage(!IO) :-
 :- type option
     --->    rebuild
     ;       build_file
+    ;       build_dir
     ;       report_timing
     ;       help
     ;       verbose
@@ -207,6 +210,7 @@ short_option('v', verbose).
 
 long_option("rebuild",          rebuild).
 long_option("build-file",       build_file).
+long_option("build-dir",        build_dir).
 long_option("report-timing",    report_timing).
 long_option("help",             help).
 long_option("verbose",          verbose).
@@ -216,6 +220,7 @@ long_option("version",          version).
 
 option_default(rebuild,         bool(no)).
 option_default(build_file,      string(build_file)).
+option_default(build_dir,       string(build_directory)).
 option_default(report_timing,   bool(no)).
 option_default(help,            bool(no)).
 option_default(verbose,         bool(no)).
