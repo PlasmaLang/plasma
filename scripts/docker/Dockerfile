@@ -84,9 +84,9 @@ RUN git clone https://github.com/PlasmaLang/plasma.git
 
 # Update to later git versions.
 WORKDIR .vim/bundle/plasma
-RUN git remote update -p && git checkout e526200 && git checkout master && git merge --ff origin/master 
+RUN git remote update -p && git checkout fa0dcf83c496b34db22e255a2cfec3bd3ee97812 && git checkout master && git merge --ff origin/master 
 WORKDIR /root/plasma 
-RUN git remote update -p && git checkout d0a518c && git checkout master && git merge --ff origin/master
+RUN git remote update -p && git checkout f25d3d2c0f412b230482b43cf8fafaedaee6b844 && git checkout master && git merge --ff origin/master
 
 WORKDIR /root
 RUN apt-get update; apt-get upgrade -yq
