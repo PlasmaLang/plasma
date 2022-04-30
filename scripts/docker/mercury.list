@@ -1,4 +1,4 @@
 
-deb http://dl.mercurylang.org/deb/ buster main
-deb-src http://dl.mercurylang.org/deb/ buster main
+deb http://dl.mercurylang.org/deb/ bullseye main
+deb-src http://dl.mercurylang.org/deb/ bullseye main
 
