@@ -55,7 +55,7 @@ Download and trust Paul's GPG key:
 ----
 cd /tmp
 wget https://paul.bone.id.au/paul.asc
-sudo apt-key add paul.asc
+sudo cp paul.asc /etc/apt/trusted.gpg.d/paulbone.asc
 ----
 
 Create a new file in /etc/apt/sources.list.d, name it mercury.list and paste
