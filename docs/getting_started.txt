@@ -2,7 +2,7 @@ Getting started with Plasma
 ===========================
 :Author: Paul Bone 
 :Email: paul@plasmalang.org
-:Date: January 2022 
+:Date: April 2022
 :Copyright: Copyright (C) 2019-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -20,7 +20,7 @@ You will need
  * GCC or Clang
  * GNU Make
  * git
- * Mercury (tested with 20.06)
+ * Mercury (tested with 22.01)
  * ninja 1.10 or later
  * asciidoc & source-highlight (if you want to build the documentation)
 
@@ -39,8 +39,8 @@ sudo apt install build-essential git
 === Mercury
 
 You’ll need another language, Mercury, since our compiler is written in it.
-The latest stable version is required, but other versions may also work.
-Plasma's CI currently tests with ROTD 2020-05-31.
+A recent stable version is required (22.01.x), ROTD versions may also work.
+Plasma's CI currently tests with 22.01.
 Compiling Mercury from source can take a long time,
 but if you’re on Debian, Ubuntu or other derivative running on x86_64
 then there are some packages!

@@ -32,8 +32,8 @@ You will need:
   GCC.  Clang should also work.
 * GNU Make
 * [Mercury](https://www.mercurylang.org/).
-  The latest stable version is required, older versions may also work.
-  Plasma's CI currently tests with ROTD 2020-05-31.
+  A recent stable version is required (22.01.x).
+  Plasma's CI currently tests with 22.01.
 * asciidoc and source-highlight
 * The [ninja build system](https://ninja-build.org), at least version 1.10.
 
