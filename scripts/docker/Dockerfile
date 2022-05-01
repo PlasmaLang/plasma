@@ -1,4 +1,4 @@
-FROM debian:buster
+FROM debian:bullseye
 
 ##
 ## The first part of this dockerfile is identical to the Mercury one
@@ -24,8 +24,8 @@ COPY mercury.list /etc/apt/sources.list.d/
 
 # Install a minimal set of Mercury grades
 RUN ./install.sh \
-    mercury-rotd-llc-dev \
-    mercury-rotd-tools=20200531-1
+    mercury-llc-dev \
+    mercury-tools=22.01-bullseye1
 
 #############################
 ## End of Mercury dockerfile
@@ -37,7 +37,7 @@ RUN ./install.sh \
 # Install some Plasma build dependencies.  We will test with both gcc and
 # clang so install both.
 RUN ./install.sh \
-    ctags \
+    exuberant-ctags \
     gcc \
     g++ \
     clang \
@@ -64,7 +64,7 @@ RUN ./install.sh \
     source-highlight \
     tig \
     vim \
-    mercury-rotd-recommended
+    mercury-recommended
 
 # Setup git and vim.
 # TODO: should be able to do this with vim packages and without the pathogen
@@ -74,7 +74,7 @@ COPY gitconfig .gitconfig
 COPY vimrc .vimrc
 RUN mkdir .vim .vim/bundle .vim/autoload
 ADD https://raw.githubusercontent.com/tpope/vim-pathogen/master/autoload/pathogen.vim .vim/autoload/pathogen.vim
-RUN cp -r /usr/share/doc/mercury-rotd-tools/examples/vim .vim/bundle/mercury
+RUN cp -r /usr/share/doc/mercury-tools/examples/vim .vim/bundle/mercury
 RUN git clone --depth 1 https://github.com/PlasmaLang/vim.git .vim/bundle/plasma
 # Some of the Mercury vim files may be compressed
 RUN find .vim -name \*.gz | xargs gunzip

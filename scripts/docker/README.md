@@ -14,6 +14,10 @@ hub](https://hub.docker.com/r/paulbone/plasma-dep) with
 
     $ docker pull paulbone/plasma-dep
 
+You can run it (it will open a shell prompt) with:
+
+    $ docker run -it paulbone/plasma-dep:latest
+
 More details
 ============
 
