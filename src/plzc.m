@@ -366,7 +366,8 @@ process_options(Args0, Result, !IO) :-
             )
         )
     ; MaybeOptions = error(ErrMsg),
-        Result = error("Error processing command line options: " ++ ErrMsg)
+        Result = error("Error processing command line options: " ++
+		option_error_to_string(ErrMsg))
     ).
 
 :- pred process_options_mode(option_table(option)::in, string::out,
