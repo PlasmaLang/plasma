@@ -1,0 +1,7 @@
+
+[bad_module_name_2]
+type = program
+# When the module name doesn't match by only case or underscores the
+# compiler would crash.
+modules = [BADMODULENAME2]
+
