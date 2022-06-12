@@ -4,11 +4,10 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_2
+module Enum
 
 // Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs
-type RedSuit = Hearts | Diamonds
 
 entrypoint
 func main() uses IO -> Int {
@@ -25,6 +24,4 @@ func suit_str(s : Suit) -> String {
         Clubs -> { return "Clubs" }
     }
 }
-
-
 

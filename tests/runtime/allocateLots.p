@@ -4,6 +4,10 @@
  * See ../LICENSE.unlicense
  */
 
+// This test only works in development builds where the GC is more
+// aggressive.
+// PLZTEST build_type dev
+
 module AllocateLots
 
 entrypoint

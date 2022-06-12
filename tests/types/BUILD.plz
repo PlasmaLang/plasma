@@ -1,0 +1,33 @@
+
+[constructor_overload]
+type = program
+modules = [ConstructorOverload]
+
+[enum]
+type = program
+modules = [Enum]
+
+[parametric]
+type = program
+modules = [Parametric]
+
+[playing_card]
+type = program
+modules = [PlayingCard]
+
+[polymorphic]
+type = program
+modules = [Polymorphic]
+
+[recursive]
+type = program
+modules = [Recursive]
+
+[tagging1]
+type = program
+modules = [Tagging1]
+
+[tagging2]
+type = program
+modules = [Tagging2]
+

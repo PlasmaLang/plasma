@@ -1,7 +1,3 @@
-[module_01]
-type = program
-modules = [Module_01, Module_01a]
-
 [module_04]
 type = program
 modules = [Module_04, Module_04a]
@@ -17,10 +13,6 @@ modules = [Module_06, Module_06a]
 [module_07]
 type = program
 modules = [Module_07, Module_07a]
-
-[heir_test]
-type = program
-modules = [HeirTest, Heir.Foo, Heir.Foo.Bar]
 
 [module_11]
 type = program

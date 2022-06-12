@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_4
+module Recursive
 
 entrypoint
 func main() uses IO -> Int {

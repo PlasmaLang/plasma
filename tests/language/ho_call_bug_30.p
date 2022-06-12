@@ -4,13 +4,14 @@
  * See ../LICENSE.unlicense
  */
 
-module Bug30
+module HOCallBug30
 
 // TODO:
 //  Need to implement and test HO values in type arguments
 
 entrypoint
 func main() uses IO -> Int {
+    // Higher order calls to builtins used to crash.
     print!(join(", ", map(int_to_string, [1, 2, 3])) ++ "\n")
 
     return 0

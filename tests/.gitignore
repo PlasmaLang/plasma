@@ -1,9 +1,5 @@
-*.diff
-*.log
+_build
 *.out
 *.outs
-*.pzo
 *.pz
-*.plasma-dump_*
-*.trace
-_build
+*.dir

@@ -1,0 +1,5 @@
+
+[hello]
+type = program
+modules = [Hello]
+

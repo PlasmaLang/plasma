@@ -1,0 +1,5 @@
+
+[heir_test]
+type = program
+modules = [HeirTest, Heir.Foo, Heir.Foo.Bar]
+

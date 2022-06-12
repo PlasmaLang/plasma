@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_8
+module Polymorphic
 
 // Type parameters.
 

@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Res_1
+module Resource 
 
 entrypoint
 func main() uses IO -> Int {

@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module List_1
+module List
 
 entrypoint
 func main() uses IO -> Int {

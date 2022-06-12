@@ -199,8 +199,14 @@ $(DEPDIR)/%.d : ;
 .PRECIOUS: $(DEPDIR)/%.d
 
 .PHONY: test
-test : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
-	(cd tests; ./run_tests.sh $(BUILD_TYPE))
+test : test-old test-new
+
+.PHONY: test-old
+test-old : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
+	(cd tests-old; ./run_tests.sh $(BUILD_TYPE))
+.PHONY: test-new
+test-new : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
+	BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests | tappy
 
 .PHONY: tags
 tags : src/tags runtime/tags
@@ -228,14 +234,14 @@ docs : $(DOCS_TARGETS)
 .PHONY: clean
 clean : localclean
 	$(MAKE) -C examples clean
-	$(MAKE) -C tests/pzt clean
-	$(MAKE) -C tests/valid clean
-	$(MAKE) -C tests/invalid clean
-	$(MAKE) -C tests/modules clean
-	$(MAKE) -C tests/modules-invalid clean
-	$(MAKE) -C tests/build-invalid clean
-	$(MAKE) -C tests/ffi clean
-	$(MAKE) -C tests/missing clean
+	$(MAKE) -C tests-old/pzt clean
+	$(MAKE) -C tests-old/valid clean
+	$(MAKE) -C tests-old/invalid clean
+	$(MAKE) -C tests-old/modules clean
+	$(MAKE) -C tests-old/modules-invalid clean
+	$(MAKE) -C tests-old/build-invalid clean
+	$(MAKE) -C tests-old/ffi clean
+	$(MAKE) -C tests-old/missing clean
 
 #
 # Realclean removes all generated files plus plasma-dump files.
@@ -243,14 +249,14 @@ clean : localclean
 .PHONY: realclean
 realclean : localclean
 	$(MAKE) -C examples realclean
-	$(MAKE) -C tests/pzt realclean
-	$(MAKE) -C tests/valid realclean
-	$(MAKE) -C tests/invalid realclean
-	$(MAKE) -C tests/modules realclean
-	$(MAKE) -C tests/modules-invalid realclean
-	$(MAKE) -C tests/build-invalid realclean
-	$(MAKE) -C tests/ffi realclean
-	$(MAKE) -C tests/missing realclean
+	$(MAKE) -C tests-old/pzt realclean
+	$(MAKE) -C tests-old/valid realclean
+	$(MAKE) -C tests-old/invalid realclean
+	$(MAKE) -C tests-old/modules realclean
+	$(MAKE) -C tests-old/modules-invalid realclean
+	$(MAKE) -C tests-old/build-invalid realclean
+	$(MAKE) -C tests-old/ffi realclean
+	$(MAKE) -C tests-old/missing realclean
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
 	rm -rf src/Mercury

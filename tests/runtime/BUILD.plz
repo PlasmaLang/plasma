@@ -1,0 +1,13 @@
+
+[allocateLots]
+type = program
+modules = [AllocateLots]
+
+[die]
+type = program
+modules = [Die]
+
+[parameters]
+type = program
+modules = [Parameters]
+

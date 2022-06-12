@@ -37,6 +37,18 @@ You will need:
 * asciidoc and source-highlight
 * The [ninja build system](https://ninja-build.org), at least version 1.10.
 
+To run the test suite you will also need:
+* lua, lua-file-system, lua-posix, tappy, diffutils
+
+To build the documentation you will also need:
+* asciidoc and source-highlight
+
+On Debian (also Ubuntu, Mint etc) Linux
+
+    $ apt install build-essential ninja-build lua5.3 lua-filesystem lua-posix tappy diffutils asciidoc source-highlight
+
+Will get you started, then proceed to installing Mercury below.
+
 ### Mercury installation
 
 The easiest way to install Mercury is to install the

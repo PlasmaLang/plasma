@@ -1,0 +1,21 @@
+
+[builtin_01]
+type = program
+modules = [Builtin01]
+
+[builtin_02_int]
+type = program
+modules = [Builtin02Int]
+
+[builtin_03_bool]
+type = program
+modules = [Builtin03Bool]
+
+[builtin_04_string]
+type = program
+modules = [Builtin04String]
+
+[builtin_05_list]
+type = program
+modules = [Builtin05List]
+

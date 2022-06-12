@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_3
+module PlayingCard 
 
 // Simple enum
 type Suit = Hearts | Diamonds | Spades | Clubs

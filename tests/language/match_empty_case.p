@@ -4,18 +4,20 @@
  * See ../LICENSE.unlicense
  */
 
-module Bug175
+module MatchEmptyCase
 
 entrypoint
 func main() uses IO -> Int {
     var x = 3
     if (x == 4) {
+        // The compiler would crash for an empty case like this.
     } else {
         print!("Hello\n")
     }
 
     match (x) {
         0 -> { print!("bye?") }
+        // The compiler would crash for an empty case like this.
         3 -> { }
         _ -> { print!("hello?") }
     }

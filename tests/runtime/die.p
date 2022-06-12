@@ -6,6 +6,9 @@
 
 module Die
 
+// PLZTEST returns 1
+// PLZTEST output stderr
+
 entrypoint
 func main() uses IO -> Int {
     Builtin.die("Dieing")

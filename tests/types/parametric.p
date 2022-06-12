@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_5
+module Parametric 
 
 entrypoint
 func main() uses IO -> Int {
