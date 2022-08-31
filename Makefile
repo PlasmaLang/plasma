@@ -241,6 +241,13 @@ clean : localclean
 	$(MAKE) -C tests-old/build-invalid clean
 	$(MAKE) -C tests-old/ffi clean
 	$(MAKE) -C tests-old/missing clean
+	find tests -name *.pz -o \
+			   -name *.out -o \
+			   -name *.outs \
+		| xargs -r rm
+	find tests -name _build -o \
+			   -name \*.dir \
+		| xargs -r rm -r
 
 #
 # Realclean removes all generated files plus plasma-dump files.
