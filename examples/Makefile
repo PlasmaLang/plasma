@@ -46,7 +46,7 @@ readline.out : readline.pz $(TOP)/runtime/plzrun
 
 .PHONY: clean
 clean:
-	rm -rf *.pz *.out *.diff *.log _build
+	rm -rf *.pz *.out *.outs *.diff *.log _build
 
 .PHONY: realclean
 realclean: clean
