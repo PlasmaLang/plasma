@@ -235,7 +235,6 @@ docs : $(DOCS_TARGETS)
 clean : localclean
 	$(MAKE) -C examples clean
 	$(MAKE) -C tests-old/pzt clean
-	$(MAKE) -C tests-old/valid clean
 	$(MAKE) -C tests-old/invalid clean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
@@ -250,7 +249,6 @@ clean : localclean
 realclean : localclean
 	$(MAKE) -C examples realclean
 	$(MAKE) -C tests-old/pzt realclean
-	$(MAKE) -C tests-old/valid realclean
 	$(MAKE) -C tests-old/invalid realclean
 	$(MAKE) -C tests-old/modules realclean
 	$(MAKE) -C tests-old/modules-invalid realclean
