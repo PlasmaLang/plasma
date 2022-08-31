@@ -235,13 +235,19 @@ docs : $(DOCS_TARGETS)
 clean : localclean
 	$(MAKE) -C examples clean
 	$(MAKE) -C tests-old/pzt clean
-	$(MAKE) -C tests-old/valid clean
 	$(MAKE) -C tests-old/invalid clean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
 	$(MAKE) -C tests-old/build-invalid clean
 	$(MAKE) -C tests-old/ffi clean
 	$(MAKE) -C tests-old/missing clean
+	find tests -name *.pz -o \
+			   -name *.out -o \
+			   -name *.outs \
+		| xargs -r rm
+	find tests -name _build -o \
+			   -name \*.dir \
+		| xargs -r rm -r
 
 #
 # Realclean removes all generated files plus plasma-dump files.
@@ -250,7 +256,6 @@ clean : localclean
 realclean : localclean
 	$(MAKE) -C examples realclean
 	$(MAKE) -C tests-old/pzt realclean
-	$(MAKE) -C tests-old/valid realclean
 	$(MAKE) -C tests-old/invalid realclean
 	$(MAKE) -C tests-old/modules realclean
 	$(MAKE) -C tests-old/modules-invalid realclean
