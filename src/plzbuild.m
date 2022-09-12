@@ -190,6 +190,8 @@ usage(!IO) :-
     io.write_string("Developer options:\n\n", !IO),
     io.write_string("    --build-file FILE\n", !IO),
     io.write_string("        Use this build file.\n\n", !IO),
+    io.write_string("    --build-dir DIR\n", !IO),
+    io.write_string("        Perform the build in this directory.\n\n", !IO),
     io.write_string("    --report-timing\n", !IO),
     io.write_string("        Report the elapsed and CPU time for each sub-command.\n\n", !IO).
 
