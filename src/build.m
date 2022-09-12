@@ -718,6 +718,7 @@ rule plzdep
 rule plzc
     command = $path/plzc $pcflags --mode compile $
 		--import-whitelist $import_whitelist $
+		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
     description = Compiling $name

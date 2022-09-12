@@ -195,7 +195,6 @@ read_whitelist(ThisModule, Filename, MaybeWhitelist, !IO) :-
                 % We can't compute the intersection of zero sets, so ignore
                 % the whitelist.  This can happen if the module name in the
                 % build file doesn't match the actual name.
-                % TODO: we need to catch this error elsewhere.
                 MaybeWhitelist = no
             ; ModulesSets = [_ | _],
                 MaybeWhitelist = yes(delete(power_intersect_list(ModulesSets),

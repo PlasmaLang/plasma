@@ -1,3 +1,4 @@
+# PLZTEST type compile_failure
 
 [bad_module_name_2]
 type = program

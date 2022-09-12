@@ -33,6 +33,7 @@
                 go_output_file              :: string,
 
                 go_import_whitelist_file    :: maybe(string),
+                go_module_name_check        :: maybe(string),
 
                 go_warn_as_error            :: bool,
 

@@ -1,1 +1,3 @@
-Test!
+bad_module_name_2.p:10: The module name from the source file 'BadModuleName2'
+                        does not match the module name from the BUILD.plz file
+                        'BADMODULENAME2'

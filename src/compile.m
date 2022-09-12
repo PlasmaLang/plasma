@@ -59,6 +59,7 @@
 
 :- import_module cord.
 :- import_module map.
+:- import_module maybe.
 :- import_module string.
 
 :- import_module builtins.
@@ -175,6 +176,18 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
 check_module_name(GOptions, Context, ModuleName, !Errors) :-
+    MbModuleNameCheck = GOptions ^ go_module_name_check,
+    ( MbModuleNameCheck = no
+    ; MbModuleNameCheck = yes(ModuleNameCheck),
+        ( if q_name_to_string(ModuleName) = ModuleNameCheck then
+            true
+        else
+            add_error(Context,
+                ce_module_name_not_match_build(ModuleName, ModuleNameCheck),
+                !Errors)
+        )
+    ),
+
     % The module name and file name are both converted to an internal
     % representation and then compared lexicographically.  If that matches
     % then they match.  This allows the file name to vary with case and
