@@ -308,10 +308,6 @@ gen_all_tests =
           maybe_input = nil
         end
 
-        local name = path.file:gsub(".exp", "")
-        local desc = string.format("%s/%s", path.dir, name)
-        local dir_build = dirs[path.dir] ~= "none" and dirs[path.dir] or nil
-
         function name_if_exists(dir, file, new_ext) 
           local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
           return lfs.attributes(path) and path or nil
@@ -320,16 +316,17 @@ gen_all_tests =
         local build_file = name_if_exists(path.dir, path.file, ".build")
         local source_file = name_if_exists(path.dir, path.file, ".p")
 
+        local name = path.file:gsub(".exp", "")
+        local desc = string.format("%s/%s", path.dir, name)
+        local dir_build
+        if not build_file and dirs[path.dir] ~= "none" then
+          dir_build = dirs[path.dir]
+        end
+
         local config
 
         if build_file then
           config = test_configuration(build_file)
-          if dir_build then
-            print(
-              "This test has a .build file and the directory has a BUILD.plz "..
-              "file, thic can create confusion.\n"..
-              string.format("See: %s and %s/BUILD.plz", build_file, path.dir))
-          end
         elseif source_file then
           config = test_configuration(source_file)
         else
