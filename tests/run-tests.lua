@@ -205,6 +205,7 @@ end
 --  A table containing the keys:
 --    expect_return - the test's expected return code
 --    check_stderr - if we should check stderr output rather than stdout
+--    build_type - The build type to enable this test for (nil for all)
 --
 function test_configuration(filename)
   local expect_return = 0
