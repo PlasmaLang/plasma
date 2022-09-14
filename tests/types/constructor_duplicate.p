@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Types_1
+module ConstructorDuplicate 
 
 // Simple enum, but it is invalid because a constructor is duplicated.
 type Suit = Hearts | Diamonds | Diamonds | Clubs
