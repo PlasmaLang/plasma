@@ -205,11 +205,14 @@ end
 --  A table containing the keys:
 --    expect_return - the test's expected return code
 --    check_stderr - if we should check stderr output rather than stdout
+--    build_type - The build type to enable this test for (nil for all)
+--    test_type - The type of this test (nil for auto or compile_failure)
 --
 function test_configuration(filename)
   local expect_return = 0
   local check_stderr = false
   local build_type
+  local test_type
 
   function invalid_value(key, value)
     print(string.format("%s: Invalid value '%s' for key %s",
@@ -239,6 +242,8 @@ function test_configuration(filename)
           end
         elseif key == "build_type" then
           build_type = value 
+        elseif key == "type" then
+          test_type = value
         else
           print(string.format("%s:%d: Unknown key in test configuration %s",
             filename, line_no, key))
@@ -252,6 +257,7 @@ function test_configuration(filename)
     expect_return = expect_return,
     check_stderr = check_stderr,
     build_type = build_type,
+    test_type = test_type,
   }
 end
 
@@ -308,10 +314,6 @@ gen_all_tests =
           maybe_input = nil
         end
 
-        local name = path.file:gsub(".exp", "")
-        local desc = string.format("%s/%s", path.dir, name)
-        local dir_build = dirs[path.dir] ~= "none" and dirs[path.dir] or nil
-
         function name_if_exists(dir, file, new_ext) 
           local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
           return lfs.attributes(path) and path or nil
@@ -320,16 +322,17 @@ gen_all_tests =
         local build_file = name_if_exists(path.dir, path.file, ".build")
         local source_file = name_if_exists(path.dir, path.file, ".p")
 
+        local name = path.file:gsub(".exp", "")
+        local desc = string.format("%s/%s", path.dir, name)
+        local dir_build
+        if not build_file and dirs[path.dir] ~= "none" then
+          dir_build = dirs[path.dir]
+        end
+
         local config
 
         if build_file then
           config = test_configuration(build_file)
-          if dir_build then
-            print(
-              "This test has a .build file and the directory has a BUILD.plz "..
-              "file, thic can create confusion.\n"..
-              string.format("See: %s and %s/BUILD.plz", build_file, path.dir))
-          end
         elseif source_file then
           config = test_configuration(source_file)
         else
@@ -339,7 +342,7 @@ gen_all_tests =
 
         coroutine.yield({
           name = name,
-          type = "run",
+          type = config.test_type or "run",
           dir = path.dir,
           desc = desc,
           depends = dir_build,
@@ -469,6 +472,8 @@ end
 function test_num_steps(test)
   if test.type == "plzbuild" then
     return 1
+  elseif test.type == "compile_failure" then
+    return 2
   elseif test.type == "run" then
     if test.build_file then
       return 3
@@ -490,6 +495,28 @@ end
 
 -- The TAP test plan
 print("1.." .. num_tests)
+
+--
+-- Filter compiler output for processing by diff
+--
+function filter_compiler_output(dir, input_name, output_name)
+  local input = assert(io.open(dir .. "/" .. input_name))
+  local output = assert(io.open(dir .. "/" .. output_name, "w"))
+  for line in input:lines() do
+    if line:match("^[^%s]+plzc ") then
+      break
+    end
+  end
+    
+  for line in input:lines() do
+    if line:match("ninja: build stopped") then
+      break
+    end
+    output:write(line .. "\n") 
+  end
+  input:close()
+  output:close()
+end
 
 --
 -- Run the test
@@ -532,6 +559,23 @@ function run_test(test)
         assert(execute(test.dir, "sh", 
           {"-c", "grep -v '^#' | sed -e 's/#.*$//'"},
           test.output, filtered_output))
+        return execute_test_command(test, "diff", "diff",
+          {"-u", test.expect, filtered_output}, nil, nil, nil)
+      end)
+  elseif test.type == "compile_failure" then
+    result = test_step(test, "build-failure", result,
+      function()
+        build_dir = test.name .. ".dir"
+        return execute_test_command(test, "build-failure", plzbuild_bin,
+          {"--build-file", test.build_file, "--build-dir", build_dir},
+          nil, test.output, nil, 1)
+      end)
+    result = test_step(test, "diff", result,
+      function()
+        local filtered_output = test.output:gsub(".out", ".outs")
+        -- grep removes entire lines beginning with a #
+        -- sed removes the ends of lines after a #
+        filter_compiler_output(test.dir, test.output, filtered_output)
         return execute_test_command(test, "diff", "diff",
           {"-u", test.expect, filtered_output}, nil, nil, nil)
       end)

@@ -1,0 +1,7 @@
+
+# PLZTEST type compile_failure 
+
+[constructor_duplicate]
+type = program
+modules = [ConstructorDuplicate]
+
