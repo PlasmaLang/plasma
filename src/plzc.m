@@ -208,28 +208,35 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
     string::in, ast::in, io::di, io::uo) is det.
 
 do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
-    filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
-    ( ImportType = interface_import,
-        Imports1 = Imports0
-    ; ImportType = typeres_import,
-        % TODO: Include only dependencies required to build interface files,
-        % that is those that are used by types and resources only.
-        Imports1 = Imports0
-    ),
-    ast_to_import_list(PlasmaAst ^ a_module_name, "..",
-        GeneralOpts ^ go_import_whitelist_file, Imports1, Imports, !IO),
+    check_module_name(GeneralOpts, PlasmaAst ^ a_context,
+        PlasmaAst ^ a_module_name, init, ModuleNameErrors),
+    ( if has_fatal_errors(ModuleNameErrors) then
+        report_errors(GeneralOpts ^ go_source_dir, ModuleNameErrors, !IO),
+        set_exit_status(1, !IO)
+    else
+        filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+        ( ImportType = interface_import,
+            Imports1 = Imports0
+        ; ImportType = typeres_import,
+            % TODO: Include only dependencies required to build interface files,
+            % that is those that are used by types and resources only.
+            Imports1 = Imports0
+        ),
+        ast_to_import_list(PlasmaAst ^ a_module_name, "..",
+            GeneralOpts ^ go_import_whitelist_file, Imports1, Imports, !IO),
 
-    WriteOutput = GeneralOpts ^ go_write_output,
-    ( WriteOutput = write_output,
-        % The interface is within the core representation. We will
-        % extract and pretty print the parts we need.
-        OutputFile = GeneralOpts ^ go_output_file,
-        write_dep_info(ImportType, OutputFile, Target, Imports, Result, !IO),
-        ( Result = ok
-        ; Result = error(ErrMsg),
-            exit_error(ErrMsg, !IO)
+        WriteOutput = GeneralOpts ^ go_write_output,
+        ( WriteOutput = write_output,
+            % The interface is within the core representation. We will
+            % extract and pretty print the parts we need.
+            OutputFile = GeneralOpts ^ go_output_file,
+            write_dep_info(ImportType, OutputFile, Target, Imports, Result, !IO),
+            ( Result = ok
+            ; Result = error(ErrMsg),
+                exit_error(ErrMsg, !IO)
+            )
+        ; WriteOutput = dont_write_output
         )
-    ; WriteOutput = dont_write_output
     ).
 
 :- pred write_dep_info(import_type::in, string::in, string::in,
