@@ -20,6 +20,7 @@
 :- import_module ast.
 :- import_module common_types.
 :- import_module compile_error.
+:- import_module context.
 :- import_module core.
 :- import_module options.
 :- import_module pz.
@@ -29,6 +30,9 @@
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
+
+:- pred check_module_name(general_options::in, context::in, q_name::in,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
 
 :- pred process_declarations(general_options::in, ast::in,
     result_partial(core, compile_error)::out, io::di, io::uo) is det.
@@ -64,7 +68,6 @@
 
 :- import_module builtins.
 :- import_module constant.
-:- import_module context.
 :- import_module core.arity_chk.
 :- import_module core.branch_chk.
 :- import_module core.pretty.
@@ -83,6 +86,58 @@
 :- import_module util.my_exception.
 :- import_module util.log.
 :- import_module util.path.
+
+%-----------------------------------------------------------------------%
+
+check_module_name(GOptions, Context, ModuleName, !Errors) :-
+    MbModuleNameCheck = GOptions ^ go_module_name_check,
+    ( MbModuleNameCheck = no
+    ; MbModuleNameCheck = yes(ModuleNameCheck),
+        ( if q_name_to_string(ModuleName) = ModuleNameCheck then
+            true
+        else
+            add_error(Context,
+                ce_module_name_not_match_build(ModuleName, ModuleNameCheck),
+                !Errors)
+        )
+    ),
+
+    % The module name and file name are both converted to an internal
+    % representation and then compared lexicographically.  If that matches
+    % then they match.  This allows the file name to vary with case and
+    % punctuation differences.
+
+    ModuleNameStripped = strip_file_name_punctuation(
+        q_name_to_string(ModuleName)),
+
+    InputFileName = GOptions ^ go_input_file,
+    file_part(InputFileName, InputFileNameNoPath),
+    ( if
+        filename_extension(source_extension, InputFileNameNoPath,
+            InputFileNameBase),
+        strip_file_name_punctuation(InputFileNameBase) = ModuleNameStripped
+    then
+        true
+    else
+        add_error(Context,
+            ce_source_file_name_not_match_module(ModuleName, InputFileName),
+            !Errors)
+    ),
+
+    OutputFileName = GOptions ^ go_output_file,
+    ( if
+        ( Extension = output_extension
+        ; Extension = interface_extension
+        ; Extension = typeres_extension
+        ),
+        filename_extension(Extension, OutputFileName, OutputFileNameBase),
+        strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped
+    then
+        true
+    else
+        add_error(Context, ce_object_file_name_not_match_module(ModuleName,
+            OutputFileName), !Errors)
+    ).
 
 %-----------------------------------------------------------------------%
 
@@ -171,59 +226,6 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
     ).
 
 %-----------------------------------------------------------------------%
-
-:- pred check_module_name(general_options::in, context::in, q_name::in,
-    errors(compile_error)::in, errors(compile_error)::out) is det.
-
-check_module_name(GOptions, Context, ModuleName, !Errors) :-
-    MbModuleNameCheck = GOptions ^ go_module_name_check,
-    ( MbModuleNameCheck = no
-    ; MbModuleNameCheck = yes(ModuleNameCheck),
-        ( if q_name_to_string(ModuleName) = ModuleNameCheck then
-            true
-        else
-            add_error(Context,
-                ce_module_name_not_match_build(ModuleName, ModuleNameCheck),
-                !Errors)
-        )
-    ),
-
-    % The module name and file name are both converted to an internal
-    % representation and then compared lexicographically.  If that matches
-    % then they match.  This allows the file name to vary with case and
-    % punctuation differences.
-
-    ModuleNameStripped = strip_file_name_punctuation(
-        q_name_to_string(ModuleName)),
-
-    InputFileName = GOptions ^ go_input_file,
-    file_part(InputFileName, InputFileNameNoPath),
-    ( if
-        filename_extension(source_extension, InputFileNameNoPath,
-            InputFileNameBase),
-        strip_file_name_punctuation(InputFileNameBase) = ModuleNameStripped
-    then
-        true
-    else
-        add_error(Context,
-            ce_source_file_name_not_match_module(ModuleName, InputFileName),
-            !Errors)
-    ),
-
-    OutputFileName = GOptions ^ go_output_file,
-    ( if
-        ( Extension = output_extension
-        ; Extension = interface_extension
-        ; Extension = typeres_extension
-        ),
-        filename_extension(Extension, OutputFileName, OutputFileNameBase),
-        strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped
-    then
-        true
-    else
-        add_error(Context, ce_object_file_name_not_match_module(ModuleName,
-            OutputFileName), !Errors)
-    ).
 
 :- pred setup_env_and_core(q_name::in, env::out, env::out, core::out) is det.
 
