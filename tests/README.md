@@ -5,13 +5,15 @@ Plasma Test Suite
 Test suite organisation
 -----------------------
 
-There are no tests here yet.  The test script will execute the tests in the
-`examples` directory.
+Tests are organised into the following directories:
 
  * **builtins**: Test builtin functions.
  * **language**: Test language features (syntax and basic semantics).
+ * **modules**: Test the module system.
  * **runtime**: Test runtime features like the GC.
  * **types**: Test the type system.
+
+Plus the **examples** directory from the root of the project.
 
 Running tests
 -------------
