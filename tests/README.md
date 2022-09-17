@@ -7,6 +7,7 @@ Test suite organisation
 
 Tests are organised into the following directories:
 
+ * **build**: Test the build system.
  * **builtins**: Test builtin functions.
  * **language**: Test language features (syntax and basic semantics).
  * **modules**: Test the module system.
