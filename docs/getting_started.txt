@@ -2,7 +2,7 @@ Getting started with Plasma
 ===========================
 :Author: Paul Bone 
 :Email: paul@plasmalang.org
-:Date: April 2022
+:Date: September 2022
 :Copyright: Copyright (C) 2019-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -12,6 +12,19 @@ This file contains some instructions on setting up the prerequisites and
 building Plasma.
 
 Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
+
+
+== Docker
+
+If you want to run Plasma in a Docker container (rather than the
+instructions below for Ubuntu Linux) the Dockerfile provided in
+https://github.com/PlasmaLang/plasma/tree/master/scripts/docker[scripts/docker] is available,
+It is also build and available on
+https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
+You can resume this "getting started" guide at the
+xref:_hello_world[Hello World] section below,
+you will still need to adapt some of the instructions for use with the
+container.
 
 == Dependencies
 
@@ -113,13 +126,6 @@ wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.
 unzip ninja-linux.zip
 sudo cp ninja /usr/local/bin/
 ----
-
-== Docker
-
-If you want to run Plasma in a Docker container, the Dockerfile provided in
-https://github.com/PlasmaLang/plasma/tree/master/scripts/docker[scripts/docker] is available,
-It is also build and available on
-https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
 
 == Plasma
 
