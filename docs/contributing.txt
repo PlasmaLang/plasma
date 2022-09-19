@@ -2,8 +2,8 @@ Contributing to Plasma
 ======================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: March, 2021
-:Copyright: Copyright (C) 2019, 2021 Plasma Team
+:Date: September, 2022
+:Copyright: Copyright (C) 2019, 2021-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -31,45 +31,6 @@ contributors.
 * By opening an issue or adding a comment or message you also agree to the 
   https://github.com/PlasmaLang/plasma/blob/master/CODE_OF_CONDUCT.md[Code
   of Conduct].
-
-== Developer documentation
-
-This document contains general information for contributors, meanwhile the
-following discuss specific topics:
-
-link:dev_howto_make_pr.html[How to make a pull request]
-
-link:dev_compiler_internals.html[Compiler structure/internals]
-
-link:dev_style_mercury.html[Mercury style guide]
-
-link:dev_style_c.html[C and C++ style guide]
-
-link:dev_mercury_grades.html[Mercury grades]
-
-For maintainers:
-
-link:dev_maintainers.html[Plasma maintainer's guide]
-
-link:dev_bugtracking.html[Bugtracking]
-
-Language design:
-
-link:design_principles.html[Language design principles]
-
-link:design_concept_map.html[Plasma Syntax to Concept Map]
-
-link:design_types.html[Type System Design]
-
-link:design_ideas.html[Ideas for Plasma]
-
-link:references.html[References and Links]
-
-Plasma bytecode and abstract machine (PZ):
-
-link:pz_machine.html[Plasma Abstract Machine]
-
-https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_format.h[Plasma Bytecode Format]
 
 == Getting started
 
@@ -281,6 +242,45 @@ Plasma better?" if the answer is yes and you're a first time contributor,
 they'll click the merge button and might follow-up with some further changes
 of their own (eg for style).  If you're more experienced they'll be a
 greater expectation on you to confirm to style and cover edge cases.
+
+== Further documentation
+
+Documentation on specific topics of interest to Plasma implementors can be
+found here.
+
+link:dev_howto_make_pr.html[How to make a pull request]
+
+link:dev_compiler_internals.html[Compiler structure/internals]
+
+link:dev_style_mercury.html[Mercury style guide]
+
+link:dev_style_c.html[C and C++ style guide]
+
+link:dev_mercury_grades.html[Mercury grades]
+
+For maintainers:
+
+link:dev_maintainers.html[Plasma maintainer's guide]
+
+link:dev_bugtracking.html[Bugtracking]
+
+Language design:
+
+link:design_principles.html[Language design principles]
+
+link:design_concept_map.html[Plasma Syntax to Concept Map]
+
+link:design_types.html[Type System Design]
+
+link:design_ideas.html[Ideas for Plasma]
+
+link:references.html[References and Links]
+
+Plasma bytecode and abstract machine (PZ):
+
+link:pz_machine.html[Plasma Abstract Machine]
+
+https://github.com/PlasmaLang/plasma/blob/master/runtime/pz_format.h[Plasma Bytecode Format]
 
 == Getting help
 
