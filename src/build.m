@@ -691,6 +691,7 @@ ninja_required_version = 1.10
 
 rule plztyperes
     command = $path/plzc $pcflags --mode make-typeres-exports $
+		--module-name-check $name $
         --source-path $source_path $
         $in -o $out
     description = Calculating type & resource exports for $name
@@ -698,12 +699,14 @@ rule plztyperes
 rule plzidep
     command = $path/plzc $pcflags --mode make-interface-depends $
 		--target-file $target $
+		--module-name-check $name $
         --source-path $source_path $
 		$in -o $out
     description = Calculating interface dependencies for $name
 
 rule plzi
     command = $path/plzc $pcflags --mode make-interface $
+		--module-name-check $name $
         --source-path $source_path $
 		$in -o $out
     description = Making interface for $name
@@ -711,6 +714,7 @@ rule plzi
 rule plzdep
     command = $path/plzc $pcflags --mode make-depends $
 		--target-file $target --import-whitelist $import_whitelist $
+		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
     description = Calculating dependencies for $name
@@ -718,6 +722,7 @@ rule plzdep
 rule plzc
     command = $path/plzc $pcflags --mode compile $
 		--import-whitelist $import_whitelist $
+		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
     description = Compiling $name

@@ -107,8 +107,7 @@
 
 ast_to_import_list(ThisModule, Dir, MaybeWhitelistFile, Imports, Result, !IO) :-
     ( MaybeWhitelistFile = yes(WhitelistFile),
-        read_whitelist(ThisModule, WhitelistFile, Whitelist, !IO),
-        MaybeWhitelist = yes(Whitelist)
+        read_whitelist(ThisModule, WhitelistFile, MaybeWhitelist, !IO)
     ; MaybeWhitelistFile = no,
         MaybeWhitelist = no
     ),
@@ -178,10 +177,10 @@ make_import_info(Path, MaybeWhitelist, Module, Result, !DirInfo, !IO) :-
 
 :- type import_whitelist == set(q_name).
 
-:- pred read_whitelist(q_name::in, string::in, import_whitelist::out,
+:- pred read_whitelist(q_name::in, string::in, maybe(import_whitelist)::out,
     io::di, io::uo) is det.
 
-read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
+read_whitelist(ThisModule, Filename, MaybeWhitelist, !IO) :-
     io.open_input(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         read(File, WhitelistRes, !IO),
@@ -192,8 +191,15 @@ read_whitelist(ThisModule, Filename, Whitelist, !IO) :-
             ModulesSets = filter(
                 pred(M::in) is semidet :- member(ThisModule, M),
                 map(set.from_list, WhitelistList)),
-            Whitelist = delete(power_intersect_list(ModulesSets),
-                ThisModule)
+            ( ModulesSets = [],
+                % We can't compute the intersection of zero sets, so ignore
+                % the whitelist.  This can happen if the module name in the
+                % build file doesn't match the actual name.
+                MaybeWhitelist = no
+            ; ModulesSets = [_ | _],
+                MaybeWhitelist = yes(delete(power_intersect_list(ModulesSets),
+                    ThisModule))
+            )
         ; WhitelistRes = eof,
             compile_error($file, $pred, format("%s: premature end of file",
                 [s(Filename)]))
