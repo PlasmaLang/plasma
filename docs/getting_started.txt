@@ -209,6 +209,12 @@ $ plzrun hello.pz
 Hello world
 ----
 
+== vim customisation
+
+If you want to write some Plasma programs and you use vim.  You may wish to
+use the
+https://github.com/PlasmaLang/vim[vim editor support].
+
 == Getting help
 
 If you're stuck and  the https://plasmalang.org/docs/[Documentation] doesn't
@@ -224,11 +230,5 @@ resources for help.
 
 For bugs or missing information please
 https://github.com/PlasmaLang/plasma/issues/new[file a bug].
-
-== vim
-
-If you want to write some Plasma programs and you use vim.  You may wish to
-use the
-https://github.com/PlasmaLang/vim[vim editor support].
 
 // vim: set syntax=asciidoc:
