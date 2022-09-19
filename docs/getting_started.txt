@@ -172,6 +172,8 @@ Enjoy!
 
 == Hello world
 
+So you've got Plasma installed, it's time to take it for a test-drive.
+
 In a new directory create a `BUILD.plz` project file, it should contain:
 
 ----
@@ -193,7 +195,7 @@ func hello() uses IO -> Int {
 }
 ----
 
-Then use the plzbuild program to build the program:
+Then use the `plzbuild` program to build the program:
 
 ----
 $ plzbuild
