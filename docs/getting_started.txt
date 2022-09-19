@@ -127,7 +127,7 @@ unzip ninja-linux.zip
 sudo cp ninja /usr/local/bin/
 ----
 
-== Plasma
+== Compiling Plasma
 
 Now it’s time to clone the plasma repo:
 
@@ -162,7 +162,13 @@ The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
 https://github.com/PlasmaLang/plasma/tree/master/examples[`examples/`].
 
-`make install` will install the Plasma tools into `$PREFIX/bin/`.
+== Installing Plasma
+
+The `make install` command will now install the Plasma tools into
+the `$PREFIX` path you set in `build.mk` in the previous step.
+The compiler and other tools are now available under `$PREFIX/bin/`.
+
+Enjoy!
 
 == Hello world
 
