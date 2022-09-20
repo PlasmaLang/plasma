@@ -252,6 +252,8 @@ link:dev_howto_make_pr.html[How to make a pull request]
 
 link:dev_compiler_internals.html[Compiler structure/internals]
 
+link:dev_testing.html[Plasma test suite]
+
 link:dev_style_mercury.html[Mercury style guide]
 
 link:dev_style_c.html[C and C++ style guide]

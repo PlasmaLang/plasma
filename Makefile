@@ -71,6 +71,7 @@ DOCS_HTML=docs/index.html \
 	docs/contributing.html \
 	docs/dev_howto_make_pr.html \
 	docs/dev_compiler_internals.html \
+	docs/dev_testing.html \
 	docs/dev_style_mercury.html \
 	docs/dev_style_c.html \
 	docs/dev_mercury_grades.html \
