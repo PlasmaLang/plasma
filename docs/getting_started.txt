@@ -48,6 +48,7 @@ Optionally to run the test suite:
  * lua-posix
  * tappy (optional, used for nicer output)
  * diffutils
+ * ncurses
 
 === C++ compiler, make and git 
 
@@ -139,7 +140,7 @@ unzip ninja-linux.zip
 sudo cp ninja /usr/local/bin/
 ----
 
-=== Lua, tappy and diffutils
+=== Lua, tappy, diffutils and ncurses
 
 To run the test suite you will need
 
@@ -148,11 +149,12 @@ To run the test suite you will need
  * lua-posix
  * tappy
  * diffutils
+ * ncurses
 
 Ubuntu 20.04 has a suitable package.
 
 ----
-apt install lua5.3 lua-filesystem lua-posix tappy diffutils
+apt install lua5.3 lua-filesystem lua-posix tappy diffutils ncurses-bin
 ----
 
 == Compiling Plasma

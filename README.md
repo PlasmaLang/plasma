@@ -46,10 +46,11 @@ Optionally to run the test suite you will also need:
 * lua-posix
 * tappy (optional, used for nicer output)
 * diffutils
+* ncurses
 
 On Debian (also Ubuntu, Mint etc) Linux
 
-    $ apt install build-essential ninja-build lua5.3 lua-filesystem lua-posix tappy diffutils asciidoc source-highlight
+    $ apt install build-essential ninja-build lua5.3 lua-filesystem lua-posix tappy diffutils asciidoc source-highlight ncurses-bin
 
 Will get you started, then proceed to installing Mercury below.
 
