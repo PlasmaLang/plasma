@@ -34,14 +34,18 @@ You will need:
 * [Mercury](https://www.mercurylang.org/).
   A recent stable version is required (22.01.x).
   Plasma's CI currently tests with 22.01.
-* asciidoc and source-highlight
 * The [ninja build system](https://ninja-build.org), at least version 1.10.
 
-To run the test suite you will also need:
-* lua, lua-file-system, lua-posix, tappy, diffutils
+Optionally to build the documentation you will also need:
+* asciidoc
+* source-highlight
 
-To build the documentation you will also need:
-* asciidoc and source-highlight
+Optionally to run the test suite you will also need:
+* lua
+* lua-file-system
+* lua-posix
+* tappy
+* diffutils
 
 On Debian (also Ubuntu, Mint etc) Linux
 

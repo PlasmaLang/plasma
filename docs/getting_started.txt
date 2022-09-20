@@ -35,7 +35,19 @@ You will need
  * git
  * Mercury (tested with 22.01)
  * ninja 1.10 or later
- * asciidoc & source-highlight (if you want to build the documentation)
+
+Optionally for building documentation:
+
+ * asciidoc
+ * source-highlight
+
+Optionally to run the test suite:
+
+ * lua
+ * lua-file-system
+ * lua-posix
+ * tappy
+ * diffutils
 
 === C++ compiler, make and git 
 
@@ -125,6 +137,22 @@ cd /tmp
 wget https://github.com/ninja-build/ninja/releases/download/v1.10.2/ninja-linux.zip
 unzip ninja-linux.zip
 sudo cp ninja /usr/local/bin/
+----
+
+=== Lua, tappy and diffutils
+
+To run the test suite you will need
+
+ * lua
+ * lua-file-system
+ * lua-posix
+ * tappy
+ * diffutils
+
+Ubuntu 20.04 has a suitable package.
+
+----
+apt install lua5.3 lua-filesystem lua-posix tappy diffutils
 ----
 
 == Compiling Plasma
