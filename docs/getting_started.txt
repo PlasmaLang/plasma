@@ -46,7 +46,7 @@ Optionally to run the test suite:
  * lua
  * lua-file-system
  * lua-posix
- * tappy
+ * tappy (optional, used for nicer output)
  * diffutils
 
 === C++ compiler, make and git 

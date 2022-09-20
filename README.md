@@ -44,7 +44,7 @@ Optionally to run the test suite you will also need:
 * lua
 * lua-file-system
 * lua-posix
-* tappy
+* tappy (optional, used for nicer output)
 * diffutils
 
 On Debian (also Ubuntu, Mint etc) Linux
