@@ -42,7 +42,7 @@ void trace_state_(const Heap * heap, void * ip, void * env,
 {
     void * code = heap_interior_ptr_to_ptr(heap, ip);
     assert(ip >= code);
-    ptrdiff_t offset =
+    std::ptrdiff_t offset =
         reinterpret_cast<uint8_t *>(ip) - reinterpret_cast<uint8_t *>(code);
 
     // XXX These should be GC roots.

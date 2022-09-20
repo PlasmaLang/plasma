@@ -218,7 +218,8 @@ void Heap::print_addr_info(void * addr) const
     } else {
         cell_bop = ptr_to_bop_cell_interior(addr);
         if (cell_bop.is_valid()) {
-            ptrdiff_t diff = (uint8_t *)cell_bop.pointer() - (uint8_t *)addr;
+            std::ptrdiff_t diff =
+		    (uint8_t *)cell_bop.pointer() - (uint8_t *)addr;
             fprintf(stderr,
                     "Debug: %p is an interior pointer 0x%lx bytes into a "
                     "BOP cell at %p",
@@ -246,7 +247,8 @@ void Heap::print_addr_info(void * addr) const
     } else {
         cell_fit = ptr_to_fit_cell_interior(addr);
         if (cell_fit.is_valid()) {
-            ptrdiff_t diff = (uint8_t *)cell_fit.pointer() - (uint8_t *)addr;
+            std::ptrdiff_t diff =
+                    (uint8_t *)cell_fit.pointer() - (uint8_t *)addr;
             fprintf(stderr,
                     "Debug: %p is an interior pointer (0x%lx bytes) to a "
                     "Fit cell at %p",
