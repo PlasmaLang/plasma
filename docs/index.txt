@@ -21,7 +21,9 @@ link:plasma_ref.html[Plasma Language Reference]::
     than the getting started guide.
 
 link:contributing.html[Contributing to Plasma]::
-    Further documentation for people interested in working on Plasma.
+    Information about contributing to Plasma.  This covers necessary stuff
+    like your first pull request but also links to further information like
+    nitty-gritty compiler internals.
 
 link:https://plasmalang.org/about.html#Publications[Publications]::
     List of publications.
