@@ -3,7 +3,7 @@ Plasma Test Suite
 :Author: Paul Bone
 :Email: paul@plasmalang.org
 :Date: September 2022
-:Copyright: Copyright (C) 2012 Plasma Team
+:Copyright: Copyright (C) 2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
