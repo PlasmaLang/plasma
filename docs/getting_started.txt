@@ -2,7 +2,7 @@ Getting started with Plasma
 ===========================
 :Author: Paul Bone 
 :Email: paul@plasmalang.org
-:Date: April 2022
+:Date: September 2022
 :Copyright: Copyright (C) 2019-2022 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
@@ -12,6 +12,19 @@ This file contains some instructions on setting up the prerequisites and
 building Plasma.
 
 Plasma has been tested on Linux, Windows subsystem for Linux 1 and 2 on x86_64.
+
+
+== Docker
+
+If you want to run Plasma in a Docker container (rather than the
+instructions below for Ubuntu Linux) the Dockerfile provided in
+https://github.com/PlasmaLang/plasma/tree/master/scripts/docker[scripts/docker] is available,
+It is also build and available on
+https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
+You can resume this "getting started" guide at the
+xref:_hello_world[Hello World] section below,
+you will still need to adapt some of the instructions for use with the
+container.
 
 == Dependencies
 
@@ -114,14 +127,7 @@ unzip ninja-linux.zip
 sudo cp ninja /usr/local/bin/
 ----
 
-== Docker
-
-If you want to run Plasma in a Docker container, the Dockerfile provided in
-https://github.com/PlasmaLang/plasma/tree/master/scripts/docker[scripts/docker] is available,
-It is also build and available on
-https://hub.docker.com/r/paulbone/plasma-dep[docker hub].
-
-== Plasma
+== Compiling Plasma
 
 Now it’s time to clone the plasma repo:
 
@@ -156,9 +162,17 @@ The `make test` command will execute the test suite.
 Be sure to take a look at the example programs in 
 https://github.com/PlasmaLang/plasma/tree/master/examples[`examples/`].
 
-`make install` will install the Plasma tools into `$PREFIX/bin/`.
+== Installing Plasma
+
+The `make install` command will now install the Plasma tools into
+the `$PREFIX` path you set in `build.mk` in the previous step.
+The compiler and other tools are now available under `$PREFIX/bin/`.
+
+Enjoy!
 
 == Hello world
+
+So you've got Plasma installed, it's time to take it for a test-drive.
 
 In a new directory create a `BUILD.plz` project file, it should contain:
 
@@ -181,7 +195,7 @@ func hello() uses IO -> Int {
 }
 ----
 
-Then use the plzbuild program to build the program:
+Then use the `plzbuild` program to build the program:
 
 ----
 $ plzbuild
@@ -194,6 +208,12 @@ program's bytecode.  Run it with:
 $ plzrun hello.pz
 Hello world
 ----
+
+== vim customisation
+
+If you want to write some Plasma programs and you use vim.  You may wish to
+use the
+https://github.com/PlasmaLang/vim[vim editor support].
 
 == Getting help
 
@@ -210,11 +230,5 @@ resources for help.
 
 For bugs or missing information please
 https://github.com/PlasmaLang/plasma/issues/new[file a bug].
-
-== vim
-
-If you want to write some Plasma programs and you use vim.  You may wish to
-use the
-https://github.com/PlasmaLang/vim[vim editor support].
 
 // vim: set syntax=asciidoc:
