@@ -13,7 +13,14 @@
  * The machine word size.
  */
 #define WORDSIZE_BYTES sizeof(void *)
-#define WORDSIZE_BITS  __WORDSIZE
+
+#if UINTPTR_MAX == 0xFFFFFFFFFFFFFFFF
+#define WORDSIZE_BITS 64
+#elif UINTPTR_MAX == 0xFFFFFFFF
+#define WORDSIZE_BYTES 32
+#else
+#pragma error "Unknown pointer size"
+#endif
 
 #if WORDSIZE_BITS == 64
 #define WORDSIZE_HEX_CHARS_STR "16"
