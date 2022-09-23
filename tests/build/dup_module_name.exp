@@ -1,0 +1,2 @@
+dup_module_name.build:3: The following modules were listed more than once:
+                         'DupModuleName', 'NameAgain'

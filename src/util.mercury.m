@@ -41,6 +41,13 @@
 
 :- func maybe_cord(maybe(X)) = cord(X).
 
+    % find_duplicates(List, DupsInList),
+    %
+    % DupsInList is the set of duplicate items in List, if DupsInList is
+    % empty, then List contains no duplicates.
+    %
+:- pred find_duplicates(list(X)::in, set(X)::out) is det.
+
     % Mercury does not provide a map over maybe_error.
     %
 :- func maybe_error_map(func(A) = B, maybe_error(A, E)) = maybe_error(B, E).
@@ -151,6 +158,22 @@ list_maybe_to_list([yes(X) | List]) = [X | list_maybe_to_list(List)].
 
 maybe_cord(yes(X)) = singleton(X).
 maybe_cord(no) = init.
+
+%-----------------------------------------------------------------------%
+
+find_duplicates(List, Dups) :-
+    find_duplicates_2(List, set.init, set.init, Dups).
+
+:- pred find_duplicates_2(list(X)::in, set(X)::in, set(X)::in, set(X)::out) is det.
+
+find_duplicates_2([], _, !Dups).
+find_duplicates_2([X | Xs], !.Seen, !Dups) :-
+    ( if member(X, !.Seen) then
+        insert(X, !Dups)
+    else
+        insert(X, !Seen)
+    ),
+    find_duplicates_2(Xs, !.Seen, !Dups).
 
 %-----------------------------------------------------------------------%
 

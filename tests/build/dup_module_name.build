@@ -1,0 +1,7 @@
+# PLZTEST type compile_failure
+
+[dup_module_name]
+type = program
+# List a module name twice.
+modules = [DupModuleName, SingleModuleName, DupModuleName, NameAgain, NameAgain, NameAgain]
+
