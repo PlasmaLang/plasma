@@ -515,7 +515,9 @@ function filter_compiler_output(dir, input_name, output_name)
 
   if output_found then
     for line in input:lines() do
-      if line:match("ninja: build stopped") then
+      if line:match("^ninja: build stopped") or
+         line:match("^%[%d+/%d+%]")
+      then
         break
       end
       output:write(line .. "\n") 
