@@ -502,18 +502,31 @@ print("1.." .. num_tests)
 function filter_compiler_output(dir, input_name, output_name)
   local input = assert(io.open(dir .. "/" .. input_name))
   local output = assert(io.open(dir .. "/" .. output_name, "w"))
+  local all_lines = {}
+  -- True if we find the right section of output to filter.
+  local output_found = false
   for line in input:lines() do
+    table.insert(all_lines, line)
     if line:match("^[^%s]+plzc ") then
+      output_found = true
       break
     end
   end
-    
-  for line in input:lines() do
-    if line:match("ninja: build stopped") then
-      break
+
+  if output_found then
+    for line in input:lines() do
+      if line:match("ninja: build stopped") then
+        break
+      end
+      output:write(line .. "\n") 
     end
-    output:write(line .. "\n") 
+  else
+    -- We didn't find the right output, write out everything.
+    for _, line in ipairs(all_lines) do
+      output:write(line .. "\n")
+    end
   end
+
   input:close()
   output:close()
 end
