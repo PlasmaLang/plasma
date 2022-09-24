@@ -1,0 +1,8 @@
+# PLZTEST type compile_failure
+
+[dup_module_name_2]
+type = program
+# List a module name twice, this time with a case or underscore difference.
+# THis will be caught when the compiler checks that it got the right module.
+modules = [DupModuleName2, Dup_ModuleName2]
+
