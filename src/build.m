@@ -220,8 +220,21 @@ make_target(TOML, TargetStr) = Result :-
                 ModulesResult = ok(Modules - ModulesContext),
                 CSourcesResult = ok(CSources - _),
 
-                Result = ok(yes(target(TargetName, Modules, ModulesContext,
-                    CSources)))
+                ( if
+                    find_duplicates(Modules, DupModules),
+                    not is_empty(DupModules)
+                then
+                    DupModulesStrings = map(func(M) = 
+                        "'" ++ q_name_to_string(M) ++ "'",
+                        to_sorted_list(DupModules)),
+                    Result = return_error(TargetContext,
+                        format(
+                            "The following modules were listed more than once: %s",
+                        [s(string_join(", ", DupModulesStrings))]))
+                else
+                    Result = ok(yes(target(TargetName, Modules, ModulesContext,
+                        CSources)))
+                )
             ;
                 ModulesResult = ok(_),
                 CSourcesResult = errors(Errors),
