@@ -548,7 +548,7 @@ function run_test(test)
     if (test.build_file) then
       result = test_step(test, "build", result,
         function()
-          build_dir = test.name .. ".dir"
+          local build_dir = test.name .. ".dir"
           return execute_test_command(test, "build", plzbuild_bin,
             {"--build-file", test.build_file, "--build-dir", build_dir},
             nil, nil, nil, 0)
@@ -580,7 +580,7 @@ function run_test(test)
   elseif test.type == "compile_failure" then
     result = test_step(test, "build-failure", result,
       function()
-        build_dir = test.name .. ".dir"
+        local build_dir = test.name .. ".dir"
         return execute_test_command(test, "build-failure", plzbuild_bin,
           {"--build-file", test.build_file, "--build-dir", build_dir},
           nil, test.output, nil, 1)
