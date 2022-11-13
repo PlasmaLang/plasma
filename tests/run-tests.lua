@@ -225,7 +225,7 @@ function test_configuration(filename)
     local line_no = 0
     for line in file:lines() do
       line_no = line_no + 1
-      local _, _, key, value = string.find(line, "PLZTEST%s+(%S+)%s+(%S+)")
+      local _, _, key, value = string.find(line, "PLZTEST%s+(%S+)%s+(.-)%s*$")
       if key then
         if key == "returns" then
           expect_return = tonumber(value)
