@@ -36,6 +36,25 @@ function debug(message)
   -- print(message)
 end
 
+function list_append(l1, l2)
+  local l = {}
+  for _, v in ipairs(l1) do
+    table.insert(l, v)
+  end
+  for _, v in ipairs(l2) do
+    table.insert(l, v)
+  end
+  return l
+end
+
+function string_split(str)
+  local l = {}
+  for token in str:gmatch("%S+") do
+    table.insert(l, token)
+  end
+  return l
+end
+
 -- Return an iterator that produces all the files under dirs (an array)
 -- recursively.
 function dir_recursive(dirs)
@@ -207,12 +226,14 @@ end
 --    check_stderr - if we should check stderr output rather than stdout
 --    build_type - The build type to enable this test for (nil for all)
 --    test_type - The type of this test (nil for auto or compile_failure)
+--    build_args - The arguments for the plzbuild command
 --
 function test_configuration(filename)
   local expect_return = 0
   local check_stderr = false
   local build_type
   local test_type
+  local build_args
 
   function invalid_value(key, value)
     print(string.format("%s: Invalid value '%s' for key %s",
@@ -244,6 +265,8 @@ function test_configuration(filename)
           build_type = value 
         elseif key == "type" then
           test_type = value
+        elseif key == "build_args" then
+          build_args = string_split(value)
         else
           print(string.format("%s:%d: Unknown key in test configuration %s",
             filename, line_no, key))
@@ -258,6 +281,7 @@ function test_configuration(filename)
     check_stderr = check_stderr,
     build_type = build_type,
     test_type = test_type,
+    build_args = build_args,
   }
 end
 
@@ -538,10 +562,14 @@ end
 --
 function run_test(test)
   local result = true -- we start in a good state
+  local build_args = {}
+  if (test.config.build_args) then
+    build_args = test.config.build_args
+  end
   if test.type == "plzbuild" then
     result = test_step(test, "build", result,
       function()
-        return execute_test_command(test, "build", plzbuild_bin, {}, nil,
+        return execute_test_command(test, "build", plzbuild_bin, build_args, nil,
           nil, nil, 0)
       end)
   elseif test.type == "run" then
@@ -549,8 +577,10 @@ function run_test(test)
       result = test_step(test, "build", result,
         function()
           local build_dir = test.name .. ".dir"
+          local extra_args = 
+            {"--build-file", test.build_file, "--build-dir", build_dir}
           return execute_test_command(test, "build", plzbuild_bin,
-            {"--build-file", test.build_file, "--build-dir", build_dir},
+            list_append(extra_args, build_args),
             nil, nil, nil, 0)
         end)
     end
@@ -581,9 +611,9 @@ function run_test(test)
     result = test_step(test, "build-failure", result,
       function()
         local build_dir = test.name .. ".dir"
+        local extra_args = {"--build-file", test.build_file, "--build-dir", build_dir}
         return execute_test_command(test, "build-failure", plzbuild_bin,
-          {"--build-file", test.build_file, "--build-dir", build_dir},
-          nil, test.output, nil, 1)
+          list_append(build_args, extra_args), nil, test.output, nil, 1)
       end)
     result = test_step(test, "diff", result,
       function()
