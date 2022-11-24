@@ -612,8 +612,15 @@ function run_test(test)
       function()
         local build_dir = test.name .. ".dir"
         local extra_args = {"--build-file", test.build_file, "--build-dir", build_dir}
+        local exp_stdout = nil
+        local exp_stderr = nil
+        if (test.config.check_stderr) then
+          exp_stderr = test.output
+        else
+          exp_stdout = test.output
+        end
         return execute_test_command(test, "build-failure", plzbuild_bin,
-          list_append(build_args, extra_args), nil, test.output, nil, 1)
+          list_append(build_args, extra_args), nil, exp_stdout, exp_stderr, 1)
       end)
     result = test_step(test, "diff", result,
       function()
