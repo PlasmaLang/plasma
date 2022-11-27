@@ -71,6 +71,9 @@ The recognised parameters are:
 executed.  If not set then the test runs in all builds.  This is the same
 build type as set in `build.mk`.
 
+**`build_args`**: Arguments to pass to plzbuild during the build step of the
+test.
+
 **`returns`**: The expected exit code for a passing test.  The default is 0.
 
 **`output`**: Which stream contains the output we wish to capture and compare.
