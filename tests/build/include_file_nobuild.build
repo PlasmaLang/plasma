@@ -1,7 +1,9 @@
 # This is free and unencumbered software released into the public domain.
 # See ../LICENSE.unlicense
 
-[include_nofile_build]
+# PLZTEST type compile_failure
+
+[include_file_nobuild]
 type = program
-modules = [IncludeNofileBuild, NotExist2]
+modules = [IncludeFileNobuild, NotExist3]
 

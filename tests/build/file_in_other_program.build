@@ -1,3 +1,6 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
 # Test that including a file that's part of a different program has the
 # correct error message.
 
