@@ -614,7 +614,11 @@ function run_test(test)
     result = test_step(test, "build-failure", result,
       function()
         local build_dir = test.name .. ".dir"
-        local extra_args = {"--build-file", test.build_file, "--build-dir", build_dir}
+        local extra_args = {"--build-dir", build_dir}
+        if (test.build_file) then
+          extra_args = list_append(extra_args,
+            {"--build-file", test.build_file})
+        end
         local exp_stdout = nil
         local exp_stderr = nil
         if (test.config.check_stderr) then
