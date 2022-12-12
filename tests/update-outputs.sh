@@ -8,7 +8,6 @@ set -e
 # Only work in tests directories that incorporate compiler error messages.
 DIRS="tests-old/invalid 
       tests-old/modules-invalid 
-      tests-old/build-invalid 
       tests-old/missing"
 
 for TESTDIR in $DIRS; do

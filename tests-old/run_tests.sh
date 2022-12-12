@@ -50,7 +50,6 @@ fi
 DIRS="invalid
       modules
       modules-invalid
-      build-invalid
       ffi
       missing"
 
