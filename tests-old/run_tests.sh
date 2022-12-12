@@ -50,7 +50,6 @@ fi
 DIRS="invalid
       modules
       modules-invalid
-      ffi
       missing"
 
 for DIR in $DIRS; do

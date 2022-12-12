@@ -8,6 +8,5 @@ test suite.
 * [modules](modules) - Valid programs that use multiple modules
 * [modules-invalid](modules-invalid) - Invalid programs that use multiple
   modules
-* [ffi](ffi) - Tests of the foreign function interface
 * [missing](missing) - Valid programs with unimplemented features
 
