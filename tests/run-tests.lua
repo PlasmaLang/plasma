@@ -345,6 +345,7 @@ gen_all_tests =
 
         local build_file = name_if_exists(path.dir, path.file, ".build")
         local source_file = name_if_exists(path.dir, path.file, ".p")
+        local test_file = name_if_exists(path.dir, path.file, ".test")
 
         local name = path.file:gsub(".exp", "")
         local desc = string.format("%s/%s", path.dir, name)
@@ -359,6 +360,8 @@ gen_all_tests =
           config = test_configuration(build_file)
         elseif source_file then
           config = test_configuration(source_file)
+        elseif test_file then
+          config = test_configuration(test_file)
         else
           -- Some module tests have neither a build file nor a source file
           config = {}
