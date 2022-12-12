@@ -346,6 +346,7 @@ gen_all_tests =
         local build_file = name_if_exists(path.dir, path.file, ".build")
         local source_file = name_if_exists(path.dir, path.file, ".p")
         local test_file = name_if_exists(path.dir, path.file, ".test")
+        local foreign_file = name_if_exists(path.dir, path.file, ".cpp")
 
         local name = path.file:gsub(".exp", "")
         local desc = string.format("%s/%s", path.dir, name)
@@ -378,6 +379,7 @@ gen_all_tests =
           expect = path.file,
           input = maybe_input,
           program = path.file:gsub(".exp", ".pz"),
+          foreign_module = foreign_file and path.file:gsub(".exp", ".so"),
           config = config,
         })
       end
@@ -596,7 +598,11 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
-        return execute_test_command(test, "run", plzrun_bin, {test.program},
+        local program_str = test.program
+        if (test.foreign_module) then
+          program_str = program_str .. ":" .. test.foreign_module
+        end
+        return execute_test_command(test, "run", plzrun_bin, {program_str},
           test.input, exp_stdout, exp_stderr, test.config.expect_return)
       end)
     result = test_step(test, "diff", result,
