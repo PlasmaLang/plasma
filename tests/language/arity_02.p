@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Arity
+module Arity02
 
 export
 func main() uses IO -> Int {

@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[arity_lambda]
+type = program
+modules = [ArityLambda]
+

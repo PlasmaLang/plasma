@@ -1,7 +1,7 @@
 
-[arity]
+[arity_01]
 type = program
-modules = [Arity]
+modules = [Arity01]
 
 [closure_01]
 type = program

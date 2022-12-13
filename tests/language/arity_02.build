@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[arity_02]
+type = program
+modules = [Arity02]
+

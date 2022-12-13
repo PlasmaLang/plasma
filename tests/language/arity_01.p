@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Arity
+module Arity01
 
 entrypoint
 func main() uses IO -> Int {
