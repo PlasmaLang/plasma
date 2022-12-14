@@ -536,7 +536,7 @@ function filter_compiler_output(dir, input_name, output_name)
   local output_found = false
   for line in input:lines() do
     table.insert(all_lines, line)
-    if line:match("^%S+plzc ") then
+    if line:match("^%S+plzc ") or line:match("^%S+plzlnk ") then
       output_found = true
       break
     end
