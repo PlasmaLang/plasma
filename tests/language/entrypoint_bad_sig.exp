@@ -1,0 +1,2 @@
+entrypoint_bad_sig.p:15: A function that is marked as an entrypoint does not
+                         have the correct signature for an entrypoint.

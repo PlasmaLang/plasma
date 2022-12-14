@@ -4,11 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module MultiEntry 
-
-/*
- * Test that we can set this as the entrypoint on the linker command line
- */
+module EntrypointMulti 
 
 entrypoint
 func name1() uses IO -> Int {

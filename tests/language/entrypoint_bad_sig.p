@@ -4,10 +4,15 @@
  * See ../LICENSE.unlicense
  */
 
-module NoEntry
+module EntrypointBadSig 
 
-export
-func main() uses IO -> Int {
+/*
+ * This program has an entrypoint function, but it has an incorrect
+ * signature for an entrypoint.
+ */
+
+entrypoint
+func main(foo : String) uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically where possible.
     print!("Hello world\n")

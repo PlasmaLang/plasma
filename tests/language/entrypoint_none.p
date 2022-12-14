@@ -4,15 +4,12 @@
  * See ../LICENSE.unlicense
  */
 
-module BadEntry
+module EntrypointNone 
 
-/*
- * This program has an entrypoint function, but it has an incorrect
- * signature for an entrypoint.
- */
-
-entrypoint
-func main(foo : String) uses IO -> Int {
+// This is exported but not marked as an entrypoint, the linker will be
+// unable to find an entrypoint in the program.
+export
+func main() uses IO -> Int {
     // the ! indicates that this call uses a resource, which resource is
     // determined automatically where possible.
     print!("Hello world\n")

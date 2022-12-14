@@ -1,0 +1,7 @@
+
+# PLZTEST type compile_failure 
+
+[entrypoint_bad_sig]
+type = program
+modules = [EntrypointBadSig]
+

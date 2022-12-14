@@ -1,0 +1,7 @@
+
+# PLZTEST type compile_failure 
+
+[entrypoint_none]
+type = program
+modules = [EntrypointNone]
+
