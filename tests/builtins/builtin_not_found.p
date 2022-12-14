@@ -4,10 +4,12 @@
  * See ../LICENSE.unlicense
  */
 
-module Builtin_01
+module BuiltinNotFound
 
 entrypoint
 func main() uses IO -> Int {
+    // string_concat is a builtin, but it's not imported so this should
+    // generate a compiler error.
     print!(string_concat("abc", "def"))
 
     return 0

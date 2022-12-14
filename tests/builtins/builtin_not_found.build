@@ -1,0 +1,7 @@
+
+# PLZTEST type compile_failure 
+
+[builtin_not_found]
+type = program
+modules = [BuiltinNotFound]
+
