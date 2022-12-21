@@ -27,6 +27,8 @@ local root_dir = lfs.currentdir()
 local plzbuild_bin = root_dir .. "/src/plzbuild"
 local plzrun_bin = root_dir .. "/runtime/plzrun"
 local build_type = os.getenv("BUILD_TYPE")
+local logging = os.getenv("LOGGING")
+
 
 --
 -- Utility functions
@@ -34,6 +36,12 @@ local build_type = os.getenv("BUILD_TYPE")
 
 function debug(message)
   -- print(message)
+end
+
+function log(message)
+  if logging then
+    print(message)
+  end
 end
 
 function list_append(l1, l2)
@@ -53,6 +61,17 @@ function string_split(str)
     table.insert(l, token)
   end
   return l
+end
+
+function list_string(l)
+  local s = ""
+  for _, i in ipairs(l) do
+    if (s ~= "") then
+      s = s .. " "
+    end
+    s = s .. i
+  end
+  return s
 end
 
 -- Return an iterator that produces all the files under dirs (an array)
@@ -172,6 +191,7 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
     os.exit(1)
   end
 
+  log(string.format("Running: %s %s", bin, list_string(args)))
   local output = ""
   if mb_output_pipe_read then
     U.close(mb_output_pipe_write)
