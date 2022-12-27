@@ -413,10 +413,16 @@ gen_all_tests =
       })
     end
 
-    for _, dir in ipairs(arg) do
-      for path in dir_recursive({dir}) do
-        if (file_is_test(path.file)) then
-          path_to_test(path.file, path.dir)
+    -- a is for 'arg' but I don't want to clubber the real 'arg'.
+    for _, a in ipairs(arg) do
+      if (file_exists(a .. ".exp")) then
+        local dir, test = string.match(a, "(.-)/([^/]*)$")
+        path_to_test(test .. ".exp", dir)
+      else
+        for path in dir_recursive({a}) do
+          if (file_is_test(path.file)) then
+            path_to_test(path.file, path.dir)
+          end
         end
       end
     end
