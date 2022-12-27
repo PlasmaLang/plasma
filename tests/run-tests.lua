@@ -74,6 +74,10 @@ function list_string(l)
   return s
 end
 
+function file_exists(path)
+  return lfs.attributes(path) and path or nil
+end
+
 -- Return an iterator that produces all the files under dirs (an array)
 -- recursively.
 function dir_recursive(dirs)
@@ -328,80 +332,92 @@ end
 --
 gen_all_tests =
   coroutine.wrap(function()
+    function file_is_test(file)
+      return file:match(".exp$")
+    end
+
     local dirs = {}
-
-    for path in dir_recursive(arg) do
-      if (path.file:match(".exp$")) then
-        if (not dirs[path.dir]) then
-          local build_file = string.format("%s/BUILD.plz", path.dir)
-          if (lfs.attributes(build_file)) then
-            test = {
-              name = "BUILD.plz",
-              type = "plzbuild",
-              dir = path.dir,
-              desc = string.format("%s/BUILD.plz", path.dir),
-              output = "plzbuild.out",
-              config = {},
-            }
-            dirs[path.dir] = test
-            coroutine.yield(test)
-          else
-            -- We test for this below and need it to be distinct from nil.
-            dirs[path.dir] = "none"
-          end
-        end
-
-        local maybe_input = path.file:gsub(".exp", ".in")
-        if not lfs.attributes(
-            string.format("%s/%s", path.dir, maybe_input))
-        then
-          maybe_input = nil
-        end
-
-        function name_if_exists(dir, file, new_ext) 
-          local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
-          return lfs.attributes(path) and path or nil
-        end
-
-        local build_file = name_if_exists(path.dir, path.file, ".build")
-        local source_file = name_if_exists(path.dir, path.file, ".p")
-        local test_file = name_if_exists(path.dir, path.file, ".test")
-        local foreign_file = name_if_exists(path.dir, path.file, ".cpp")
-
-        local name = path.file:gsub(".exp", "")
-        local desc = string.format("%s/%s", path.dir, name)
-        local dir_build
-        if not build_file and dirs[path.dir] ~= "none" then
-          dir_build = dirs[path.dir]
-        end
-
-        local config
-
-        if build_file then
-          config = test_configuration(build_file)
-        elseif source_file then
-          config = test_configuration(source_file)
-        elseif test_file then
-          config = test_configuration(test_file)
+    function maybe_add_build_dir(dir)
+      if (not dirs[dir]) then
+        local build_file = string.format("%s/BUILD.plz", dir)
+        if (lfs.attributes(build_file)) then
+          test = {
+            name = "BUILD.plz",
+            type = "plzbuild",
+            dir = dir,
+            desc = string.format("%s/BUILD.plz", dir),
+            output = "plzbuild.out",
+            config = {},
+          }
+          dirs[dir] = test
+          coroutine.yield(test)
         else
-          -- Some module tests have neither a build file nor a source file
-          config = {}
+          -- We test for this below and need it to be distinct from nil.
+          dirs[dir] = "none"
         end
+      end
+    end
 
-        coroutine.yield({
-          name = name,
-          type = config.test_type or "run",
-          dir = path.dir,
-          desc = desc,
-          depends = dir_build,
-          build_file = build_file and path.file:gsub(".exp", ".build"),
-          output = path.file:gsub(".exp", ".out"),
-          expect = path.file,
-          input = maybe_input,
-          program = path.file:gsub(".exp", ".pz"),
-          foreign_module = foreign_file and path.file:gsub(".exp", ".so"),
-          config = config,
-        })
+    function path_to_test(file, dir)
+      maybe_add_build_dir(dir)
+      local maybe_input = file:gsub(".exp", ".in")
+      if not lfs.attributes(
+          string.format("%s/%s", dir, maybe_input))
+      then
+        maybe_input = nil
+      end
+
+      function name_if_exists(dir, file, new_ext) 
+        local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
+        return file_exists(path)
+      end
+
+      local build_file = name_if_exists(dir, file, ".build")
+      local source_file = name_if_exists(dir, file, ".p")
+      local test_file = name_if_exists(dir, file, ".test")
+      local foreign_file = name_if_exists(dir, file, ".cpp")
+
+      local name = file:gsub(".exp", "")
+      local desc = string.format("%s/%s", dir, name)
+      local dir_build
+      if not build_file and dirs[dir] ~= "none" then
+        dir_build = dirs[dir]
+      end
+
+      local config
+
+      if build_file then
+        config = test_configuration(build_file)
+      elseif source_file then
+        config = test_configuration(source_file)
+      elseif test_file then
+        config = test_configuration(test_file)
+      else
+        -- Some module tests have neither a build file nor a source file
+        config = {}
+      end
+
+      coroutine.yield({
+        name = name,
+        type = config.test_type or "run",
+        dir = dir,
+        desc = desc,
+        depends = dir_build,
+        build_file = build_file and file:gsub(".exp", ".build"),
+        output = file:gsub(".exp", ".out"),
+        expect = file,
+        input = maybe_input,
+        program = file:gsub(".exp", ".pz"),
+        foreign_module = foreign_file and file:gsub(".exp", ".so"),
+        config = config,
+      })
+    end
+
+    for _, dir in ipairs(arg) do
+      for path in dir_recursive({dir}) do
+        if (file_is_test(path.file)) then
+          path_to_test(path.file, path.dir)
+        end
       end
     end
   end)
