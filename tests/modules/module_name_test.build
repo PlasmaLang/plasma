@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[module_name_test]
+type = program
+modules = [ModuleNameTest]
+
