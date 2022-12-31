@@ -2,8 +2,8 @@ Getting started with Plasma
 ===========================
 :Author: Paul Bone 
 :Email: paul@plasmalang.org
-:Date: September 2022
-:Copyright: Copyright (C) 2019-2022 Plasma Team
+:Date: Janurary 2023
+:Copyright: Copyright (C) 2019-2023 Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -46,7 +46,6 @@ Optionally to run the test suite:
  * lua
  * lua-file-system
  * lua-posix
- * tappy (optional, used for nicer output)
  * diffutils
  * ncurses
 
@@ -143,21 +142,20 @@ sudo cp ninja /usr/local/bin/
 Alpine Linux doesn't currently contain a recent enough version, you'll need to
 build ninja from source on Alpine.
 
-=== Lua, tappy, diffutils and ncurses
+=== Lua, diffutils and ncurses
 
 To run the test suite you will need
 
  * lua
  * lua-file-system
  * lua-posix
- * tappy
  * diffutils
  * ncurses
 
 Ubuntu 20.04 has a suitable package.
 
 ----
-apt install lua5.3 lua-filesystem lua-posix tappy diffutils ncurses-bin
+apt install lua5.3 lua-filesystem lua-posix diffutils ncurses-bin
 ----
 
 == Compiling Plasma

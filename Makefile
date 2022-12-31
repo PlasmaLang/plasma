@@ -207,11 +207,7 @@ test-old : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
 	(cd tests-old; ./run_tests.sh $(BUILD_TYPE))
 .PHONY: test-new
 test-new : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
-	if which tappy > /dev/null; then \
-		BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests | tappy; \
-	else \
-		BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests; \
-	fi
+	BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests | ./tests/pretty.lua
 
 .PHONY: tags
 tags : src/tags runtime/tags
