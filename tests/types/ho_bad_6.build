@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[ho_bad_6]
+type = program
+modules = [HO_Bad_6]
+

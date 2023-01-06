@@ -1,6 +1,0 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Unknown variable or constructor 'msg'
-Context:            closure_05.p:15
-plzc location:      predicate `pre.from_ast.ast_to_pre_pattern'/8
-plzc file:          pre.from_ast.m

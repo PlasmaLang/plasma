@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[match_bad_1]
+type = program
+modules = [Match_Bad_1]
+

@@ -1,2 +1,0 @@
-types_4.p:13: "MyList(string)" and "MyList(int)" are not the same, because
-              "string" and "int" are not the same

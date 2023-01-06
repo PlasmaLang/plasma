@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[coverage_1]
+type = program
+modules = [Coverage_1]
+

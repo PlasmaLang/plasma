@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[occurs1]
+type = program
+modules = [Occurs1]
+

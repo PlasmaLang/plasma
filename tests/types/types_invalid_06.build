@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[types_invalid_06]
+type = program
+modules = [TypesInvalid_06]
+

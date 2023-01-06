@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[bug_375]
+type = program
+modules = [Bug375]
+

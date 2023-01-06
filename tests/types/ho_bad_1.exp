@@ -1,0 +1,3 @@
+ho_bad_1.p:14: "func(int) -> string" and "func(string) -> string" are not the
+               same, because
+               "int" and "string" are not the same

@@ -1,6 +1,0 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            The variable 'msg' is defined in an outer scope and cannot be initialised from within this closure
-Context:            closure_06.p:17
-plzc location:      predicate `pre.from_ast.pattern_simple_vars_or_wildcards'/9
-plzc file:          pre.from_ast.m

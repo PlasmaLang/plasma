@@ -1,0 +1,5 @@
+# PLZTEST type compile_failure 
+
+[vars_invalid_01]
+type = program
+modules = [VarsInvalid_01]

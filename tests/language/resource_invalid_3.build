@@ -1,0 +1,5 @@
+# PLZTEST type compile_failure 
+
+[resource_invalid_3]
+type = program
+modules = [ResourceInvalid3]

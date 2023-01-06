@@ -1,0 +1,1 @@
+ho_bad_6.p:21: "func(_) -> _" and "func(_, int) -> _" are not the same

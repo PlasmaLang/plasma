@@ -1,0 +1,6 @@
+bug_375.p:22: "func(C()) -> Builtin.Bool()" and "func(SP()) -> Builtin.Bool()"
+              are not the same, because
+              "C()" and "SP()" are not the same
+bug_375.p:36: "func(C()) -> Builtin.Bool()" and "func(SP()) -> Builtin.Bool()"
+              are not the same, because
+              "C()" and "SP()" are not the same

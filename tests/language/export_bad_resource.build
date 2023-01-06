@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[export_bad_resource]
+type = program
+modules = [ExportBadResource]
+

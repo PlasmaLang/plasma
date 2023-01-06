@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[return]
+type = program
+modules = [Return]
+

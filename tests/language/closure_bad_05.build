@@ -1,0 +1,6 @@
+# PLZTEST type compile_failure 
+
+[closure_bad_05]
+type = program
+modules = [Closure_Bad_05]
+

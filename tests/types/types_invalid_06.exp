@@ -1,0 +1,12 @@
+types_invalid_06.p:15: Ambigious types
+  The unbound solver variables are:
+    'Sv_v_19 = MyList(_)
+    'Anon_21 = _ # ? no 1
+    'Anon_22 = _ # ? no 1
+
+  The unresolved solver clauses are:
+      % ../types_invalid_06.p:15
+      'Sv_v_19 = MyList('Anon_22)
+
+      % ../types_invalid_06.p:15
+      'Sv_v_19 = MyList('Anon_21)
