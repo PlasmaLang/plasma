@@ -1,8 +1,6 @@
 #
 # This is a Plasma build file, it will tell Plasma about the programs in
-# this directory and what modules they're made from.  However tests are
-# executed via GNU Make so if you add a program here, also add a .pz target
-# in Makefile
+# this directory and what modules they're made from.
 #
 
 [change]
