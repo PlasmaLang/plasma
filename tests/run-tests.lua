@@ -27,6 +27,8 @@ local root_dir = lfs.currentdir()
 local plzbuild_bin = root_dir .. "/src/plzbuild"
 local plzrun_bin = root_dir .. "/runtime/plzrun"
 local build_type = os.getenv("BUILD_TYPE")
+local logging = os.getenv("LOGGING")
+
 
 --
 -- Utility functions
@@ -34,6 +36,12 @@ local build_type = os.getenv("BUILD_TYPE")
 
 function debug(message)
   -- print(message)
+end
+
+function log(message)
+  if logging then
+    print(message)
+  end
 end
 
 function list_append(l1, l2)
@@ -53,6 +61,21 @@ function string_split(str)
     table.insert(l, token)
   end
   return l
+end
+
+function list_string(l)
+  local s = ""
+  for _, i in ipairs(l) do
+    if (s ~= "") then
+      s = s .. " "
+    end
+    s = s .. i
+  end
+  return s
+end
+
+function file_exists(path)
+  return lfs.attributes(path) and path or nil
 end
 
 -- Return an iterator that produces all the files under dirs (an array)
@@ -172,6 +195,7 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
     os.exit(1)
   end
 
+  log(string.format("Running: %s %s", bin, list_string(args)))
   local output = ""
   if mb_output_pipe_read then
     U.close(mb_output_pipe_write)
@@ -308,75 +332,98 @@ end
 --
 gen_all_tests =
   coroutine.wrap(function()
-    local dirs = {}
+    function file_is_test(file)
+      return file:match(".exp$")
+    end
 
-    for path in dir_recursive(arg) do
-      if (path.file:match(".exp$")) then
-        if (not dirs[path.dir]) then
-          local build_file = string.format("%s/BUILD.plz", path.dir)
-          if (lfs.attributes(build_file)) then
-            test = {
-              name = "BUILD.plz",
-              type = "plzbuild",
-              dir = path.dir,
-              desc = string.format("%s/BUILD.plz", path.dir),
-              output = "plzbuild.out",
-              config = {},
-            }
-            dirs[path.dir] = test
-            coroutine.yield(test)
-          else
-            -- We test for this below and need it to be distinct from nil.
-            dirs[path.dir] = "none"
+    local dirs = {}
+    function maybe_add_build_dir(dir)
+      if (not dirs[dir]) then
+        local build_file = string.format("%s/BUILD.plz", dir)
+        if (lfs.attributes(build_file)) then
+          test = {
+            name = "BUILD.plz",
+            type = "plzbuild",
+            dir = dir,
+            desc = string.format("%s/BUILD.plz", dir),
+            output = "plzbuild.out",
+            config = {},
+          }
+          dirs[dir] = test
+          coroutine.yield(test)
+        else
+          -- We test for this below and need it to be distinct from nil.
+          dirs[dir] = "none"
+        end
+      end
+    end
+
+    function path_to_test(file, dir)
+      maybe_add_build_dir(dir)
+      local maybe_input = file:gsub(".exp", ".in")
+      if not lfs.attributes(
+          string.format("%s/%s", dir, maybe_input))
+      then
+        maybe_input = nil
+      end
+
+      function name_if_exists(dir, file, new_ext) 
+        local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
+        return file_exists(path)
+      end
+
+      local build_file = name_if_exists(dir, file, ".build")
+      local source_file = name_if_exists(dir, file, ".p")
+      local test_file = name_if_exists(dir, file, ".test")
+      local foreign_file = name_if_exists(dir, file, ".cpp")
+
+      local name = file:gsub(".exp", "")
+      local desc = string.format("%s/%s", dir, name)
+      local dir_build
+      if not build_file and dirs[dir] ~= "none" then
+        dir_build = dirs[dir]
+      end
+
+      local config
+
+      if build_file then
+        config = test_configuration(build_file)
+      elseif source_file then
+        config = test_configuration(source_file)
+      elseif test_file then
+        config = test_configuration(test_file)
+      else
+        -- Some module tests have neither a build file nor a source file
+        config = {}
+      end
+
+      coroutine.yield({
+        name = name,
+        type = config.test_type or "run",
+        dir = dir,
+        desc = desc,
+        depends = dir_build,
+        build_file = build_file and file:gsub(".exp", ".build"),
+        output = file:gsub(".exp", ".out"),
+        expect = file,
+        input = maybe_input,
+        program = file:gsub(".exp", ".pz"),
+        foreign_module = foreign_file and file:gsub(".exp", ".so"),
+        config = config,
+      })
+    end
+
+    -- a is for 'arg' but I don't want to clubber the real 'arg'.
+    for _, a in ipairs(arg) do
+      if (file_exists(a .. ".exp")) then
+        local dir, test = string.match(a, "(.-)/([^/]*)$")
+        path_to_test(test .. ".exp", dir)
+      else
+        for path in dir_recursive({a}) do
+          if (file_is_test(path.file)) then
+            path_to_test(path.file, path.dir)
           end
         end
-
-        local maybe_input = path.file:gsub(".exp", ".in")
-        if not lfs.attributes(
-            string.format("%s/%s", path.dir, maybe_input))
-        then
-          maybe_input = nil
-        end
-
-        function name_if_exists(dir, file, new_ext) 
-          local path = string.format("%s/%s", dir, file:gsub(".exp", new_ext))
-          return lfs.attributes(path) and path or nil
-        end
-
-        local build_file = name_if_exists(path.dir, path.file, ".build")
-        local source_file = name_if_exists(path.dir, path.file, ".p")
-
-        local name = path.file:gsub(".exp", "")
-        local desc = string.format("%s/%s", path.dir, name)
-        local dir_build
-        if not build_file and dirs[path.dir] ~= "none" then
-          dir_build = dirs[path.dir]
-        end
-
-        local config
-
-        if build_file then
-          config = test_configuration(build_file)
-        elseif source_file then
-          config = test_configuration(source_file)
-        else
-          -- Some module tests have neither a build file nor a source file
-          config = {}
-        end
-
-        coroutine.yield({
-          name = name,
-          type = config.test_type or "run",
-          dir = path.dir,
-          desc = desc,
-          depends = dir_build,
-          build_file = build_file and path.file:gsub(".exp", ".build"),
-          output = path.file:gsub(".exp", ".out"),
-          expect = path.file,
-          input = maybe_input,
-          program = path.file:gsub(".exp", ".pz"),
-          config = config,
-        })
       end
     end
   end)
@@ -531,7 +578,7 @@ function filter_compiler_output(dir, input_name, output_name)
   local output_found = false
   for line in input:lines() do
     table.insert(all_lines, line)
-    if line:match("^%S+plzc ") then
+    if line:match("^%S+plzc ") or line:match("^%S+plzlnk ") then
       output_found = true
       break
     end
@@ -593,7 +640,11 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
-        return execute_test_command(test, "run", plzrun_bin, {test.program},
+        local program_str = test.program
+        if (test.foreign_module) then
+          program_str = program_str .. ":" .. test.foreign_module
+        end
+        return execute_test_command(test, "run", plzrun_bin, {program_str},
           test.input, exp_stdout, exp_stderr, test.config.expect_return)
       end)
     result = test_step(test, "diff", result,
@@ -611,7 +662,11 @@ function run_test(test)
     result = test_step(test, "build-failure", result,
       function()
         local build_dir = test.name .. ".dir"
-        local extra_args = {"--build-file", test.build_file, "--build-dir", build_dir}
+        local extra_args = {"--build-dir", build_dir}
+        if (test.build_file) then
+          extra_args = list_append(extra_args,
+            {"--build-file", test.build_file})
+        end
         local exp_stdout = nil
         local exp_stderr = nil
         if (test.config.check_stderr) then

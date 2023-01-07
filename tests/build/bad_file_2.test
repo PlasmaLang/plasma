@@ -1,0 +1,5 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure
+# PLZTEST build_args --rebuild --build-file not_exist.build

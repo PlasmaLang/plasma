@@ -1,0 +1,6 @@
+A compilation error occured and this error is not handled gracefully
+by the Plasma compiler. Sorry.
+Message:            Unknown symbol: msg
+Context:            ../closure_bad_02.p:22
+plzc location:      predicate `pre.from_ast.ast_to_pre_expr_2'/7
+plzc file:          pre.from_ast.m

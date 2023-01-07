@@ -207,11 +207,7 @@ test-old : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
 	(cd tests-old; ./run_tests.sh $(BUILD_TYPE))
 .PHONY: test-new
 test-new : src/plzasm src/plzlnk src/plzc src/plzbuild runtime/plzrun
-	if which tappy > /dev/null; then \
-		BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests | tappy; \
-	else \
-		BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests; \
-	fi
+	BUILD_TYPE=$(BUILD_TYPE) ./tests/run-tests.lua examples tests | ./tests/pretty.lua
 
 .PHONY: tags
 tags : src/tags runtime/tags
@@ -240,11 +236,8 @@ docs : $(DOCS_TARGETS)
 clean : localclean
 	$(MAKE) -C examples clean
 	$(MAKE) -C tests-old/pzt clean
-	$(MAKE) -C tests-old/invalid clean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
-	$(MAKE) -C tests-old/build-invalid clean
-	$(MAKE) -C tests-old/ffi clean
 	$(MAKE) -C tests-old/missing clean
 	find tests -name *.pz -o \
 			   -name *.out -o \
@@ -261,12 +254,11 @@ clean : localclean
 realclean : localclean
 	$(MAKE) -C examples realclean
 	$(MAKE) -C tests-old/pzt realclean
-	$(MAKE) -C tests-old/invalid realclean
 	$(MAKE) -C tests-old/modules realclean
 	$(MAKE) -C tests-old/modules-invalid realclean
-	$(MAKE) -C tests-old/build-invalid realclean
-	$(MAKE) -C tests-old/ffi realclean
 	$(MAKE) -C tests-old/missing realclean
+	find tests -name *.so \
+		| xargs -r rm
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
 	rm -rf src/Mercury

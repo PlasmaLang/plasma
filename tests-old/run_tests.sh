@@ -47,11 +47,8 @@ if [ -n "$STALE_BUILD_DIRS" ]; then
     rm -r $STALE_BUILD_DIRS
 fi
 
-DIRS="invalid
-      modules
+DIRS="modules
       modules-invalid
-      build-invalid
-      ffi
       missing"
 
 for DIR in $DIRS; do

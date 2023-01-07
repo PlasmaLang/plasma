@@ -1,0 +1,2 @@
+ho_bad_4.p:11: "func(string) -> (string, int)" and "func(string) -> string" are
+               not the same

@@ -1,0 +1,2 @@
+ho_bad_2.p:19: "func('a) -> 'a" and "func('a) -> 'b" are not the same, because
+               "'a" and "'b" are not the same

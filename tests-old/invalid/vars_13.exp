@@ -1,6 +1,0 @@
-A compilation error occured and this error is not handled gracefully
-by the Plasma compiler. Sorry.
-Message:            Variable not initalised: x
-Context:            vars_13.p:12
-plzc location:      predicate `pre.from_ast.ast_to_pre_expr_2'/7
-plzc file:          pre.from_ast.m

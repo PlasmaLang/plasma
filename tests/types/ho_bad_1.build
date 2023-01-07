@@ -1,0 +1,9 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure 
+
+[ho_bad_1]
+type = program
+modules = [HO_Bad_1]
+

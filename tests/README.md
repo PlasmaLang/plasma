@@ -9,6 +9,7 @@ Tests are organised into the following directories:
 
  * **build**: Test the build system.
  * **builtins**: Test builtin functions.
+ * **ffi**: Test the foreign function interface.
  * **language**: Test language features (syntax and basic semantics).
  * **modules**: Test the module system.
  * **runtime**: Test runtime features like the GC.

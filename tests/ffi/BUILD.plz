@@ -1,0 +1,12 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+#
+# This is a Plasma build file, it will tell Plasma about the programs in
+# this directory and what modules they're made from.
+#
+
+[import_function]
+type = program
+modules = [ImportFunction]
+c_sources = [import_function.cpp]
+

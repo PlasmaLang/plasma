@@ -1,0 +1,6 @@
+A compilation error occured and this error is not handled gracefully
+by the Plasma compiler. Sorry.
+Message:            Two or more parameters have the same name
+Context:            ../vars_invalid_02.p:10
+plzc location:      predicate `pre.from_ast.ast_to_pre_body'/10
+plzc file:          pre.from_ast.m

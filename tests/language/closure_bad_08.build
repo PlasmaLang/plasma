@@ -1,0 +1,9 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure 
+
+[closure_bad_08]
+type = program
+modules = [Closure_Bad_08]
+

@@ -1,7 +1,9 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
 
-[arity]
+[arity_01]
 type = program
-modules = [Arity]
+modules = [Arity01]
 
 [closure_01]
 type = program
