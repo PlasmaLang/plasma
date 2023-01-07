@@ -2,7 +2,7 @@
  * Plasma bytecode execution
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2022 Plasma Team
+ * Copyright (C) 2015-2023 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This program executes plasma bytecode.
@@ -160,6 +160,6 @@ static void version(void)
 {
     printf("Plasma Runtime, " PLASMA_VERSION_STRING "\n");
     printf("https://plasmalang.org\n");
-    printf("Copyright (C) 2015-2022 The Plasma Team\n");
+    printf("Copyright (C) 2015-2023 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
 }

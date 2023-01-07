@@ -2,7 +2,7 @@
 % Plasma constants
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) 2020-2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module provides constants used in the compiler and other tools.
@@ -79,7 +79,7 @@ import_whitelist_file_no_directroy = "include_whitelist.txt".
 version(Name, !IO) :-
     io.format("%s, %s\n", [s(Name), s(version_string)], !IO),
     io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2015-2022 The Plasma Team\n", !IO),
+    io.write_string("Copyright (C) 2015-2023 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
 %-----------------------------------------------------------------------%
