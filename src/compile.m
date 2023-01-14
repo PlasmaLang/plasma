@@ -2,7 +2,7 @@
 % Plasma compilation process
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) 2020-2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module drives the compilation process.  It sits between plzc.m which
@@ -119,8 +119,8 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
     then
         true
     else
-        add_error(Context,
-            ce_source_file_name_not_match_module(ModuleName, InputFileName),
+        add_error(Context, ce_source_file_name_not_match_module(ModuleName,
+                filename(InputFileName)),
             !Errors)
     ),
 
@@ -138,7 +138,7 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         true
     else
         add_error(Context, ce_object_file_name_not_match_module(ModuleName,
-            OutputFileName), !Errors)
+            filename(OutputFileName)), !Errors)
     ).
 
 %-----------------------------------------------------------------------%

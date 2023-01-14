@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module compile_error.
 %
-% Copyright (C) 2015-2018, 2020-2022 Plasma Team
+% Copyright (C) 2015-2018, 2020-2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines possible Plasma compilation errors.
@@ -25,6 +25,8 @@
 
 %-----------------------------------------------------------------------%
 
+:- type filename ---> filename(string).
+
 :- type compile_error
     % Errors for reading source code or the organisation of code (module and
     % file names don't match, etc).
@@ -32,11 +34,11 @@
             % this.
     --->    ce_read_source_error(read_src_error)
     ;       ce_module_name_not_match_build(q_name, string)
-    ;       ce_source_file_name_not_match_module(q_name, string)
-    ;       ce_object_file_name_not_match_module(q_name, string)
+    ;       ce_source_file_name_not_match_module(q_name, filename)
+    ;       ce_object_file_name_not_match_module(q_name, filename)
     ;       ce_module_not_found(q_name)
     ;       ce_module_unavailable(q_name, q_name)
-    ;       ce_interface_contains_wrong_module(string, q_name, q_name)
+    ;       ce_interface_contains_wrong_module(filename, q_name, q_name)
     ;       ce_import_would_clobber(q_name, maybe(q_name))
     ;       ce_import_duplicate(q_name)
 
@@ -132,12 +134,12 @@ ce_to_pretty(ce_module_name_not_match_build(Module, ModuleInBuild),
         [p_quote("'", p_str(ModuleInBuild))].
 ce_to_pretty(ce_source_file_name_not_match_module(Expect, Got), Para, []) :-
     Para = p_words("The source filename") ++ p_spc_nl ++
-        [p_quote("'", p_str(Got))] ++ p_spc_nl ++
+        p_file(Got) ++ p_spc_nl ++
         p_words("does not match the module name") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Expect))].
 ce_to_pretty(ce_object_file_name_not_match_module(Expect, Got), Para, []) :-
     Para = p_words("The output filename") ++ p_spc_nl ++
-        [p_quote("`", p_str(Got))] ++ p_spc_nl ++
+        p_file(Got) ++ p_spc_nl ++
         p_words("does not match the module name") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Expect))].
 ce_to_pretty(ce_module_not_found(Name), Para, []) :-
@@ -152,7 +154,7 @@ ce_to_pretty(ce_module_unavailable(Importee, Importer), Para, []) :-
         [q_name_pretty(Importer)].
 ce_to_pretty(ce_interface_contains_wrong_module(File, Expect, Got), Para, []) :-
     Para = p_words("The interface file") ++ p_spc_nl ++
-        [p_quote("'", p_str(File))] ++ p_spc_nl ++
+        p_file(File) ++ p_spc_nl ++
         p_words("describes the wrong module, got:") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Got))] ++ p_spc_nl ++
         [p_str("expected:")] ++ p_spc_nl ++
@@ -350,5 +352,9 @@ type_error_pretty(type_unification_occurs(Var, Type)) =
         p_words("cannot be bound to") ++ p_spc_nl ++
         [p_quote("\"", Type)] ++ p_spc_nl ++
         p_words("because it can't contain itself.").
+
+:- func p_file(filename) = list(pretty).
+
+p_file(filename(File)) = [p_quote("'", p_str(File))].
 
 %-----------------------------------------------------------------------%
