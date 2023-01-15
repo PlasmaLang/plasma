@@ -132,14 +132,14 @@ ce_to_pretty(_, ce_module_name_not_match_build(Module, ModuleInBuild),
         p_words("does not match the module name from the BUILD.plz file") ++
         p_spc_nl ++
         [p_quote("'", p_str(ModuleInBuild))].
-ce_to_pretty(_, ce_source_file_name_not_match_module(Expect, Got), Para, []) :-
+ce_to_pretty(SrcPath, ce_source_file_name_not_match_module(Expect, Got), Para, []) :-
     Para = p_words("The source filename") ++ p_spc_nl ++
-        p_file(Got) ++ p_spc_nl ++
+        p_file(SrcPath, Got) ++ p_spc_nl ++
         p_words("does not match the module name") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Expect))].
-ce_to_pretty(_, ce_object_file_name_not_match_module(Expect, Got), Para, []) :-
+ce_to_pretty(SrcPath, ce_object_file_name_not_match_module(Expect, Got), Para, []) :-
     Para = p_words("The output filename") ++ p_spc_nl ++
-        p_file(Got) ++ p_spc_nl ++
+        p_file(SrcPath, Got) ++ p_spc_nl ++
         p_words("does not match the module name") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Expect))].
 ce_to_pretty(_, ce_module_not_found(Name), Para, []) :-
@@ -152,9 +152,9 @@ ce_to_pretty(_, ce_module_unavailable(Importee, Importer), Para, []) :-
         p_words("can't be included because it is not listed in all the " ++
             "build file's module lists that include module") ++ p_spc_nl ++
         [q_name_pretty(Importer)].
-ce_to_pretty(_, ce_interface_contains_wrong_module(File, Expect, Got), Para, []) :-
+ce_to_pretty(SrcPath, ce_interface_contains_wrong_module(File, Expect, Got), Para, []) :-
     Para = p_words("The interface file") ++ p_spc_nl ++
-        p_file(File) ++ p_spc_nl ++
+        p_file(SrcPath, File) ++ p_spc_nl ++
         p_words("describes the wrong module, got:") ++ p_spc_nl ++
         [p_quote("'", q_name_pretty(Got))] ++ p_spc_nl ++
         [p_str("expected:")] ++ p_spc_nl ++
@@ -353,8 +353,13 @@ type_error_pretty(type_unification_occurs(Var, Type)) =
         [p_quote("\"", Type)] ++ p_spc_nl ++
         p_words("because it can't contain itself.").
 
-:- func p_file(filename) = list(pretty).
+:- func p_file(string, filename) = list(pretty).
 
-p_file(filename(File)) = [p_quote("'", p_str(File))].
+p_file(SourcePath, filename(File0)) = [p_quote("'", p_str(File))] :-
+    ( if append(SourcePath, File1, File0) then
+        File = File1
+    else
+        File = File0
+    ).
 
 %-----------------------------------------------------------------------%
