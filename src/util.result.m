@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module util.result.
 %
-% Copyright (C) 2015, 2018, 2020-2021 Plasma Team
+% Copyright (C) 2015, 2018, 2020-2021, 2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % A result type, like maybe_error however it can track multiple compilation
@@ -43,7 +43,7 @@
 
 :- typeclass error(E) where [
         % pretty(Error, ParaPart, ExtraPart)
-        pred pretty(E::in, list(pretty)::out, list(pretty)::out) is det,
+        pred pretty(string::in, E::in, list(pretty)::out, list(pretty)::out) is det,
         func error_or_warning(E) = error_or_warning
     ].
 
@@ -169,7 +169,7 @@ error_to_string(SourcePath, error(Context, Error)) = String :-
         ),
         Prefix = [p_str(EoW), p_tabstop]
     ),
-    pretty(Error, Para, Extra),
+    pretty(SourcePath, Error, Para, Extra),
     ( Extra = [],
         Pretty = [p_para(Prefix ++ Para)]
     ; Extra = [_ | _],
@@ -214,7 +214,7 @@ error_map(Func, error(Context, E)) = error(Context, Func(E)).
 %-----------------------------------------------------------------------%
 
 :- instance error(string) where [
-        pretty(S, p_words(S), []),
+        pretty(_, S, p_words(S), []),
         error_or_warning(_) = error
     ].
 

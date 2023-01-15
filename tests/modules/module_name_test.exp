@@ -1,7 +1,7 @@
 module_name_test.p:8: The module name from the source file
                       'ModuleNameTestQUACK' does not match the module name from
                       the BUILD.plz file 'ModuleNameTest'
-module_name_test.p:8: The source filename '../module_name_test.p' does not
-                      match the module name 'ModuleNameTestQUACK'
-module_name_test.p:8: The output filename `ModuleNameTest.dep` does not match
+module_name_test.p:8: The source filename 'module_name_test.p' does not match
+                      the module name 'ModuleNameTestQUACK'
+module_name_test.p:8: The output filename 'ModuleNameTest.dep' does not match
                       the module name 'ModuleNameTestQUACK'

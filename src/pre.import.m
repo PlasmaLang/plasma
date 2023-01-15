@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.import.
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) 2020-2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Process imports by reading interface files.
@@ -470,7 +470,7 @@ process_typeres_import(ModuleName, ImportAST, Result, !Core) :-
     else
         Result = compile_errors(error(Context,
             ce_interface_contains_wrong_module(
-                Context ^ c_file, ModuleName, ModuleNameAST)))
+                filename(Context ^ c_file), ModuleName, ModuleNameAST)))
     ).
 
 %-----------------------------------------------------------------------%
@@ -588,7 +588,7 @@ process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     else
         Result = compile_errors(error(Context,
             ce_interface_contains_wrong_module(
-                Context ^ c_file, ModuleName, ModuleNameAST)))
+                filename(Context ^ c_file), ModuleName, ModuleNameAST)))
     ).
 
 :- pred read_import_import(q_name::in, env::in,

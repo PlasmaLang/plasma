@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module asm_error.
 %
-% Copyright (C) 2015, 2017-2018, 2020-2021 Plasma Team
+% Copyright (C) 2015, 2017-2018, 2020-2021, 2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Error type for the PZ assembler.
@@ -44,15 +44,15 @@
 %-----------------------------------------------------------------------%
 
 :- instance error(asm_error) where [
-        pred(pretty/3) is asme_pretty,
+        pred(pretty/4) is asme_pretty,
         func(error_or_warning/1) is asme_error_or_warning
     ].
 
-:- pred asme_pretty(asm_error::in, list(pretty)::out, list(pretty)::out) is det.
+:- pred asme_pretty(string::in, asm_error::in, list(pretty)::out, list(pretty)::out) is det.
 
-asme_pretty(Error, Para, Extra) :-
+asme_pretty(SrcPath, Error, Para, Extra) :-
     ( Error = e_read_src_error(ReadSrcError),
-        pretty(ReadSrcError, Para, Extra)
+        pretty(SrcPath, ReadSrcError, Para, Extra)
     ;
         ( Error = e_name_already_defined(Name),
             Para = [p_quote("\"", p_str(Name))] ++ p_spc_nl ++

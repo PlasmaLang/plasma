@@ -5,7 +5,7 @@
 %
 % Parsing and lexing utils.
 %
-% Copyright (C) 2015, 2017, 2019-2021 Plasma Team
+% Copyright (C) 2015, 2017, 2019-2021, 2023 Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
@@ -124,7 +124,7 @@ return(T) = (func(S) = lex_token(T, S)).
 
 :- instance error(read_src_error) where [
     func(error_or_warning/1) is rse_error_or_warning,
-    pretty(E, rse_pretty(E), [])
+    pretty(_, E, rse_pretty(E), [])
 ].
 
 :- func rse_error_or_warning(read_src_error) = error_or_warning.
