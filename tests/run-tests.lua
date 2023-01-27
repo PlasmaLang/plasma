@@ -119,7 +119,6 @@ end
 --    string.
 --
 -- Returns
---  true/false: Was this command succesful (returnd 0)
 --  "exited"/"killed": Did the process terminate itself, or was it killed.
 --  Number: The return code / signal number
 --  String: The output, if mb_output_file was nil.
