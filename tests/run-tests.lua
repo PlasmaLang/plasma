@@ -195,15 +195,20 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
   end
 
   log(string.format("Running: %s %s", bin, list_string(args)))
-  local output = ""
-  if mb_output_pipe_read then
-    U.close(mb_output_pipe_write)
+  function read_stream(stream)
+    local output = ""
     repeat
-      local str = U.read(mb_output_pipe_read, 4096)
+      local str = U.read(stream, 4096)
       if str then
         output = output .. str
       end
     until not str or str == ""
+    return output
+  end
+  local output = ""
+  if mb_output_pipe_read then
+    U.close(mb_output_pipe_write)
+    output = read_stream(mb_output_pipe_read)
   end
 
   -- This is a bad way to read two streams since we could deadlock
@@ -211,12 +216,7 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
   local stderr = ""
   if mb_stderr_pipe_read then
     U.close(mb_stderr_pipe_write)
-    repeat
-      local str = U.read(mb_stderr_pipe_read, 4096)
-      if str then
-        stderr = stderr .. str
-      end
-    until not str or str == ""
+    stderr = read_stream(mb_stderr_pipe_read)
   end
 
   local pid, exit, status
