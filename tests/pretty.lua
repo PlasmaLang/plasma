@@ -47,11 +47,11 @@ if term_bold and term_green and term_red and term_reset then
 end
 term_reset = term_reset or ""
 
-
 local num_tests
 local num_ok = 0
 local num_fail = 0
 local num_skip = 0
+local failed_tests = {}
 
 local line
 for line in io.lines() do
@@ -76,6 +76,9 @@ for line in io.lines() do
       if parse_nok then
         num_fail = num_fail + 1
         printn(term_failure .. "+")
+        if not status then
+          table.insert(failed_tests, line) 
+        end
       end
     end
   end
@@ -109,6 +112,11 @@ end
 print("")
 
 if num_fail ~= 0 then
+  print("Failed tests:")
+  for _, failed in pairs(failed_tests) do
+    print("  "..failed)
+  end
+
   os.exit(1)
 end
 
