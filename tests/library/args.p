@@ -2,6 +2,9 @@
  * vim: ft=plasma
  * This is free and unencumbered software released into the public domain.
  * See ../LICENSE.unlicense
+ *
+ * PLZTEST returns 255
+ * PLZTEST output stderr
  */
 
 module Args 
