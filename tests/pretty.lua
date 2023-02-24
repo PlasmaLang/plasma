@@ -98,9 +98,7 @@ for line in io.lines() do
       else
         num_fail = num_fail + 1
         printn(term_failure .. "+")
-        if not status then
-          table.insert(failed_tests, line) 
-        end
+        table.insert(failed_tests, line) 
       end
     end
   end
