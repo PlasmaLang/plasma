@@ -55,7 +55,9 @@ local num_ok = 0
 local num_fail = 0
 local num_skip = 0
 local num_todo = 0
+local num_todo_ok = 0
 local failed_tests = {}
+local todo_ok_tests = {}
 
 local line
 for line in io.lines() do
@@ -75,8 +77,14 @@ for line in io.lines() do
       num_skip = num_skip + 1
       printn(term_skip .. "-")
     else
-      num_ok = num_ok + 1
-      printn(term_success .. ".")
+      if parse_todo then
+        num_todo_ok = num_todo_ok + 1
+        printn(term_success .. "?")
+        table.insert(todo_ok_tests, line) 
+      else
+        num_ok = num_ok + 1
+        printn(term_success .. ".")
+      end
     end
   else
     local parse_nok = line:match("^not ok")
@@ -101,12 +109,12 @@ end
 -- print a newline
 print(term_reset)
 
-if num_ok + num_fail + num_skip + num_todo ~= num_tests then
-  print("Missing / extra tests:  "..num_ok.." (pass) + "..num_fail.." (fail) + "..num_skip.." (skip) + "..num_todo.." (todo) = "..num_tests)
+if num_ok + num_fail + num_skip + num_todo + num_todo_ok ~= num_tests then
+  print("Missing / extra tests:  "..num_ok.." (pass) + "..num_fail.." (fail) + "..num_skip.." (skip) + "..num_todo.." (todo) + "..num_todo_ok.." (todo ok) = "..num_tests)
   os.exit(1)
 end
 
-printn(num_ok .. " / "..num_tests.." tests passed")
+printn(num_ok + num_todo_ok .. " / "..num_tests.." tests passed")
 
 if num_fail ~= 0 or num_skip ~= 0 or num_todo ~= 0 then
   printn(" (")
@@ -136,7 +144,16 @@ if num_fail ~= 0 then
   for _, failed in pairs(failed_tests) do
     print("  "..failed)
   end
+end
 
+if num_todo_ok ~= 0 then
+  print("Some TODO tests are now passing:")
+  for _, todo_ok in pairs(todo_ok_tests) do
+    print("  "..todo_ok)
+  end
+end
+
+if num_fail ~= 0 then
   os.exit(1)
 end
 
