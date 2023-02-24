@@ -34,16 +34,19 @@ local term_bold = getTermEscape("bold")
 local term_green = getTermEscape("setaf 2")
 local term_red = getTermEscape("setaf 1")
 local term_yellow = getTermEscape("setaf 3")
+local term_cyan = getTermEscape("setaf 6")
 local term_reset = getTermEscape("sgr0")
 -- If one of these was unsuccesful then we set the terminal escape strings
 -- to empty strings and they'll have no effect.
 local term_success = ""
 local term_failure = ""
 local term_skip = ""
+local term_todo = ""
 if term_bold and term_green and term_red and term_reset then
   term_success = term_green .. term_bold
   term_failure = term_red .. term_bold
   term_skip = term_yellow .. term_bold
+  term_todo = term_cyan .. term_bold
 end
 term_reset = term_reset or ""
 
@@ -51,6 +54,7 @@ local num_tests
 local num_ok = 0
 local num_fail = 0
 local num_skip = 0
+local num_todo = 0
 local failed_tests = {}
 
 local line
@@ -62,18 +66,28 @@ for line in io.lines() do
     end
   end
 
-  local parse_skip = line:match("^ok.*# [sS][kK][iI][pP]")
-  if parse_skip then
-    num_skip = num_skip + 1
-    printn(term_skip .. "-")
-  else
-    local parse_ok = line:match("^ok")
-    if parse_ok then
+  local parse_skip = line:match("# [sS][kK][iI][pP]")
+  local parse_todo = line:match("# [tT][oO][dD][oO]")
+
+  local parse_ok = line:match("^ok")
+  if parse_ok then
+    if parse_skip then
+      num_skip = num_skip + 1
+      printn(term_skip .. "-")
+    else
       num_ok = num_ok + 1
       printn(term_success .. ".")
-    else 
-      local parse_nok = line:match("^not ok")
-      if parse_nok then
+    end
+  else
+    local parse_nok = line:match("^not ok")
+    if parse_nok then
+      if parse_skip then
+        num_skip = num_skip + 1
+        printn(term_skip .. "-")
+      elseif parse_todo then
+        num_todo = num_todo + 1
+        printn(term_todo .. "=")
+      else
         num_fail = num_fail + 1
         printn(term_failure .. "+")
         if not status then
@@ -87,17 +101,23 @@ end
 -- print a newline
 print(term_reset)
 
-if num_ok + num_fail + num_skip ~= num_tests then
-  print("Missing / extra tests:  "..num_ok.." (pass) + "..num_fail.." (fail) + "..num_skip.." (skip) = "..num_tests)
+if num_ok + num_fail + num_skip + num_todo ~= num_tests then
+  print("Missing / extra tests:  "..num_ok.." (pass) + "..num_fail.." (fail) + "..num_skip.." (skip) + "..num_todo.." (todo) = "..num_tests)
   os.exit(1)
 end
 
 printn(num_ok .. " / "..num_tests.." tests passed")
 
-if num_fail ~= 0 or num_skip ~= 0 then
+if num_fail ~= 0 or num_skip ~= 0 or num_todo ~= 0 then
   printn(" (")
   if num_fail ~= 0 then
     printn(term_failure..num_fail.." failed"..term_reset)
+    if num_skip ~= 0 or num_todo ~= 0 then
+      printn(", ")
+    end
+  end
+  if num_todo ~= 0 then
+    printn(term_todo..num_todo.." todo"..term_reset)
     if num_skip ~= 0 then
       printn(", ")
     end
