@@ -688,8 +688,13 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
+        local exp_return = 1
+        if test.config.is_todo then
+          exp_return = 0
+        end
         return execute_test_command(test, "build-failure", plzbuild_bin,
-          list_append(build_args, extra_args), nil, exp_stdout, exp_stderr, 1)
+          list_append(build_args, extra_args), nil, exp_stdout, exp_stderr,
+          exp_return, test.config.is_todo)
       end)
     result = test_step(test, "diff", result,
       function()
