@@ -1,0 +1,39 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+[closure_01]
+type = program
+modules = [Closure_01]
+
+[closure_02]
+type = program
+modules = [Closure_02]
+
+[closure_03]
+type = program
+modules = [Closure_03]
+
+[closure_04]
+type = program
+modules = [Closure_04]
+
+[closure_05]
+type = program
+modules = [Closure_05]
+
+[closure_06]
+type = program
+modules = [Closure_06]
+
+[ho_1]
+type = program
+modules = [HO_1]
+
+[ho_2]
+type = program
+modules = [HO_2]
+
+[ho_call_bug_30]
+type = program
+modules = [HOCallBug30]
+
