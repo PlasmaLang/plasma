@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Closure_03 
+module ClosureInfer2 
 
 /*
  * The type checker seems to be giving an over-specific type to some of the

@@ -1,6 +1,6 @@
 A compilation error occured and this error is not handled gracefully
 by the Plasma compiler. Sorry.
 Message:            The variable 'varctorname' is already defined
-Context:            match_1.p:23
+Context:            ../match_bad_error_1.p:23
 plzc location:      predicate `pre.from_ast.ast_to_pre_stmt_var'/9
 plzc file:          pre.from_ast.m

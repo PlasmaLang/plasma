@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Closure_02
+module ClosureMutRec 
 
 func make_is_odd() -> func(Int) -> Bool {
     func is_odd(n : Int) -> Bool {

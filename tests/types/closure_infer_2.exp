@@ -1,0 +1,16 @@
+closure_infer_2.p:21: "func(func(int) -> int, Builtin.Maybe(_))
+                       -> Builtin.Maybe(string)" and
+                      "func(func(int) -> string, Builtin.Maybe(string))
+                       -> Builtin.Maybe(string)" are not the same, because
+                      "func(int) -> int" and "func(int) -> string" are not the
+                      same, because
+                      "int" and "string" are not the same
+closure_infer_2.p:33: "func(_, Builtin.Maybe(int)) -> Builtin.Maybe(string)"
+                      and
+                      "func(func(int) -> int, Builtin.Maybe(int))
+                                                                   -> Builtin.Maybe(
+                                                                        int)"
+                      are not the same, because
+                      "Builtin.Maybe(string)" and "Builtin.Maybe(int)" are not
+                      the same, because
+                      "string" and "int" are not the same

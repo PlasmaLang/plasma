@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Match_1
+module MatchBadError1
 
 export
 func main() uses IO -> Int {

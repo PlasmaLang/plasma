@@ -1,4 +1,4 @@
-closure_01.p:22: Ambigious types
+closure_infer_1.p:22: Ambigious types
   The unbound solver variables are:
     'Sv_greet_1 = func(string, _)
     'Sv_opening_4 = _

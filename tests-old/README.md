@@ -7,5 +7,4 @@ test suite.
 * [modules](modules) - Valid programs that use multiple modules
 * [modules-invalid](modules-invalid) - Invalid programs that use multiple
   modules
-* [missing](missing) - Valid programs with unimplemented features
 
