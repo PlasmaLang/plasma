@@ -1,4 +1,0 @@
-comment.p:18: The tokeniser got confused, until we improve it please don't end
-              comments with **/
-comment.p:19: Warning: The tokeniser can get confused, until we improve it
-              please don't end comments with **/

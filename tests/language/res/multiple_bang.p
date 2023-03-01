@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Res_1
+module MultipleBang 
 
 export
 func main() uses IO -> Int {

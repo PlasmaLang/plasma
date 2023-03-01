@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Hello
+module CommentEnd
 
 export
 func main() uses IO -> Int {

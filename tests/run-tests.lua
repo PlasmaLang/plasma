@@ -119,7 +119,6 @@ end
 --    string.
 --
 -- Returns
---  true/false: Was this command succesful (returnd 0)
 --  "exited"/"killed": Did the process terminate itself, or was it killed.
 --  Number: The return code / signal number
 --  String: The output, if mb_output_file was nil.
@@ -196,15 +195,20 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
   end
 
   log(string.format("Running: %s %s", bin, list_string(args)))
-  local output = ""
-  if mb_output_pipe_read then
-    U.close(mb_output_pipe_write)
+  function read_stream(stream)
+    local output = ""
     repeat
-      local str = U.read(mb_output_pipe_read, 4096)
+      local str = U.read(stream, 4096)
       if str then
         output = output .. str
       end
     until not str or str == ""
+    return output
+  end
+  local output = ""
+  if mb_output_pipe_read then
+    U.close(mb_output_pipe_write)
+    output = read_stream(mb_output_pipe_read)
   end
 
   -- This is a bad way to read two streams since we could deadlock
@@ -212,12 +216,7 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
   local stderr = ""
   if mb_stderr_pipe_read then
     U.close(mb_stderr_pipe_write)
-    repeat
-      local str = U.read(mb_stderr_pipe_read, 4096)
-      if str then
-        stderr = stderr .. str
-      end
-    until not str or str == ""
+    stderr = read_stream(mb_stderr_pipe_read)
   end
 
   local pid, exit, status
@@ -250,6 +249,7 @@ end
 --    check_stderr - if we should check stderr output rather than stdout
 --    build_type - The build type to enable this test for (nil for all)
 --    test_type - The type of this test (nil for auto or compile_failure)
+--    is_todo - This test represents an unimplemented feature
 --    build_args - The arguments for the plzbuild command
 --
 function test_configuration(filename)
@@ -257,6 +257,7 @@ function test_configuration(filename)
   local check_stderr = false
   local build_type
   local test_type
+  local is_todo = false
   local build_args
 
   function invalid_value(key, value)
@@ -291,6 +292,8 @@ function test_configuration(filename)
           test_type = value
         elseif key == "build_args" then
           build_args = string_split(value)
+        elseif key == "todo" then
+          is_todo = value
         else
           print(string.format("%s:%d: Unknown key in test configuration %s",
             filename, line_no, key))
@@ -305,6 +308,7 @@ function test_configuration(filename)
     check_stderr = check_stderr,
     build_type = build_type,
     test_type = test_type,
+    is_todo = is_todo,
     build_args = build_args,
   }
 end
@@ -461,15 +465,24 @@ end
 -- Indicate that this step was executed with the given how it
 -- exited ("exited" or "killed") and the exit/signal code.
 --
-function tap_exec(test, stage, exit, code, expect_return)
+function tap_exec(test, stage, exit, code, expect_return, is_todo)
+  local todo_text = ""
+  if is_todo then
+    todo_text = "TODO "..is_todo
+  end
   if exit == "exited" then
     if code == expect_return then
-      tap_result(test, stage, true)
+      tap_result(test, stage, true, todo_text)
       return true
     else
-      tap_result(test, stage, false,
-        string.format("exited with %d expected %d", code, expect_return))
-      return false
+      if is_todo then
+        tap_result(test, stage, false, todo_text)
+        return true
+      else
+        tap_result(test, stage, false,
+          string.format("exited with %d expected %d", code, expect_return))
+        return false
+      end
     end
   else
     tap_result(test, stage, false, "killed by signal " .. code)
@@ -484,12 +497,12 @@ local a_test_failed = false
 -- Run a command for testing.
 --
 function execute_test_command(test, stage, cmd, args, input,
-    exp_out, exp_stderr, exp_return)
+    exp_out, exp_stderr, exp_return, is_todo)
   exp_return = exp_return or 0
 
   local exit, status, output, stderr = 
     execute(test.dir, cmd, args, input, exp_out, exp_stderr)
-  local r = tap_exec(test, stage, exit, status, exp_return)
+  local r = tap_exec(test, stage, exit, status, exp_return, is_todo)
   for line in stderr:gmatch("[^\n]+") do
     print("  " .. line)
   end
@@ -645,7 +658,8 @@ function run_test(test)
           program_str = program_str .. ":" .. test.foreign_module
         end
         return execute_test_command(test, "run", plzrun_bin, {program_str},
-          test.input, exp_stdout, exp_stderr, test.config.expect_return)
+          test.input, exp_stdout, exp_stderr, test.config.expect_return,
+          test.config.is_todo)
       end)
     result = test_step(test, "diff", result,
       function()
@@ -674,8 +688,13 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
+        local exp_return = 1
+        if test.config.is_todo then
+          exp_return = 0
+        end
         return execute_test_command(test, "build-failure", plzbuild_bin,
-          list_append(build_args, extra_args), nil, exp_stdout, exp_stderr, 1)
+          list_append(build_args, extra_args), nil, exp_stdout, exp_stderr,
+          exp_return, test.config.is_todo)
       end)
     result = test_step(test, "diff", result,
       function()

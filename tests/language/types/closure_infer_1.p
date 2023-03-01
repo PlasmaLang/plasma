@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module Closure_01
+module ClosureInfer1
 
 export
 func main() uses IO -> Int {

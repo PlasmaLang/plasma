@@ -7,8 +7,7 @@ set -e
 
 # Only work in tests directories that incorporate compiler error messages.
 DIRS="tests-old/invalid 
-      tests-old/modules-invalid 
-      tests-old/missing"
+      tests-old/modules-invalid"
 
 for TESTDIR in $DIRS; do
     for OUTPUT in $TESTDIR/*.out; do

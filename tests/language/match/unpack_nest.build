@@ -1,0 +1,10 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST todo nested constructors in unpack statements
+# PLZTEST type compile_failure 
+
+[unpack_nest]
+type = program
+modules = [UnpackNest]
+

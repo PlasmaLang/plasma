@@ -48,8 +48,7 @@ if [ -n "$STALE_BUILD_DIRS" ]; then
 fi
 
 DIRS="modules
-      modules-invalid
-      missing"
+      modules-invalid"
 
 for DIR in $DIRS; do
     for EXPFILE in $DIR/*.exp; do
@@ -81,7 +80,7 @@ for TEST in $TESTS; do
                 valid/die|valid/noentry)
                     continue
                     ;;
-                *invalid/*|missing/*|../examples/*)
+                *invalid/*|../examples/*)
                     continue
                     ;;
             esac

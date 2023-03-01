@@ -5,45 +5,9 @@
 type = program
 modules = [Arity01]
 
-[closure_01]
-type = program
-modules = [Closure_01]
-
-[closure_02]
-type = program
-modules = [Closure_02]
-
-[closure_03]
-type = program
-modules = [Closure_03]
-
-[closure_04]
-type = program
-modules = [Closure_04]
-
-[closure_05]
-type = program
-modules = [Closure_05]
-
-[closure_06]
-type = program
-modules = [Closure_06]
-
 [comment]
 type = program
 modules = [Comment]
-
-[ho_1]
-type = program
-modules = [HO_1]
-
-[ho_2]
-type = program
-modules = [HO_2]
-
-[ho_call_bug_30]
-type = program
-modules = [HOCallBug30]
 
 [ite_1]
 type = program
@@ -61,39 +25,11 @@ modules = [Ite_3]
 type = program
 modules = [List]
 
-[match_1]
-type = program
-modules = [Match_1]
-
-[match_2]
-type = program
-modules = [Match_2]
-
-[match_empty_case]
-type = program
-modules = [MatchEmptyCase]
-
 [operators]
 type = program
 modules = [Operators]
 
-[resource]
-type = program
-modules = [Resource]
-
 [string]
 type = program
 modules = [String]
-
-[unpack_1]
-type = program
-modules = [Unpack_1]
-
-[vars_1]
-type = program
-modules = [Vars_1]
-
-[vars_2]
-type = program
-modules = [Vars_2]
 

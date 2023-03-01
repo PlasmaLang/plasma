@@ -238,7 +238,6 @@ clean : localclean
 	$(MAKE) -C tests-old/pzt clean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
-	$(MAKE) -C tests-old/missing clean
 	find tests -name *.pz -o \
 			   -name *.out -o \
 			   -name *.outs \
@@ -256,7 +255,6 @@ realclean : localclean
 	$(MAKE) -C tests-old/pzt realclean
 	$(MAKE) -C tests-old/modules realclean
 	$(MAKE) -C tests-old/modules-invalid realclean
-	$(MAKE) -C tests-old/missing realclean
 	find tests -name *.so \
 		| xargs -r rm
 	rm -f src/tags 
