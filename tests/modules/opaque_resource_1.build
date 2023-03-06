@@ -1,0 +1,7 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+[opaque_resource_1]
+type = program
+modules = [OpaqueResource1, OpaqueResource]
+
