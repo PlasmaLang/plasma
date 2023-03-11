@@ -55,6 +55,15 @@ function list_append(l1, l2)
   return l
 end
 
+function all(t, f)
+  for _, v in ipairs(t) do
+    if not f(v) then
+      return false
+    end
+  end
+  return true
+end
+
 function string_split(str)
   local l = {}
   for token in str:gmatch("%S+") do
@@ -320,7 +329,7 @@ end
 --  type:    either "plzbuild" or "run"
 --  dir:     String, the working directory for the test
 --  output:  String, the file name to write the test output to.
---  depends: nil, anther test that this test needs before it can run.
+--  depends: List of tests that this test needs before it can run.
 --
 -- plzbuild tests:
 --  These tests will run "plzbuild" in a directory, they check that is
@@ -344,6 +353,7 @@ gen_all_tests =
     function maybe_add_build_dir(dir)
       if (not dirs[dir]) then
         local build_file = string.format("%s/BUILD.plz", dir)
+        dirs[dir] = {}
         if (lfs.attributes(build_file)) then
           test = {
             name = "BUILD.plz",
@@ -353,11 +363,8 @@ gen_all_tests =
             output = "plzbuild.out",
             config = {},
           }
-          dirs[dir] = test
+          table.insert(dirs[dir], test)
           coroutine.yield(test)
-        else
-          -- We test for this below and need it to be distinct from nil.
-          dirs[dir] = "none"
         end
       end
     end
@@ -529,7 +536,7 @@ end
 function test_step(test, stage, prev_result, func)
   local depends_result = true
   if test.depends then
-    depends_result = test.depends.result
+    depends_result = all(test.depends, function(x) return x.result end)
   end
   local result
   if test.config.build_type ~= nil and test.config.build_type ~= build_type then
