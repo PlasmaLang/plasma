@@ -28,51 +28,6 @@ all:
 %.pz : %.pzo $(TOP)/src/plzlnk
 	$(TOP)/src/plzlnk -n ${subst .pz,,$@} -o $@ $<
 
-module_01.pz : module_01.p module_01a.p BUILD.plz $(TOOLS)
-	$(TOP)/src/plzbuild module_01
-
-module_01_dyn.out : module_01.pz module_02.pz
-	$(TOP)/runtime/plzrun -l module_02.pz module_01.pz > $@
-
-.PHONY: module_01_dyn.gctest
-module_01_dyn.gctest : module_01.pz module_02.pz $(TOP)/runtime/plzrun
-	PZ_RUNTIME_DEV_OPTS=gc_zealous $(TOP)/runtime/plzrun -l module_02.pz \
-		module_01.pz > /dev/null
-
-module_02.pzo : module_02a.pi
-module_02.pi : module_02a.typeres
-module_02a.pzo : module_02.pi
-module_02a.pi : module_02.typeres
-
-module_02.pz : module_02.pzo module_02a.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_02 -o $@ \
-		module_02.pzo module_02a.pzo
-
-#
-# Create four tests, the first to link modules a and b, the last to link b
-# and a (reverse order), they choose different entry modules.
-module_03a.pz : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03a -e Module_03a.main -o $@ \
-		module_03a.pzo module_03b.pzo
-module_03b.pz : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03b -e Module_03b.main -o $@ \
-		module_03a.pzo module_03b.pzo
-module_03ar.pz : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03ar -e Module_03a.main -o $@ \
-		module_03b.pzo module_03a.pzo
-module_03br.pz : module_03a.pzo module_03b.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03br -e Module_03b.main -o $@ \
-		module_03b.pzo module_03a.pzo
-
-# module_03c.pzo does not have an entrypoint.  The linker should implicitly
-# choose the only entrypoint.
-module_03c.pz : module_03a.pzo module_03c.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03c -o $@ \
-		module_03a.pzo module_03c.pzo
-module_03cr.pz : module_03a.pzo module_03c.pzo $(TOP)/src/plzlnk
-	$(TOP)/src/plzlnk -n Module_03c -o $@ \
-		module_03c.pzo module_03a.pzo
-
 module_04.pz : module_04.p module_04a.p BUILD.plz $(TOOLS) 
 	$(TOP)/src/plzbuild module_04
 
