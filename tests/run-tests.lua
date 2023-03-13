@@ -352,10 +352,25 @@ gen_all_tests =
     local dirs = {}
     function maybe_add_build_dir(dir)
       if (not dirs[dir]) then
-        local build_file = string.format("%s/BUILD.plz", dir)
         dirs[dir] = {}
+       
+        local make_file = string.format("%s/Makefile", dir)
+        if (lfs.attributes(make_file)) then
+          local test = {
+            name = "make",
+            type = "make",
+            dir = dir,
+            desc = string.format("%s/Makefile", dir),
+            output = "make.out",
+            config = {},
+          }
+          table.insert(dirs[dir], test)
+          coroutine.yield(test)
+        end
+
+        local build_file = string.format("%s/BUILD.plz", dir)
         if (lfs.attributes(build_file)) then
-          test = {
+          local test = {
             name = "BUILD.plz",
             type = "plzbuild",
             dir = dir,
@@ -638,6 +653,11 @@ function run_test(test)
       function()
         return execute_test_command(test, "build", plzbuild_bin, build_args, nil,
           nil, nil, 0)
+      end)
+  elseif test.type == "make" then
+    result = test_step(test, "build", result,
+      function()
+        return execute_test_command(test, "make", "make", {}, nil, nil, nil, 0)
       end)
   elseif test.type == "run" then
     if (test.build_file) then
