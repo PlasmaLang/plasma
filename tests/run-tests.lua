@@ -400,6 +400,7 @@ gen_all_tests =
 
       local build_file = name_if_exists(dir, file, ".build")
       local source_file = name_if_exists(dir, file, ".p")
+      local shell_file = name_if_exists(dir, file, ".sh")
       local test_file = name_if_exists(dir, file, ".test")
       local foreign_file = name_if_exists(dir, file, ".cpp")
 
@@ -416,6 +417,8 @@ gen_all_tests =
         config = test_configuration(build_file)
       elseif source_file then
         config = test_configuration(source_file)
+      elseif shell_file then
+        config = test_configuration(shell_file)
       elseif test_file then
         config = test_configuration(test_file)
       else
@@ -430,6 +433,7 @@ gen_all_tests =
         desc = desc,
         depends = dir_build,
         build_file = build_file and file:gsub(".exp", ".build"),
+        shell_file = shell_file and file:gsub(".exp", ".sh"),
         output = file:gsub(".exp", ".out"),
         expect = file,
         input = maybe_input,
@@ -680,13 +684,19 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
-        local program_str = test.program
-        if (test.foreign_module) then
-          program_str = program_str .. ":" .. test.foreign_module
+        if test.shell_file then
+          return execute_test_command(test, "run", "./"..test.shell_file,
+            {}, test.input, exp_stdout, exp_stderr,
+            test.config.expect_return, test.config.is_todo)
+        else
+          local program_str = test.program
+          if (test.foreign_module) then
+            program_str = program_str .. ":" .. test.foreign_module
+          end
+          return execute_test_command(test, "run", plzrun_bin, {program_str},
+            test.input, exp_stdout, exp_stderr, test.config.expect_return,
+            test.config.is_todo)
         end
-        return execute_test_command(test, "run", plzrun_bin, {program_str},
-          test.input, exp_stdout, exp_stderr, test.config.expect_return,
-          test.config.is_todo)
       end)
     result = test_step(test, "diff", result,
       function()
