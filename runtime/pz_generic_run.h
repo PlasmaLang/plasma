@@ -2,7 +2,7 @@
  * Plasma bytecode generic interpreter definitions
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015, 2018-2019, 2021 Plasma Team
+ * Copyright (C) 2015, 2018-2019, 2021, 2023 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -164,14 +164,8 @@ union StackValue {
 #define RETURN_STACK_SIZE 2048*4
 #define EXPR_STACK_SIZE   4096*4
 
-struct Context final : public AbstractGCTracer {
-    uint8_t *    ip;
-    void *       env;
-    Memory<uint8_t*[RETURN_STACK_SIZE]> return_stack;
-    unsigned     rsp;
-    Memory<StackValue[EXPR_STACK_SIZE]> expr_stack;
-    unsigned     esp;
-
+class Context final : public AbstractGCTracer {
+  public:
     Context(GCCapability & gc);
     ~Context();
 
@@ -179,6 +173,47 @@ struct Context final : public AbstractGCTracer {
     bool release(bool fast);
 
     void do_trace(HeapMarkState * state) const override;
+    
+    void execute_closure(Closure *closure) {
+        ip  = static_cast<uint8_t *>(closure->code());
+        env = closure->data();
+    }
+
+    InstructionToken read_next_token() {
+        return (InstructionToken)(*(ip++));
+    }
+
+    template<typename T>
+    T read_next_imm() {
+        align_ip(sizeof(T));
+        T v = *reinterpret_cast<T *>(ip);
+        ip += sizeof(T);
+        return v;
+    }
+
+    uint8_t* get_ip() const {
+        return ip;
+    }
+
+    void jump(uint8_t *code) {
+        ip = code;
+    }
+
+  private:
+    void align_ip(unsigned n) {
+      ip = (uint8_t *)AlignUp((size_t)ip, n);
+    }
+
+  private:
+    uint8_t *    ip;
+
+  public:
+    void *       env;
+    Memory<uint8_t*[RETURN_STACK_SIZE]> return_stack;
+    unsigned     rsp;
+    Memory<StackValue[EXPR_STACK_SIZE]> expr_stack;
+    unsigned     esp;
+
 };
 
 int

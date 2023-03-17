@@ -2,7 +2,7 @@
  * Plasma bytecode exection (generic portable version)
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2019, 2021 Plasma Team
+ * Copyright (C) 2015-2019, 2021, 2023 Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
@@ -24,44 +24,35 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                       PZ & pz)
 {
     int retcode;
-    context.ip  = static_cast<uint8_t *>(closure->code());
-    context.env = closure->data();
+    context.execute_closure(closure);
 
     pz_trace_state(heap,
-                   context.ip,
+                   context.get_ip(),
                    context.env,
                    context.rsp,
                    context.esp,
                    (uint64_t *)context.expr_stack.ptr());
     while (true) {
-        InstructionToken token = (InstructionToken)(*(context.ip));
+        InstructionToken token = context.read_next_token();
 
-        context.ip++;
         switch (token) {
             case PZT_NOP:
                 pz_trace_instr(context.rsp, "nop");
                 break;
             case PZT_LOAD_IMMEDIATE_8:
-                context.expr_stack[++context.esp].u8 = *context.ip;
-                context.ip++;
+                context.expr_stack[++context.esp].u8 = context.read_next_imm<uint8_t>();
                 pz_trace_instr(context.rsp, "load imm:8");
                 break;
             case PZT_LOAD_IMMEDIATE_16:
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                context.expr_stack[++context.esp].u16 = *(uint16_t *)context.ip;
-                context.ip += 2;
+                context.expr_stack[++context.esp].u16 = context.read_next_imm<uint16_t>();
                 pz_trace_instr(context.rsp, "load imm:16");
                 break;
             case PZT_LOAD_IMMEDIATE_32:
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 4);
-                context.expr_stack[++context.esp].u32 = *(uint32_t *)context.ip;
-                context.ip += 4;
+                context.expr_stack[++context.esp].u32 = context.read_next_imm<uint32_t>();
                 pz_trace_instr(context.rsp, "load imm:32");
                 break;
             case PZT_LOAD_IMMEDIATE_64:
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 8);
-                context.expr_stack[++context.esp].u64 = *(uint64_t *)context.ip;
-                context.ip += 8;
+                context.expr_stack[++context.esp].u64 = context.read_next_imm<uint64_t>();
                 pz_trace_instr(context.rsp, "load imm:64");
                 break;
             case PZT_ZE_8_16:
@@ -276,9 +267,8 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_ROLL: {
-                uint8_t depth = *context.ip;
+                uint8_t depth = context.read_next_imm<uint8_t>();
                 StackValue temp;
-                context.ip++;
                 switch (depth) {
                     case 0:
                         fprintf(stderr, "Illegal rot depth 0");
@@ -307,8 +297,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                  * have to add 1 because we increment the stack pointer
                  * before accessing the stack.
                  */
-                uint8_t depth = *context.ip;
-                context.ip++;
+                uint8_t depth = context.read_next_imm<uint8_t>();
                 context.esp++;
                 context.expr_stack[context.esp] =
                     context.expr_stack[context.esp - depth];
@@ -316,17 +305,13 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_CALL: {
-                Closure * closure;
+                Closure * closure = context.read_next_imm<Closure*>();
 
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
                 context.return_stack[++context.rsp] =
                     static_cast<uint8_t *>(context.env);
                 context.return_stack[++context.rsp] =
-                    context.ip + WORDSIZE_BYTES;
-                closure     = *(Closure **)context.ip;
-                context.ip  = static_cast<uint8_t *>(closure->code());
-                context.env = closure->data();
+                    reinterpret_cast<uint8_t *>(context.get_ip());
+                context.execute_closure(closure);
 
                 pz_trace_instr(context.rsp, "call");
                 break;
@@ -336,145 +321,117 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
 
                 context.return_stack[++context.rsp] =
                     static_cast<uint8_t *>(context.env);
-                context.return_stack[++context.rsp] = context.ip;
+                context.return_stack[++context.rsp] = context.get_ip();
 
                 closure     = (Closure *)context.expr_stack[context.esp--].ptr;
-                context.ip  = static_cast<uint8_t *>(closure->code());
-                context.env = closure->data();
+                context.execute_closure(closure);
 
                 pz_trace_instr(context.rsp, "call_ind");
                 break;
             }
-            case PZT_CALL_PROC:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
+            case PZT_CALL_PROC: {
+                uint8_t *new_ip = context.read_next_imm<uint8_t*>();
+
                 context.return_stack[++context.rsp] =
                     static_cast<uint8_t *>(context.env);
-                context.return_stack[++context.rsp] =
-                    context.ip + WORDSIZE_BYTES;
-                context.ip = *(uint8_t **)context.ip;
+                context.return_stack[++context.rsp] = context.get_ip();
+                context.jump(new_ip);
                 pz_trace_instr(context.rsp, "call_proc");
                 break;
-            case PZT_TCALL: {
-                Closure * closure;
-
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                closure     = *(Closure **)context.ip;
-                context.ip  = static_cast<uint8_t *>(closure->code());
-                context.env = closure->data();
+            }
+            case PZT_TCALL:
+                context.execute_closure(context.read_next_imm<Closure*>());
 
                 pz_trace_instr(context.rsp, "tcall");
                 break;
-            }
             case PZT_TCALL_IND: {
                 Closure * closure;
 
                 closure     = (Closure *)context.expr_stack[context.esp--].ptr;
-                context.ip  = static_cast<uint8_t *>(closure->code());
-                context.env = closure->data();
+                context.execute_closure(closure);
 
                 pz_trace_instr(context.rsp, "call_ind");
                 break;
             }
             case PZT_TCALL_PROC:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                context.ip = *(uint8_t **)context.ip;
+                context.jump(context.read_next_imm<uint8_t*>());
                 pz_trace_instr(context.rsp, "tcall_proc");
                 break;
-            case PZT_CJMP_8:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
+            case PZT_CJMP_8: {
+                uint8_t *dest = context.read_next_imm<uint8_t*>();
                 if (context.expr_stack[context.esp--].u8) {
-                    context.ip = *(uint8_t **)context.ip;
+                    context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:8 taken");
                 } else {
-                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:8 not taken");
                 }
                 break;
-            case PZT_CJMP_16:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
+            }
+            case PZT_CJMP_16: {
+                uint8_t *dest = context.read_next_imm<uint8_t*>();
                 if (context.expr_stack[context.esp--].u16) {
-                    context.ip = *(uint8_t **)context.ip;
+                    context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:16 taken");
                 } else {
-                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:16 not taken");
                 }
                 break;
-            case PZT_CJMP_32:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
+            }
+            case PZT_CJMP_32: {
+                uint8_t *dest = context.read_next_imm<uint8_t*>();
                 if (context.expr_stack[context.esp--].u32) {
-                    context.ip = *(uint8_t **)context.ip;
+                    context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:32 taken");
                 } else {
-                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:32 not taken");
                 }
                 break;
-            case PZT_CJMP_64:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
+            }
+            case PZT_CJMP_64: {
+                uint8_t *dest = context.read_next_imm<uint8_t*>();
                 if (context.expr_stack[context.esp--].u64) {
-                    context.ip = *(uint8_t **)context.ip;
+                    context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:64 taken");
                 } else {
-                    context.ip += WORDSIZE_BYTES;
                     pz_trace_instr(context.rsp, "cjmp:64 not taken");
                 }
                 break;
+            }
             case PZT_JMP:
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                context.ip = *(uint8_t **)context.ip;
+                context.jump(context.read_next_imm<uint8_t*>());
                 pz_trace_instr(context.rsp, "jmp");
                 break;
             case PZT_RET:
-                context.ip  = context.return_stack[context.rsp--];
+                context.jump(context.return_stack[context.rsp--]);
                 context.env = context.return_stack[context.rsp--];
                 pz_trace_instr(context.rsp, "ret");
                 break;
             case PZT_ALLOC: {
-                size_t size;
+                size_t size = context.read_next_imm<size_t>();
                 void * addr;
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                size = *(size_t *)context.ip;
-                context.ip += WORDSIZE_BYTES;
+
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
-                addr =
-                    context.alloc((size + WORDSIZE_BYTES - 1) / WORDSIZE_BYTES);
+                size = (size + WORDSIZE_BYTES - 1) / WORDSIZE_BYTES;
+                addr = context.alloc(size);
                 context.expr_stack[++context.esp].ptr = addr;
                 pz_trace_instr(context.rsp, "alloc");
                 break;
             }
             case PZT_MAKE_CLOSURE: {
-                void *code, *data;
-
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                code       = *(void **)context.ip;
-                context.ip = (context.ip + WORDSIZE_BYTES);
-                data       = context.expr_stack[context.esp].ptr;
+                uint8_t *code = context.read_next_imm<uint8_t*>();
+                void *data = context.expr_stack[context.esp].ptr;
                 Closure * closure =
-                    new (context) Closure(static_cast<uint8_t *>(code), data);
+                    new (context) Closure(code, data);
                 context.expr_stack[context.esp].ptr = closure;
                 pz_trace_instr(context.rsp, "make_closure");
                 break;
             }
             case PZT_LOAD_8: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr = 
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u8 = *(uint8_t *)addr;
@@ -483,13 +440,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_LOAD_16: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u16 = *(uint16_t *)addr;
@@ -498,13 +452,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_LOAD_32: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u32 = *(uint32_t *)addr;
@@ -513,13 +464,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_LOAD_64: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (ptr - * ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr = 
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].u64 = *(uint64_t *)addr;
@@ -528,13 +476,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_LOAD_PTR: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (ptr - ptr ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 context.expr_stack[context.esp + 1].ptr =
                     context.expr_stack[context.esp].ptr;
                 context.expr_stack[context.esp].ptr = *(void **)addr;
@@ -543,13 +488,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_STORE_8: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 *(uint8_t *)addr = context.expr_stack[context.esp - 1].u8;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -558,13 +500,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_STORE_16: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 *(uint16_t *)addr = context.expr_stack[context.esp - 1].u16;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -573,13 +512,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_STORE_32: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr = 
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 *(uint32_t *)addr = context.expr_stack[context.esp - 1].u32;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -588,13 +524,10 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             }
             case PZT_STORE_64: {
-                uint16_t offset;
-                void * addr;
-                context.ip = (uint8_t *)AlignUp((size_t)context.ip, 2);
-                offset     = *(uint16_t *)context.ip;
-                context.ip += 2;
                 /* (* ptr - ptr) */
-                addr = (uint8_t *)context.expr_stack[context.esp].ptr + offset;
+                uint16_t offset = context.read_next_imm<uint16_t>();
+                void *addr =
+                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
                 *(uint64_t *)addr = context.expr_stack[context.esp - 1].u64;
                 context.expr_stack[context.esp - 1].ptr =
                     context.expr_stack[context.esp].ptr;
@@ -618,40 +551,31 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 }
                 pz_trace_instr(context.rsp, "end");
                 pz_trace_state(heap,
-                               context.ip,
+                               context.get_ip(),
                                context.env,
                                context.rsp,
                                context.esp,
                                (uint64_t *)context.expr_stack.ptr());
                 return retcode;
             case PZT_CCALL: {
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                pz_foreign_c_func callee = 
-                    *reinterpret_cast<pz_foreign_c_func*>(context.ip);
+                pz_foreign_c_func callee =
+                    context.read_next_imm<pz_foreign_c_func>();
                 context.esp = callee(context.expr_stack.ptr(), context.esp);
-                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_ALLOC: {
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
-                pz_foreign_c_alloc_func callee = 
-                    *reinterpret_cast<pz_foreign_c_alloc_func*>(context.ip);
+                pz_foreign_c_alloc_func callee =
+                    context.read_next_imm<pz_foreign_c_alloc_func>();
                 context.esp = callee(context.expr_stack.ptr(), context.esp, 
                     context);
-                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
             case PZT_CCALL_SPECIAL: {
-                context.ip =
-                    (uint8_t *)AlignUp((size_t)context.ip, WORDSIZE_BYTES);
                 pz_foreign_c_special_func callee =
-                    *reinterpret_cast<pz_foreign_c_special_func*>(context.ip);
+                    context.read_next_imm<pz_foreign_c_special_func>();
                 context.esp = callee(context.expr_stack.ptr(), context.esp, pz);
-                context.ip += WORDSIZE_BYTES;
                 pz_trace_instr(context.rsp, "ccall");
                 break;
             }
@@ -665,7 +589,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 abort();
         }
         pz_trace_state(heap,
-                       context.ip,
+                       context.get_ip(),
                        context.env,
                        context.rsp,
                        context.esp,
