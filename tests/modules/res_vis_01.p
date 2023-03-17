@@ -4,12 +4,12 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_11
+module ResVis01
 
-import Module_11.B as B
+import ResVis01.B as B
 
 // Remove this once we make transitive resource names available.
-import Module_11.A as A
+import ResVis01.A as A
 
 entrypoint
 func main() uses IO -> Int {
@@ -44,7 +44,7 @@ func testTypeB4() -> B.TypeB4(Int) {
 
 // Import C but not D, show that we can use both C's resources, even the
 // one that depends on D.
-import Module_11.C as C
+import ResVis01.C as C
 
 func testCallsCRes3() uses IO {
     C.test!(testUsesCRes3)

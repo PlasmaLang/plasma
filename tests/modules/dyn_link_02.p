@@ -4,14 +4,14 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_10
+module DynLink02 
 
-import Module_10a
-import Module_10b
+import DynLink02A as A 
+import DynLink02B as B
 
 entrypoint
 func main() uses IO -> Int {
-    Module_10a.printMessage!("Hello " ++ Module_10b.getMessage())
+    A.printMessage!("Hello " ++ B.getMessage())
 
     return 0
 }

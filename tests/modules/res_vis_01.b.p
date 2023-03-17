@@ -4,9 +4,9 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_11.B
+module ResVis01.B
 
-import Module_11.A as A
+import ResVis01.A as A
 
 export
 resource Res2 from A.Res1

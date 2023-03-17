@@ -239,6 +239,8 @@ clean : localclean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
 	find tests -name *.pz -o \
+			   -name *.pzo -o \
+			   -name *.pi -o \
 			   -name *.out -o \
 			   -name *.outs -o \
 			   -name *.so \

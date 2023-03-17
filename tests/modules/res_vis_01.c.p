@@ -4,9 +4,9 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_11.C
+module ResVis01.C
 
-import Module_11.D as D
+import ResVis01.D as D
 
 export
 resource Res1 from IO
@@ -19,7 +19,7 @@ func test(f : func() uses Res3) uses Res1 {
 }
 
 // Show that we can export a function that depends on another module's
-// resource, which also isn't visible to Module_11.
+// resource, which also isn't visible to ResVis01.
 export
 func test2() uses D.Res2 {
 }
