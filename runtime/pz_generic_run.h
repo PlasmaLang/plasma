@@ -174,6 +174,14 @@ class Context final : public AbstractGCTracer {
 
     void do_trace(HeapMarkState * state) const override;
     
+    uint8_t* get_ip() const {
+        return ip;
+    }
+
+    void jump(uint8_t *code) {
+        ip = code;
+    }
+
     void execute_closure(Closure *closure) {
         ip  = static_cast<uint8_t *>(closure->code());
         env = closure->data();
@@ -191,12 +199,19 @@ class Context final : public AbstractGCTracer {
         return v;
     }
 
-    uint8_t* get_ip() const {
-        return ip;
+    template<typename T>
+    void expr_push(T v) {
+        *reinterpret_cast<T*>(&expr_stack[++esp]) = v;
     }
 
-    void jump(uint8_t *code) {
-        ip = code;
+    template<typename T>
+    T expr_pop() {
+        return *reinterpret_cast<T*>(&expr_stack[esp--]);
+    }
+
+    template<typename T>
+    T& expr_tos(unsigned depth = 0) {
+        return *reinterpret_cast<T*>(&expr_stack[esp - depth]);
     }
 
   private:

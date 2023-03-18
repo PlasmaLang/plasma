@@ -40,235 +40,218 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 pz_trace_instr(context.rsp, "nop");
                 break;
             case PZT_LOAD_IMMEDIATE_8:
-                context.expr_stack[++context.esp].u8 = context.read_next_imm<uint8_t>();
+                context.expr_push<uint8_t>(context.read_next_imm<uint8_t>());
                 pz_trace_instr(context.rsp, "load imm:8");
                 break;
             case PZT_LOAD_IMMEDIATE_16:
-                context.expr_stack[++context.esp].u16 = context.read_next_imm<uint16_t>();
+                context.expr_push<uint16_t>(context.read_next_imm<uint16_t>());
                 pz_trace_instr(context.rsp, "load imm:16");
                 break;
             case PZT_LOAD_IMMEDIATE_32:
-                context.expr_stack[++context.esp].u32 = context.read_next_imm<uint32_t>();
+                context.expr_push<uint32_t>(context.read_next_imm<uint32_t>());
                 pz_trace_instr(context.rsp, "load imm:32");
                 break;
             case PZT_LOAD_IMMEDIATE_64:
-                context.expr_stack[++context.esp].u64 = context.read_next_imm<uint64_t>();
+                context.expr_push<uint64_t>(context.read_next_imm<uint64_t>());
                 pz_trace_instr(context.rsp, "load imm:64");
                 break;
             case PZT_ZE_8_16:
-                context.expr_stack[context.esp].u16 =
-                    context.expr_stack[context.esp].u8;
+                context.expr_tos<uint16_t>() = context.expr_tos<uint8_t>();
                 pz_trace_instr(context.rsp, "ze:8:16");
                 break;
             case PZT_ZE_8_32:
-                context.expr_stack[context.esp].u32 =
-                    context.expr_stack[context.esp].u8;
+                context.expr_tos<uint32_t>() = context.expr_tos<uint8_t>();
                 pz_trace_instr(context.rsp, "ze:8:32");
                 break;
             case PZT_ZE_8_64:
-                context.expr_stack[context.esp].u64 =
-                    context.expr_stack[context.esp].u8;
+                context.expr_tos<uint64_t>() = context.expr_tos<uint8_t>();
                 pz_trace_instr(context.rsp, "ze:8:64");
                 break;
             case PZT_ZE_16_32:
-                context.expr_stack[context.esp].u32 =
-                    context.expr_stack[context.esp].u16;
+                context.expr_tos<uint32_t>() = context.expr_tos<uint16_t>();
                 pz_trace_instr(context.rsp, "ze:16:32");
                 break;
             case PZT_ZE_16_64:
-                context.expr_stack[context.esp].u64 =
-                    context.expr_stack[context.esp].u16;
+                context.expr_tos<uint64_t>() = context.expr_tos<uint16_t>();
                 pz_trace_instr(context.rsp, "ze:16:64");
                 break;
             case PZT_ZE_32_64:
-                context.expr_stack[context.esp].u64 =
-                    context.expr_stack[context.esp].u32;
+                context.expr_tos<uint64_t>() = context.expr_tos<uint32_t>();
                 pz_trace_instr(context.rsp, "ze:32:64");
                 break;
             case PZT_SE_8_16:
-                context.expr_stack[context.esp].s16 =
-                    context.expr_stack[context.esp].s8;
+                context.expr_tos<int16_t>() = context.expr_tos<int8_t>();
                 pz_trace_instr(context.rsp, "se:8:16");
                 break;
             case PZT_SE_8_32:
-                context.expr_stack[context.esp].s32 =
-                    context.expr_stack[context.esp].s8;
+                context.expr_tos<int32_t>() = context.expr_tos<int8_t>();
                 pz_trace_instr(context.rsp, "se:8:32");
                 break;
             case PZT_SE_8_64:
-                context.expr_stack[context.esp].s64 =
-                    context.expr_stack[context.esp].s8;
+                context.expr_tos<int64_t>() = context.expr_tos<int8_t>();
                 pz_trace_instr(context.rsp, "se:8:64");
                 break;
             case PZT_SE_16_32:
-                context.expr_stack[context.esp].s32 =
-                    context.expr_stack[context.esp].s16;
+                context.expr_tos<int32_t>() = context.expr_tos<int16_t>();
                 pz_trace_instr(context.rsp, "se:16:32");
                 break;
             case PZT_SE_16_64:
-                context.expr_stack[context.esp].s64 =
-                    context.expr_stack[context.esp].s16;
+                context.expr_tos<int64_t>() = context.expr_tos<int16_t>();
                 pz_trace_instr(context.rsp, "se:16:64");
                 break;
             case PZT_SE_32_64:
-                context.expr_stack[context.esp].s64 =
-                    context.expr_stack[context.esp].s32;
+                context.expr_tos<int64_t>() = context.expr_tos<int32_t>();
                 pz_trace_instr(context.rsp, "se:32:64");
                 break;
             case PZT_TRUNC_64_32:
-                context.expr_stack[context.esp].u32 =
-                    context.expr_stack[context.esp].u64 & 0xFFFFFFFFu;
+                context.expr_tos<uint32_t>() =
+                    context.expr_tos<uint64_t>() & 0xFFFFFFFFu;
                 pz_trace_instr(context.rsp, "trunc:64:32");
                 break;
             case PZT_TRUNC_64_16:
-                context.expr_stack[context.esp].u16 =
-                    context.expr_stack[context.esp].u64 & 0xFFFF;
+                context.expr_tos<uint16_t>() =
+                    context.expr_tos<uint64_t>() & 0xFFFF;
                 pz_trace_instr(context.rsp, "trunc:64:16");
                 break;
             case PZT_TRUNC_64_8:
-                context.expr_stack[context.esp].u8 =
-                    context.expr_stack[context.esp].u64 & 0xFF;
+                context.expr_tos<uint8_t>() =
+                    context.expr_tos<uint64_t>() & 0xFF;
                 pz_trace_instr(context.rsp, "trunc:64:8");
                 break;
             case PZT_TRUNC_32_16:
-                context.expr_stack[context.esp].u16 =
-                    context.expr_stack[context.esp].u32 & 0xFFFF;
+                context.expr_tos<uint16_t>() =
+                    context.expr_tos<uint32_t>() & 0xFFFF;
                 pz_trace_instr(context.rsp, "trunc:32:16");
                 break;
             case PZT_TRUNC_32_8:
-                context.expr_stack[context.esp].u8 =
-                    context.expr_stack[context.esp].u32 & 0xFF;
+                context.expr_tos<uint8_t>() =
+                    context.expr_tos<uint32_t>() & 0xFF;
                 pz_trace_instr(context.rsp, "trunc:32:8");
                 break;
             case PZT_TRUNC_16_8:
-                context.expr_stack[context.esp].u8 =
-                    context.expr_stack[context.esp].u16 & 0xFF;
+                context.expr_tos<uint8_t>() =
+                    context.expr_tos<uint16_t>() & 0xFF;
                 pz_trace_instr(context.rsp, "trunc:16:8");
                 break;
 
-#define PZ_RUN_ARITHMETIC(opcode_base, width, signedness, operator, op_name) \
-    case opcode_base##_##width:                                              \
-        context.expr_stack[context.esp - 1].signedness##width =              \
-            (context.expr_stack[context.esp - 1]                             \
-                 .signedness##width                                          \
-                 operator context.expr_stack[context.esp]                    \
-                 .signedness##width);                                        \
-        context.esp--;                                                       \
-        pz_trace_instr(context.rsp, op_name);                                \
-        break
 // clang-format off
-#define PZ_RUN_ARITHMETIC1(opcode_base, width, signedness, operator, op_name) \
-    case opcode_base##_##width:                                               \
-        context.expr_stack[context.esp].signedness##width =                   \
-                operator context.expr_stack[context.esp].signedness##width;   \
-        pz_trace_instr(context.rsp, op_name);                                 \
+#define PZ_RUN_ARITHMETIC(label, T, operator, op_name)  \
+    case label: {                                       \
+        T arg2 = context.expr_pop<T>();                 \
+        T arg1 = context.expr_tos<T>();                 \
+        context.expr_tos<T>() = arg1 operator arg2;     \
+        pz_trace_instr(context.rsp, op_name);           \
+        break;                                          \
+    }
+#define PZ_RUN_ARITHMETIC1(label, T,  operator, op_name)    \
+    case label:                                             \
+        context.expr_tos<T>() =                             \
+                operator context.expr_tos<T>();             \
+        pz_trace_instr(context.rsp, op_name);               \
         break
-// clang-format on
 
-                PZ_RUN_ARITHMETIC(PZT_ADD, 8, s, +, "add:8");
-                PZ_RUN_ARITHMETIC(PZT_ADD, 16, s, +, "add:16");
-                PZ_RUN_ARITHMETIC(PZT_ADD, 32, s, +, "add:32");
-                PZ_RUN_ARITHMETIC(PZT_ADD, 64, s, +, "add:64");
-                PZ_RUN_ARITHMETIC(PZT_SUB, 8, s, -, "sub:8");
-                PZ_RUN_ARITHMETIC(PZT_SUB, 16, s, -, "sub:16");
-                PZ_RUN_ARITHMETIC(PZT_SUB, 32, s, -, "sub:32");
-                PZ_RUN_ARITHMETIC(PZT_SUB, 64, s, -, "sub:64");
-                PZ_RUN_ARITHMETIC(PZT_MUL, 8, s, *, "mul:8");
-                PZ_RUN_ARITHMETIC(PZT_MUL, 16, s, *, "mul:16");
-                PZ_RUN_ARITHMETIC(PZT_MUL, 32, s, *, "mul:32");
-                PZ_RUN_ARITHMETIC(PZT_MUL, 64, s, *, "mul:64");
-                PZ_RUN_ARITHMETIC(PZT_DIV, 8, s, /, "div:8");
-                PZ_RUN_ARITHMETIC(PZT_DIV, 16, s, /, "div:16");
-                PZ_RUN_ARITHMETIC(PZT_DIV, 32, s, /, "div:32");
-                PZ_RUN_ARITHMETIC(PZT_DIV, 64, s, /, "div:64");
-                PZ_RUN_ARITHMETIC(PZT_MOD, 8, s, %, "rem:8");
-                PZ_RUN_ARITHMETIC(PZT_MOD, 16, s, %, "rem:16");
-                PZ_RUN_ARITHMETIC(PZT_MOD, 32, s, %, "rem:32");
-                PZ_RUN_ARITHMETIC(PZT_MOD, 64, s, %, "rem:64");
-                PZ_RUN_ARITHMETIC(PZT_AND, 8, u, &, "and:8");
-                PZ_RUN_ARITHMETIC(PZT_AND, 16, u, &, "and:16");
-                PZ_RUN_ARITHMETIC(PZT_AND, 32, u, &, "and:32");
-                PZ_RUN_ARITHMETIC(PZT_AND, 64, u, &, "and:64");
-                PZ_RUN_ARITHMETIC(PZT_OR, 8, u, |, "or:8");
-                PZ_RUN_ARITHMETIC(PZT_OR, 16, u, |, "or:16");
-                PZ_RUN_ARITHMETIC(PZT_OR, 32, u, |, "or:32");
-                PZ_RUN_ARITHMETIC(PZT_OR, 64, u, |, "or:64");
-                PZ_RUN_ARITHMETIC(PZT_XOR, 8, u, ^, "xor:8");
-                PZ_RUN_ARITHMETIC(PZT_XOR, 16, u, ^, "xor:16");
-                PZ_RUN_ARITHMETIC(PZT_XOR, 32, u, ^, "xor:32");
-                PZ_RUN_ARITHMETIC(PZT_XOR, 64, u, ^, "xor:64");
-                PZ_RUN_ARITHMETIC(PZT_LT_U, 8, u, <, "ltu:8");
-                PZ_RUN_ARITHMETIC(PZT_LT_U, 16, u, <, "ltu:16");
-                PZ_RUN_ARITHMETIC(PZT_LT_U, 32, u, <, "ltu:32");
-                PZ_RUN_ARITHMETIC(PZT_LT_U, 64, u, <, "ltu:64");
-                PZ_RUN_ARITHMETIC(PZT_LT_S, 8, s, <, "lts:8");
-                PZ_RUN_ARITHMETIC(PZT_LT_S, 16, s, <, "lts:16");
-                PZ_RUN_ARITHMETIC(PZT_LT_S, 32, s, <, "lts:32");
-                PZ_RUN_ARITHMETIC(PZT_LT_S, 64, s, <, "lts:64");
-                PZ_RUN_ARITHMETIC(PZT_GT_U, 8, u, >, "gtu:8");
-                PZ_RUN_ARITHMETIC(PZT_GT_U, 16, u, >, "gtu:16");
-                PZ_RUN_ARITHMETIC(PZT_GT_U, 32, u, >, "gtu:32");
-                PZ_RUN_ARITHMETIC(PZT_GT_U, 64, u, >, "gtu:64");
-                PZ_RUN_ARITHMETIC(PZT_GT_S, 8, s, >, "gts:8");
-                PZ_RUN_ARITHMETIC(PZT_GT_S, 16, s, >, "gts:16");
-                PZ_RUN_ARITHMETIC(PZT_GT_S, 32, s, >, "gts:32");
-                PZ_RUN_ARITHMETIC(PZT_GT_S, 64, s, >, "gts:64");
-                PZ_RUN_ARITHMETIC(PZT_EQ, 8, s, ==, "eq:8");
-                PZ_RUN_ARITHMETIC(PZT_EQ, 16, s, ==, "eq:16");
-                PZ_RUN_ARITHMETIC(PZT_EQ, 32, s, ==, "eq:32");
-                PZ_RUN_ARITHMETIC(PZT_EQ, 64, s, ==, "eq:64");
-                PZ_RUN_ARITHMETIC1(PZT_NOT, 8, u, !, "not:8");
-                PZ_RUN_ARITHMETIC1(PZT_NOT, 16, u, !, "not:16");
-                PZ_RUN_ARITHMETIC1(PZT_NOT, 32, u, !, "not:16");
-                PZ_RUN_ARITHMETIC1(PZT_NOT, 64, u, !, "not:16");
+                PZ_RUN_ARITHMETIC(PZT_ADD_8,   int8_t,   +,  "add:8");
+                PZ_RUN_ARITHMETIC(PZT_ADD_16,  int16_t,  +,  "add:16");
+                PZ_RUN_ARITHMETIC(PZT_ADD_32,  int32_t,  +,  "add:32");
+                PZ_RUN_ARITHMETIC(PZT_ADD_64,  int64_t,  +,  "add:64");
+                PZ_RUN_ARITHMETIC(PZT_SUB_8,   int8_t,   -,  "sub:8");
+                PZ_RUN_ARITHMETIC(PZT_SUB_16,  int16_t,  -,  "sub:16");
+                PZ_RUN_ARITHMETIC(PZT_SUB_32,  int32_t,  -,  "sub:32");
+                PZ_RUN_ARITHMETIC(PZT_SUB_64,  int64_t,  -,  "sub:64");
+                PZ_RUN_ARITHMETIC(PZT_MUL_8,   int8_t,   *,  "mul:8");
+                PZ_RUN_ARITHMETIC(PZT_MUL_16,  int16_t,  *,  "mul:16");
+                PZ_RUN_ARITHMETIC(PZT_MUL_32,  int32_t,  *,  "mul:32");
+                PZ_RUN_ARITHMETIC(PZT_MUL_64,  int64_t,  *,  "mul:64");
+                PZ_RUN_ARITHMETIC(PZT_DIV_8,   int8_t,   /,  "div:8");
+                PZ_RUN_ARITHMETIC(PZT_DIV_16,  int16_t,  /,  "div:16");
+                PZ_RUN_ARITHMETIC(PZT_DIV_32,  int32_t,  /,  "div:32");
+                PZ_RUN_ARITHMETIC(PZT_DIV_64,  int64_t,  /,  "div:64");
+                PZ_RUN_ARITHMETIC(PZT_MOD_8,   int8_t,   %,  "rem:8");
+                PZ_RUN_ARITHMETIC(PZT_MOD_16,  int16_t,  %,  "rem:16");
+                PZ_RUN_ARITHMETIC(PZT_MOD_32,  int32_t,  %,  "rem:32");
+                PZ_RUN_ARITHMETIC(PZT_MOD_64,  int64_t,  %,  "rem:64");
+                PZ_RUN_ARITHMETIC(PZT_AND_8,   uint8_t,  &,  "and:8");
+                PZ_RUN_ARITHMETIC(PZT_AND_16,  uint16_t, &,  "and:16");
+                PZ_RUN_ARITHMETIC(PZT_AND_32,  uint32_t, &,  "and:32");
+                PZ_RUN_ARITHMETIC(PZT_AND_64,  uint64_t, &,  "and:64");
+                PZ_RUN_ARITHMETIC(PZT_OR_8,    uint8_t,  |,  "or:8");
+                PZ_RUN_ARITHMETIC(PZT_OR_16,   uint16_t, |,  "or:16");
+                PZ_RUN_ARITHMETIC(PZT_OR_32,   uint32_t, |,  "or:32");
+                PZ_RUN_ARITHMETIC(PZT_OR_64,   uint64_t, |,  "or:64");
+                PZ_RUN_ARITHMETIC(PZT_XOR_8,   uint8_t,  ^,  "xor:8");
+                PZ_RUN_ARITHMETIC(PZT_XOR_16,  uint16_t, ^,  "xor:16");
+                PZ_RUN_ARITHMETIC(PZT_XOR_32,  uint32_t, ^,  "xor:32");
+                PZ_RUN_ARITHMETIC(PZT_XOR_64,  uint64_t, ^,  "xor:64");
+                PZ_RUN_ARITHMETIC(PZT_LT_U_8,  uint8_t,  <,  "ltu:8");
+                PZ_RUN_ARITHMETIC(PZT_LT_U_16, uint16_t, <,  "ltu:16");
+                PZ_RUN_ARITHMETIC(PZT_LT_U_32, uint32_t, <,  "ltu:32");
+                PZ_RUN_ARITHMETIC(PZT_LT_U_64, uint64_t, <,  "ltu:64");
+                PZ_RUN_ARITHMETIC(PZT_LT_S_8,  int8_t,   <,  "lts:8");
+                PZ_RUN_ARITHMETIC(PZT_LT_S_16, int16_t,  <,  "lts:16");
+                PZ_RUN_ARITHMETIC(PZT_LT_S_32, int32_t,  <,  "lts:32");
+                PZ_RUN_ARITHMETIC(PZT_LT_S_64, int64_t,  <,  "lts:64");
+                PZ_RUN_ARITHMETIC(PZT_GT_U_8,  uint8_t,  >,  "gtu:8");
+                PZ_RUN_ARITHMETIC(PZT_GT_U_16, uint16_t, >,  "gtu:16");
+                PZ_RUN_ARITHMETIC(PZT_GT_U_32, uint32_t, >,  "gtu:32");
+                PZ_RUN_ARITHMETIC(PZT_GT_U_64, uint64_t, >,  "gtu:64");
+                PZ_RUN_ARITHMETIC(PZT_GT_S_8,  int8_t,   >,  "gts:8");
+                PZ_RUN_ARITHMETIC(PZT_GT_S_16, int16_t,  >,  "gts:16");
+                PZ_RUN_ARITHMETIC(PZT_GT_S_32, int32_t,  >,  "gts:32");
+                PZ_RUN_ARITHMETIC(PZT_GT_S_64, int64_t,  >,  "gts:64");
+                PZ_RUN_ARITHMETIC(PZT_EQ_8,    int8_t,   ==, "eq:8");
+                PZ_RUN_ARITHMETIC(PZT_EQ_16,   int16_t,  ==, "eq:16");
+                PZ_RUN_ARITHMETIC(PZT_EQ_32,   int32_t,  ==, "eq:32");
+                PZ_RUN_ARITHMETIC(PZT_EQ_64,   int64_t,  ==, "eq:64");
+
+                PZ_RUN_ARITHMETIC1(PZT_NOT_8,  uint8_t,  !,  "not:8");
+                PZ_RUN_ARITHMETIC1(PZT_NOT_16, uint16_t, !,  "not:16");
+                PZ_RUN_ARITHMETIC1(PZT_NOT_32, uint32_t, !,  "not:16");
+                PZ_RUN_ARITHMETIC1(PZT_NOT_64, uint64_t, !,  "not:16");
+// clang-format on
 
 #undef PZ_RUN_ARITHMETIC
 #undef PZ_RUN_ARITHMETIC1
 
-#define PZ_RUN_SHIFT(opcode_base, width, operator, op_name) \
-    case opcode_base##_##width:                             \
-        context.expr_stack[context.esp - 1].u##width =      \
-            (context.expr_stack[context.esp - 1]            \
-                 .u##width                                  \
-                 operator context.expr_stack[context.esp]   \
-                 .u8);                                      \
-        context.esp--;                                      \
-        pz_trace_instr(context.rsp, op_name);               \
-        break
+#define PZ_RUN_SHIFT(label, T, operator, op_name)   \
+    case label: {                                   \
+        uint8_t arg2 = context.expr_pop<uint8_t>(); \
+        T arg1 = context.expr_tos<T>();             \
+        context.expr_tos<T>() = arg1 operator arg2; \
+        pz_trace_instr(context.rsp, op_name);       \
+        break;                                      \
+    }
 
-                PZ_RUN_SHIFT(PZT_LSHIFT, 8, <<, "lshift:8");
-                PZ_RUN_SHIFT(PZT_LSHIFT, 16, <<, "lshift:16");
-                PZ_RUN_SHIFT(PZT_LSHIFT, 32, <<, "lshift:32");
-                PZ_RUN_SHIFT(PZT_LSHIFT, 64, <<, "lshift:64");
-                PZ_RUN_SHIFT(PZT_RSHIFT, 8, >>, "rshift:8");
-                PZ_RUN_SHIFT(PZT_RSHIFT, 16, >>, "rshift:16");
-                PZ_RUN_SHIFT(PZT_RSHIFT, 32, >>, "rshift:32");
-                PZ_RUN_SHIFT(PZT_RSHIFT, 64, >>, "rshift:64");
+                PZ_RUN_SHIFT(PZT_LSHIFT_8,  uint8_t,  <<, "lshift:8");
+                PZ_RUN_SHIFT(PZT_LSHIFT_16, uint16_t, <<, "lshift:16");
+                PZ_RUN_SHIFT(PZT_LSHIFT_32, uint32_t, <<, "lshift:32");
+                PZ_RUN_SHIFT(PZT_LSHIFT_64, uint64_t, <<, "lshift:64");
+                PZ_RUN_SHIFT(PZT_RSHIFT_8,  uint8_t,  >>, "rshift:8");
+                PZ_RUN_SHIFT(PZT_RSHIFT_16, uint16_t, >>, "rshift:16");
+                PZ_RUN_SHIFT(PZT_RSHIFT_32, uint32_t, >>, "rshift:32");
+                PZ_RUN_SHIFT(PZT_RSHIFT_64, uint64_t, >>, "rshift:64");
 
 #undef PZ_RUN_SHIFT
 
             case PZT_DUP:
-                context.esp++;
-                context.expr_stack[context.esp] =
-                    context.expr_stack[context.esp - 1];
+                context.expr_push<StackValue>(
+                    context.expr_tos<StackValue>());
                 pz_trace_instr(context.rsp, "dup");
                 break;
             case PZT_DROP:
-                context.esp--;
-                pz_trace_instr(context.rsp, "drop");
+                context.expr_pop<StackValue>();
+                pz_trace_instr(context.rsp, "pop");
                 break;
             case PZT_SWAP: {
                 StackValue temp;
-                temp = context.expr_stack[context.esp];
-                context.expr_stack[context.esp] =
-                    context.expr_stack[context.esp - 1];
-                context.expr_stack[context.esp - 1] = temp;
+                temp = context.expr_tos<StackValue>();
+                context.expr_tos<StackValue>() =
+                    context.expr_tos<StackValue>(1);
+                context.expr_tos<StackValue>(1) = temp;
                 pz_trace_instr(context.rsp, "swap");
                 break;
             }
             case PZT_ROLL: {
                 uint8_t depth = context.read_next_imm<uint8_t>();
-                StackValue temp;
                 switch (depth) {
                     case 0:
                         fprintf(stderr, "Illegal rot depth 0");
@@ -281,12 +264,12 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                          * context.esp - 0, not context.esp - 1
                          */
                         depth--;
-                        temp = context.expr_stack[context.esp - depth];
+                        StackValue temp = context.expr_tos<StackValue>(depth);
                         for (int i = depth; i > 0; i--) {
-                            context.expr_stack[context.esp - i] =
-                                context.expr_stack[context.esp - (i - 1)];
+                            context.expr_tos<StackValue>(i) =
+                                context.expr_tos<StackValue>(i - 1);
                         }
-                        context.expr_stack[context.esp] = temp;
+                        context.expr_tos<StackValue>() = temp;
                 }
                 pz_trace_instr2(context.rsp, "roll", depth + 1);
                 break;
@@ -298,9 +281,8 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                  * before accessing the stack.
                  */
                 uint8_t depth = context.read_next_imm<uint8_t>();
-                context.esp++;
-                context.expr_stack[context.esp] =
-                    context.expr_stack[context.esp - depth];
+                context.expr_push<StackValue>(
+                    context.expr_tos<StackValue>(depth - 1));
                 pz_trace_instr2(context.rsp, "pick", depth);
                 break;
             }
@@ -345,11 +327,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 pz_trace_instr(context.rsp, "tcall");
                 break;
             case PZT_TCALL_IND: {
-                Closure * closure;
-
-                closure     = (Closure *)context.expr_stack[context.esp--].ptr;
-                context.execute_closure(closure);
-
+                context.execute_closure(context.expr_pop<Closure*>());
                 pz_trace_instr(context.rsp, "call_ind");
                 break;
             }
@@ -359,7 +337,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             case PZT_CJMP_8: {
                 uint8_t *dest = context.read_next_imm<uint8_t*>();
-                if (context.expr_stack[context.esp--].u8) {
+                if (context.expr_pop<uint8_t>()) {
                     context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:8 taken");
                 } else {
@@ -369,7 +347,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
             }
             case PZT_CJMP_16: {
                 uint8_t *dest = context.read_next_imm<uint8_t*>();
-                if (context.expr_stack[context.esp--].u16) {
+                if (context.expr_pop<uint16_t>()) {
                     context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:16 taken");
                 } else {
@@ -379,7 +357,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
             }
             case PZT_CJMP_32: {
                 uint8_t *dest = context.read_next_imm<uint8_t*>();
-                if (context.expr_stack[context.esp--].u32) {
+                if (context.expr_pop<uint32_t>()) {
                     context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:32 taken");
                 } else {
@@ -389,7 +367,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
             }
             case PZT_CJMP_64: {
                 uint8_t *dest = context.read_next_imm<uint8_t*>();
-                if (context.expr_stack[context.esp--].u64) {
+                if (context.expr_pop<uint64_t>()) {
                     context.jump(dest);
                     pz_trace_instr(context.rsp, "cjmp:64 taken");
                 } else {
@@ -408,130 +386,108 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
                 break;
             case PZT_ALLOC: {
                 size_t size = context.read_next_imm<size_t>();
-                void * addr;
 
                 // pz_gc_alloc uses size in machine words, round the value
                 // up and convert it to words rather than bytes.
                 size = (size + WORDSIZE_BYTES - 1) / WORDSIZE_BYTES;
-                addr = context.alloc(size);
-                context.expr_stack[++context.esp].ptr = addr;
+                context.expr_push<void*>(context.alloc(size));
                 pz_trace_instr(context.rsp, "alloc");
                 break;
             }
             case PZT_MAKE_CLOSURE: {
                 uint8_t *code = context.read_next_imm<uint8_t*>();
-                void *data = context.expr_stack[context.esp].ptr;
+                void *data = context.expr_tos<void*>();
                 Closure * closure =
                     new (context) Closure(code, data);
-                context.expr_stack[context.esp].ptr = closure;
+                context.expr_tos<Closure*>() = closure;
                 pz_trace_instr(context.rsp, "make_closure");
                 break;
             }
             case PZT_LOAD_8: {
                 /* (ptr - * ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr = 
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                context.expr_stack[context.esp + 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.expr_stack[context.esp].u8 = *(uint8_t *)addr;
-                context.esp++;
+                uint8_t *base = context.expr_tos<uint8_t*>();
+                context.expr_tos<uint8_t>() = *(base + offset);
+                context.expr_push<uint8_t*>(base);
                 pz_trace_instr(context.rsp, "load_8");
                 break;
             }
             case PZT_LOAD_16: {
                 /* (ptr - * ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                context.expr_stack[context.esp + 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.expr_stack[context.esp].u16 = *(uint16_t *)addr;
-                context.esp++;
+                uint8_t *base = context.expr_tos<uint8_t*>();
+                context.expr_tos<uint16_t>() =
+                    *reinterpret_cast<uint16_t*>(base + offset);
+                context.expr_push<uint8_t*>(base);
                 pz_trace_instr(context.rsp, "load_16");
                 break;
             }
             case PZT_LOAD_32: {
                 /* (ptr - * ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                context.expr_stack[context.esp + 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.expr_stack[context.esp].u32 = *(uint32_t *)addr;
-                context.esp++;
+                uint8_t *base = context.expr_tos<uint8_t*>();
+                context.expr_tos<uint32_t>() =
+                    *reinterpret_cast<uint32_t*>(base + offset);
+                context.expr_push<uint8_t*>(base);
                 pz_trace_instr(context.rsp, "load_32");
                 break;
             }
             case PZT_LOAD_64: {
                 /* (ptr - * ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr = 
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                context.expr_stack[context.esp + 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.expr_stack[context.esp].u64 = *(uint64_t *)addr;
-                context.esp++;
+                uint8_t *base = context.expr_tos<uint8_t*>();
+                context.expr_tos<uint64_t>() =
+                    *reinterpret_cast<uint64_t*>(base + offset);
+                context.expr_push<uint8_t*>(base);
                 pz_trace_instr(context.rsp, "load_64");
                 break;
             }
             case PZT_LOAD_PTR: {
                 /* (ptr - ptr ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                context.expr_stack[context.esp + 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.expr_stack[context.esp].ptr = *(void **)addr;
-                context.esp++;
+                uint8_t *base = context.expr_tos<uint8_t*>();
+                context.expr_tos<uintptr_t>() =
+                    *reinterpret_cast<uintptr_t*>(base + offset);
+                context.expr_push<uint8_t*>(base);
                 pz_trace_instr(context.rsp, "load_ptr");
                 break;
             }
             case PZT_STORE_8: {
                 /* (* ptr - ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                *(uint8_t *)addr = context.expr_stack[context.esp - 1].u8;
-                context.expr_stack[context.esp - 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.esp--;
+                uint8_t *base = context.expr_pop<uint8_t*>();
+                *(base + offset) = context.expr_tos<uint8_t>();
+                context.expr_tos<uint8_t*>() = base;
                 pz_trace_instr(context.rsp, "store_8");
                 break;
             }
             case PZT_STORE_16: {
                 /* (* ptr - ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                *(uint16_t *)addr = context.expr_stack[context.esp - 1].u16;
-                context.expr_stack[context.esp - 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.esp--;
+                uint8_t *base = context.expr_pop<uint8_t*>();
+                *reinterpret_cast<uint16_t*>(base + offset) =
+                    context.expr_tos<uint16_t>();
+                context.expr_tos<uint8_t*>() = base;
                 pz_trace_instr(context.rsp, "store_16");
                 break;
             }
             case PZT_STORE_32: {
                 /* (* ptr - ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr = 
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                *(uint32_t *)addr = context.expr_stack[context.esp - 1].u32;
-                context.expr_stack[context.esp - 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.esp--;
+                uint8_t *base = context.expr_pop<uint8_t*>();
+                *reinterpret_cast<uint32_t*>(base + offset) =
+                    context.expr_tos<uint32_t>();
+                context.expr_tos<uint8_t*>() = base;
                 pz_trace_instr(context.rsp, "store_32");
                 break;
             }
             case PZT_STORE_64: {
                 /* (* ptr - ptr) */
                 uint16_t offset = context.read_next_imm<uint16_t>();
-                void *addr =
-                    (uint8_t *)context.expr_stack[context.esp].ptr + offset;
-                *(uint64_t *)addr = context.expr_stack[context.esp - 1].u64;
-                context.expr_stack[context.esp - 1].ptr =
-                    context.expr_stack[context.esp].ptr;
-                context.esp--;
+                uint8_t *base = context.expr_pop<uint8_t*>();
+                *reinterpret_cast<uint64_t*>(base + offset) =
+                    context.expr_tos<uint64_t>();
+                context.expr_tos<uint8_t*>() = base;
                 pz_trace_instr(context.rsp, "store_64");
                 break;
             }
@@ -542,7 +498,7 @@ int generic_main_loop(Context & context, Heap * heap, Closure * closure,
             }
 
             case PZT_END:
-                retcode = context.expr_stack[context.esp].s32;
+                retcode = context.expr_tos<int32_t>();
                 if (context.esp != 1) {
                     fprintf(stderr,
                             "Stack misaligned, esp: %d should be 1\n",
