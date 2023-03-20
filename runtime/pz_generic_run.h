@@ -147,6 +147,13 @@ enum InstructionToken {
 #endif
 };
 
+// All values take the same space on the stack and are all aligned.  This
+// means wasted space.
+// For now we can't do better without making our stack operations - dup,
+// drop, roll and pick - specialised to each data size and know the layout.  At
+// that point it'd be easier to use more traditional stack frames.  Instead
+// we choose to keep the interpreter simplier.  We can write seperate more
+// efficient interpreters and compilers.
 union StackValue {
     uint8_t   u8;
     int8_t    s8;
