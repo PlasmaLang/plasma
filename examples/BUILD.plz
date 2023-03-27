@@ -5,6 +5,10 @@
 # this directory and what modules they're made from.
 #
 
+[ackermann]
+type = program
+modules = [ Ackermann ]
+
 [change]
 type = program
 modules = [ Change, String, Util ]
