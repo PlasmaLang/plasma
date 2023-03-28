@@ -2,7 +2,7 @@
 % Plasma builder
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program starts the build process for Plasma projects
@@ -471,7 +471,7 @@ make_foreign_link_target(Target) = Dep :-
     ; ForeignSources = [_ | _],
         Output = make_c_library_name(Target),
         ( if
-            map(file_change_extension(".cpp", ".o"),
+            map(file_change_extension(cpp_extension, native_object_extension),
                 ForeignSources, ForeignObjects)
         then
             Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects))
@@ -482,12 +482,16 @@ make_foreign_link_target(Target) = Dep :-
 
 :- func make_c_library_name(target) = string.
 
-make_c_library_name(Target) = nq_name_to_string(Target ^ t_name) ++ ".so".
+make_c_library_name(Target) = nq_name_to_string(Target ^ t_name) ++
+    native_dylib_extension.
 
 :- func make_foreign_target(string) = dep_target.
 
 make_foreign_target(CFileName) = Target :-
-    ( if file_change_extension(".cpp", ".o", CFileName, ObjectName) then
+    ( if
+        file_change_extension(cpp_extension, native_object_extension,
+            CFileName, ObjectName)
+    then
         Target = dt_c_compile(ObjectName, CFileName)
     else
         compile_error($file, $pred, "Unrecognised source file extension")
@@ -785,7 +789,7 @@ invoke_ninja(Options, Proj, Result, !IO) :-
                 CTarget = []
             ; CSources = [_ | _],
                 % Need to build the foreign code
-                CTarget = [ninja_target_path(Name, ".so")]
+                CTarget = [ninja_target_path(Name, native_dylib_extension)]
             )
         ), Targets),
     NinjaTargetsStr = string_join(" ", condense(NinjaTargets)),
