@@ -353,8 +353,8 @@ not_found_error(Context, Key) =
                 dtcl_input  :: list(string)
             )
     ;       dt_c_compile(
-                ctcc_output :: string,
-                ctcc_input  :: string
+                dtcc_output :: string,
+                dtcc_input  :: string
             ).
 
 :- pred build_dependency_info(list(target)::in,
