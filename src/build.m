@@ -529,12 +529,8 @@ do_write_dependency_file(DepInfo, BuildFile, !IO) :-
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
-    format(File, "build %s : plzlink %s | $path/plzlnk\n",
+    format(File, "build ../%s : plzlink %s | $path/plzlnk\n",
         [s(ProgFile), s(string_join(" ", Objects))], !IO),
-    format(File, "    name = %s\n\n",
-        [s(nq_name_to_string(ProgName))], !IO),
-    format(File, "build ../%s : copy_out %s\n",
-        [s(ProgFile), s(ProgFile)], !IO),
     format(File, "    name = %s\n\n",
         [s(nq_name_to_string(ProgName))], !IO).
 write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
@@ -580,12 +576,8 @@ write_target(File,
     format(File, "    name = %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
-    format(File, "build %s : c_link %s\n",
+    format(File, "build ../%s : c_link %s\n",
         [s(Output), s(string_join(" ", Inputs))], !IO),
-    format(File, "    name = %s\n\n",
-        [s(nq_name_to_string(ModuleName))], !IO),
-    format(File, "build ../%s : copy_foreign_out %s\n",
-        [s(Output), s(Output)], !IO),
     format(File, "    name = %s\n\n",
         [s(nq_name_to_string(ModuleName))], !IO).
 write_target(File, dt_c_compile(Object, Source), !IO) :-
@@ -755,14 +747,6 @@ rule c_link
 rule c_compile
     command = $cxx -o $out -c $in
     description = Compiling $name
-
-rule copy_out
-    command = cp $in $out
-    description = Copying $name bytecode
-
-rule copy_foreign_out
-    command = cp $in $out
-    description = Copying foreign code for $name
 ".
 
 %-----------------------------------------------------------------------%
