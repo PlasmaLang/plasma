@@ -224,7 +224,7 @@ make_target(TOML, TargetStr) = Result :-
                     find_duplicates(Modules, DupModules),
                     not is_empty(DupModules)
                 then
-                    DupModulesStrings = map(func(M) = 
+                    DupModulesStrings = map(func(M) =
                         "'" ++ q_name_to_string(M) ++ "'",
                         to_sorted_list(DupModules)),
                     Result = return_error(TargetContext,
