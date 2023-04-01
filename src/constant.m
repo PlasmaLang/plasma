@@ -2,7 +2,7 @@
 % Plasma constants
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module provides constants used in the compiler and other tools.
@@ -22,6 +22,10 @@
 :- func pz_text_extension = string.
 :- func output_extension = string.
 :- func library_extension = string.
+
+:- func native_object_extension = string.
+:- func native_dylib_extension = string.
+:- func cpp_extension = string.
 
 :- func build_file = string.
 :- func build_directory = string.
@@ -55,6 +59,10 @@ depends_extension = ".dep".
 pz_text_extension = ".pzt".
 output_extension = ".pzo".
 library_extension = ".pz".
+
+native_object_extension = ".o".
+native_dylib_extension = ".so".
+cpp_extension = ".cpp".
 
 build_file = "BUILD.plz".
 build_directory = "_build".
