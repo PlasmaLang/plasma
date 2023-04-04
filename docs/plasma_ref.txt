@@ -2,8 +2,8 @@ Plasma Language Reference
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: February 2022
-:Copyright: Copyright (C) 2015-2022 Plasma Team
+:Date: April 2023
+:Copyright: Copyright (C) Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -57,9 +57,7 @@ Plasma := ModuleDecl ToplevelItem*
 ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
-              | Definition
-
-Definition := FuncDefinition
+              | FuncDefinition
 
 ModuleQualifiers := ( ident . )*
 QualifiedIdent := ModuleQualifiers ident
