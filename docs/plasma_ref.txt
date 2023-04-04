@@ -1259,7 +1259,7 @@ This hides both the lambda expression and the pattern match.  Note that
 lambda or generator syntax is not specified yet so this may be different in
 reality, or not implemented at all.
 
-==== Ideas
+== Ideas
 
 These are just ideas at this stage, they are probably bad ideas.
 
