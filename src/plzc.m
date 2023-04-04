@@ -2,7 +2,7 @@
 % Plasma compiler
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program compiles plasma modules.
@@ -214,7 +214,7 @@ do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
         report_errors(GeneralOpts ^ go_source_dir, ModuleNameErrors, !IO),
         set_exit_status(1, !IO)
     else
-        filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _),
+        filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _, _),
         ( ImportType = interface_import,
             Imports1 = Imports0
         ; ImportType = typeres_import,

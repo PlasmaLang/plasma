@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -94,6 +94,7 @@ parse_typeres(Filename, Result, !IO) :-
     ;       and_
     ;       or_
     ;       not_
+    ;       pragma_
     ;       ident
     ;       number
     ;       string
@@ -162,6 +163,7 @@ lexemes = [
         ("not"              -> return(not_)),
         ("and"              -> return(and_)),
         ("or"               -> return(or_)),
+        ("pragma"           -> return(pragma_)),
         ("{"                -> return(l_curly)),
         ("}"                -> return(r_curly)),
         ("("                -> return(l_paren)),
@@ -312,6 +314,7 @@ parse_plasma(!.Tokens, Result) :-
     %               | TypeDefinition
     %               | ResourceDefinition
     %               | Definition
+    %               | Pragma
     %
 :- pred parse_entry(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
@@ -328,7 +331,8 @@ parse_entry(Result, !Tokens) :-
             parse_map(func({N, X}) = ast_resource(N, X),
                 parse_resource(parse_nq_name)),
             parse_map(func({N, X}) = ast_function(N, X),
-                parse_func(parse_nq_name, parse_source))],
+                parse_func(parse_nq_name, parse_source)),
+            parse_pragma],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -1574,6 +1578,33 @@ maybe_parse_export(Sharing, !Tokens) :-
     ; MaybeExport = no,
         Sharing = s_private
     ).
+
+%-----------------------------------------------------------------------%
+
+    % Pragma := 'pragma' Ident ('(' Arg? ')')
+    %
+:- pred parse_pragma(parse_res(ast_entry)::out, tokens::in, tokens::out)
+    is det.
+
+parse_pragma(Result, !Tokens) :-
+    match_token(pragma_, MatchPragma, !Tokens),
+    match_token(ident, MatchIdent, !Tokens),
+    within(l_paren, one_or_more_delimited(comma, parse_pragma_arg),
+        r_paren, MatchArgs, !Tokens),
+    ( if
+        MatchPragma = ok(_),
+        MatchIdent = ok(Ident),
+        MatchArgs = ok(Args)
+    then
+        Result = ok(ast_pragma(ast_pragma(Ident, Args)))
+    else
+        Result = combine_errors_3(MatchPragma, MatchIdent, MatchArgs)
+    ).
+
+:- pred parse_pragma_arg(parse_res(ast_pragma_arg)::out,
+    tokens::in, tokens::out) is det.
+
+parse_pragma_arg(ok(ast_pragma_arg), !Tokens).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

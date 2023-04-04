@@ -58,6 +58,7 @@ ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
               | FuncDefinition
+              | Pragma
 
 ModuleQualifiers := ( ident . )*
 QualifiedIdent := ModuleQualifiers ident
@@ -1258,6 +1259,27 @@ var array = [Sat..Sun  -> 2
 This hides both the lambda expression and the pattern match.  Note that
 lambda or generator syntax is not specified yet so this may be different in
 reality, or not implemented at all.
+
+== Pragmas
+
+----
+Pragma := 'pragma' Ident '(' PragmaArgs? ')'
+
+PragmaArgs := PragmaArg (',' PragmaArg)*
+
+PragmaArg = not yet defined.
+----
+
+Pragmas provide a way for the programmer to communicate something "out of
+bound" to the compiler/other tools.  This is usually not something that's
+part of the program's meaning, but how it should be interpreted.  For
+example what library to include or how to compile something.
+They take the form above with the identifier being the name of the pragma
+which the compiler or other tools will use as a first step to interpret the
+pragma.
+
+No pragmas are currently defined.
+
 
 == Ideas
 
