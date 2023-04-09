@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.ast_to_core.
 %
-% Copyright (C) 2015-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion
@@ -350,8 +350,8 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
         ( MaybeFunction = ok(Function0),
             ( Body = ast_body_block(_),
                 Function = Function0
-            ; Body = ast_body_foreign,
-                func_set_foreign( Function0, Function)
+            ; Body = ast_body_foreign(_),
+                func_set_foreign(Function0, Function)
             ),
 
             core_set_function(FuncId, Function, !Core),
@@ -384,7 +384,7 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
 
     ( Body = ast_body_block(Block),
         foldl3(gather_funcs_block, Block, !Core, !Env, !Errors)
-    ; Body = ast_body_foreign
+    ; Body = ast_body_foreign(_)
     ).
 
 :- pred gather_nested_funcs(nq_name::in, ast_nested_function::in,
@@ -651,7 +651,7 @@ func_to_pre(Env0, nq_named(Name, Func), !Pre) :-
         % be qualified.
         func_to_pre_func(Env0, q_name(Name), Params, Returns, Block, Context,
             !Pre)
-    ; Body = ast_body_foreign
+    ; Body = ast_body_foreign(_)
         % Foreign functions skip pre representation.
     ).
 

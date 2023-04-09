@@ -101,7 +101,9 @@
     --->    ast_body_block(
                 list(ast_block_thing)
             )
-    ;       ast_body_foreign.
+    ;       ast_body_foreign(
+                abf_foreign_sym     :: string
+            ).
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))

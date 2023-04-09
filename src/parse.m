@@ -606,7 +606,7 @@ parse_resource(ParseName, Result, !Tokens) :-
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
     % FuncBody := Block
-    %           | 'foreign'
+    %           | Foreign
     %
 :- pred parse_func(parsing.parser(Name, token_type),
     parse_type, parse_res({Name, ast_function}), tokens, tokens).
@@ -618,7 +618,7 @@ parse_func(ParseName, ParseType, Result, !Tokens) :-
     parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
         or([parse_map(func(Bs) = ast_body_block(Bs), parse_block),
-            parse_map(func(_) = ast_body_foreign, match_token(foreign))],
+            parse_foreign],
            BodyResult, !Tokens),
         ( BodyResult = ok(Body),
             Result = ok({Name, ast_function(Decl, Body, Sharing, Entrypoint)})
@@ -763,6 +763,26 @@ parse_uses(Result, !Tokens) :-
         )
     ; UsesObservesResult = error(C, G, E),
         Result = error(C, G, E)
+    ).
+
+    % Foreign := 'foreign' '(' Ident ')'
+    %
+    % A foreign code declration. Plasma will attempt to link the foreign
+    % symbol named with the Ident.
+    %
+:- pred parse_foreign(parse_res(ast_body)::out,
+    tokens::in, tokens::out) is det.
+
+parse_foreign(Result, !Tokens) :-
+    match_token(foreign, ForeignMatch, !Tokens),
+    within(l_paren, match_token(ident), r_paren, MaybeName, !Tokens),
+    ( if
+        ForeignMatch = ok(_),
+        MaybeName = ok(Name)
+    then
+        Result = ok(ast_body_foreign(Name))
+    else
+        Result = combine_errors_2(ForeignMatch, MaybeName)
     ).
 
     % Block := '{' ( Statment | Definition )* ReturnExpr? '}'
@@ -1678,7 +1698,6 @@ parse_abs_thing(Token, Result, !Tokens) :-
     ; ResourceMatch = error(C, G, E),
         Result = error(C, G, E)
     ).
-
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
