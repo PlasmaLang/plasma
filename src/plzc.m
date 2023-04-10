@@ -46,6 +46,7 @@
 :- import_module core.type_chk.
 :- import_module core_to_pz.
 :- import_module dump_stage.
+:- import_module foreign.
 :- import_module options.
 :- import_module parse.
 :- import_module pre.
@@ -97,6 +98,9 @@ main(!IO) :-
                         ),
                         run_and_catch(do_make_dep_info(ImportType, GeneralOpts,
                                 Target, PlasmaAst),
+                            plzc, HadErrors, !IO)
+                    ; Mode = make_foreign,
+                        run_and_catch(do_make_foreign(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
                     ),
                     ReportTiming = GeneralOpts ^ go_report_timing,
@@ -340,7 +344,8 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
     ;       make_interface
     ;       make_typeres_exports
     ;       make_depends(string)
-    ;       make_interface_depends(string).
+    ;       make_interface_depends(string)
+    ;       make_foreign.
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -403,6 +408,9 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
     else if Mode = "make-interface-depends" then
         Result = ok(make_interface_depends(TargetFile)),
         OutputExtension = constant.interface_depends_extension
+    else if Mode = "generate-foreign" then
+        Result = ok(make_foreign),
+        OutputExtension = constant.cpp_extension
     else
         Result = error(
             format("Error processing command line options, " ++
