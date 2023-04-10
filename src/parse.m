@@ -1601,7 +1601,12 @@ maybe_parse_export(Sharing, !Tokens) :-
 
 %-----------------------------------------------------------------------%
 
-    % Pragma := 'pragma' Ident ('(' Arg? ')')
+    % Pragma := 'pragma' Ident ('(' ( PragmaArg PragmaArgs )?  ')')
+    %
+    % PragmaArgs := ',' PragmaArg PragmaArgs
+    %             | empty
+    %
+    % PragmaArg := String
     %
 :- pred parse_pragma(parse_res(ast_entry)::out, tokens::in, tokens::out)
     is det.
@@ -1609,7 +1614,7 @@ maybe_parse_export(Sharing, !Tokens) :-
 parse_pragma(Result, !Tokens) :-
     match_token(pragma_, MatchPragma, !Tokens),
     match_token(ident, MatchIdent, !Tokens),
-    within(l_paren, one_or_more_delimited(comma, parse_pragma_arg),
+    within(l_paren, zero_or_more_delimited(comma, parse_pragma_arg),
         r_paren, MatchArgs, !Tokens),
     ( if
         MatchPragma = ok(_),
@@ -1624,7 +1629,13 @@ parse_pragma(Result, !Tokens) :-
 :- pred parse_pragma_arg(parse_res(ast_pragma_arg)::out,
     tokens::in, tokens::out) is det.
 
-parse_pragma_arg(ok(ast_pragma_arg), !Tokens).
+parse_pragma_arg(Result, !Tokens) :-
+    parse_string(StringRes, !Tokens),
+    ( StringRes = ok(String),
+        Result = ok(ast_pragma_arg(String))
+    ; StringRes = error(C, G, E),
+        Result = error(C, G, E)
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

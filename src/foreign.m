@@ -36,6 +36,7 @@
 :- import_module q_name.
 :- import_module util.
 :- import_module util.mercury.
+:- import_module util.my_exception.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
@@ -49,17 +50,46 @@
 %-----------------------------------------------------------------------%
 
 do_make_foreign(GeneralOpts, PlasmaAst, !IO) :-
+    ForeignIncludes = find_foreign_includes(PlasmaAst),
     ForeignFuncs = find_foreign_funcs(PlasmaAst),
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         OutputFile = GeneralOpts ^ go_output_file,
         write_foreign_hooks(OutputFile, PlasmaAst ^ a_module_name,
-            ForeignFuncs, Result, !IO),
+            ForeignIncludes, ForeignFuncs, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
             exit_error(ErrMsg, !IO)
         )
     ; WriteOutput = dont_write_output
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- type foreign_include
+    --->    foreign_include(string).
+
+:- func find_foreign_includes(ast) = list(foreign_include).
+
+find_foreign_includes(Ast) = ForeignIncludes :-
+    Ast = ast(_, _, Entries),
+    filter_entries(Entries, _, _, _, _, Pragmas),
+    foldl(find_foreign_include_pragma, Pragmas, [], ForeignIncludes0),
+    ForeignIncludes = reverse(ForeignIncludes0).
+
+:- pred find_foreign_include_pragma(ast_pragma::in,
+    list(foreign_include)::in, list(foreign_include)::out) is det.
+
+find_foreign_include_pragma(ast_pragma(Name, Args), !Includes) :-
+    ( if Name = "foreign_include" then
+        ( if Args = [ast_pragma_arg(String)] then
+            Include = foreign_include(String),
+            !:Includes = [Include | !.Includes]
+        else
+            compile_error($file, $pred, "Malformed pragma arg")
+        )
+    else
+        true
     ).
 
 %-----------------------------------------------------------------------%
@@ -80,22 +110,34 @@ find_foreign_funcs(Ast) = ForeignFuncs :-
 
 %-----------------------------------------------------------------------%
 
-:- pred write_foreign_hooks(string::in, q_name::in, list(foreign_func)::in,
-    maybe_error::out, io::di, io::uo) is det.
+:- pred write_foreign_hooks(string::in, q_name::in,
+    list(foreign_include)::in, list(foreign_func)::in, maybe_error::out,
+    io::di, io::uo) is det.
 
-write_foreign_hooks(Filename, ModuleName, ForeignFuncs, Result, !IO) :-
+write_foreign_hooks(Filename, ModuleName, ForeignIncludes, ForeignFuncs,
+        Result, !IO) :-
     open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         format(File, "// Foreign hooks for %s\n\n",
             [s(q_name_to_string(ModuleName))], !IO),
+
         % XXX Fix include path.
         write_string(File, "#include \"../../../runtime/pz_common.h\"\n", !IO),
         write_string(File, "#include \"../../../runtime/pz_foreign.h\"\n", !IO),
         write_string(File, "#include \"../../../runtime/pz_generic_run.h\"\n\n", !IO),
+        foldl(write_include(File), ForeignIncludes, !IO),
+        nl(File, !IO),
+
+        % XXX: Only one registration function.
+        write_string(File, "extern \"C\" {\n", !IO),
+        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_);\n",
+            !IO),
+        write_string(File, "}\n\n", !IO),
+
         write_string(File, "using namespace pz;\n\n", !IO),
 
-        format(File, "bool register_funcs_%s(void *f_, void *gc_) {\n",
-            [s(q_name_clobber(ModuleName))], !IO),
+        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_) {\n",
+            !IO),
         write_string(File, "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);", !IO),
         write_string(File, "  Foreign *f = reinterpret_cast<Foreign*>(f_);", !IO),
 
@@ -109,6 +151,12 @@ write_foreign_hooks(Filename, ModuleName, ForeignFuncs, Result, !IO) :-
         Result = error(format("%s: %s\n",
             [s(Filename), s(error_message(Error))]))
     ).
+
+:- pred write_include(output_stream::in, foreign_include::in,
+    io::di, io::uo) is det.
+
+write_include(File, foreign_include(Path), !IO) :-
+    io.format(File, "#include \"../%s\"\n", [s(Path)], !IO).
 
 :- pred write_register_foreign_func(output_stream::in, q_name::in,
     foreign_func::in, io::di, io::uo) is det.

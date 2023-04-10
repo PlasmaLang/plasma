@@ -1267,7 +1267,7 @@ Pragma := 'pragma' Ident '(' PragmaArgs? ')'
 
 PragmaArgs := PragmaArg (',' PragmaArg)*
 
-PragmaArg = not yet defined.
+PragmaArg = String 
 ----
 
 Pragmas provide a way for the programmer to communicate something "out of
@@ -1278,8 +1278,26 @@ They take the form above with the identifier being the name of the pragma
 which the compiler or other tools will use as a first step to interpret the
 pragma.
 
-No pragmas are currently defined.
+Pragmas will generally have the form:
 
+----
+pragma Verb(Noun0, Noun1 ... NounN)
+----
+
+There may be any number of nouns including zero.  A Plasma implementation
+will define what verbs are meaningful and which nouns (if any) are
+meaningful for that verb.  A Plasma implementation *should* issue a warning
+but *must not* issue an error (except for a warnings-as-errors mode) for a
+pragma it doesn't understand.
+
+This Plasma implementation understand the following pragma:
+
+----
+pragma foreign_include(String)
+----
+
+Which says that the foreign code elsewhere in this file requires the foreign
+(C language) header file named by the string literal.
 
 == Ideas
 
