@@ -1,3 +1,7 @@
+/*
+ * This is free and unencumbered software released into the public domain.
+ * See ../LICENSE.unlicense
+ */
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -7,42 +11,20 @@
 #include "../../runtime/pz_foreign.h"
 #include "../../runtime/pz_generic_run.h"
 
-extern "C" {
-    bool pz_init_foreign_code(void *f, void *gc);
-}
+#include "import_function.h"
 
 using namespace pz;
 
-static unsigned foo(void * stack_, unsigned sp)
+unsigned foo(void * stack_, unsigned sp)
 {
     printf("Hi mum\n");
     return sp;
 }
 
-static unsigned getpid_fn(void * stack_, unsigned sp)
+unsigned my_getpid(void * stack_, unsigned sp)
 {
     StackValue * stack = reinterpret_cast<StackValue *>(stack_);
     stack[++sp].u32 = getpid();
     return sp;
-}
-
-bool pz_init_foreign_code(void *foreign_, void *gc_)
-{
-    GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);
-    Foreign *foreign = reinterpret_cast<Foreign*>(foreign_);
-
-    if (!foreign->register_foreign_code(String("ImportFunction"), String("foo"),
-                foo, gc))
-    {
-        return false;
-    }
-    
-    if (!foreign->register_foreign_code(String("ImportFunction"),
-                String("getpid"), getpid_fn, gc))
-    {
-        return false;
-    }
-
-    return true;
 }
 

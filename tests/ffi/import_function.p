@@ -6,6 +6,8 @@
 
 module ImportFunction
 
+pragma foreign_include("import_function.h")
+
 func getpid() -> Int
     foreign(my_getpid)
 
