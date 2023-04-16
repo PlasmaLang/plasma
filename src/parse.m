@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module parse.
 %
-% Copyright (C) 2016-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parser
@@ -94,6 +94,7 @@ parse_typeres(Filename, Result, !IO) :-
     ;       and_
     ;       or_
     ;       not_
+    ;       pragma_
     ;       ident
     ;       number
     ;       string
@@ -162,6 +163,7 @@ lexemes = [
         ("not"              -> return(not_)),
         ("and"              -> return(and_)),
         ("or"               -> return(or_)),
+        ("pragma"           -> return(pragma_)),
         ("{"                -> return(l_curly)),
         ("}"                -> return(r_curly)),
         ("("                -> return(l_paren)),
@@ -312,6 +314,7 @@ parse_plasma(!.Tokens, Result) :-
     %               | TypeDefinition
     %               | ResourceDefinition
     %               | Definition
+    %               | Pragma
     %
 :- pred parse_entry(parse_res(ast_entry)::out, tokens::in, tokens::out) is det.
 
@@ -328,7 +331,8 @@ parse_entry(Result, !Tokens) :-
             parse_map(func({N, X}) = ast_resource(N, X),
                 parse_resource(parse_nq_name)),
             parse_map(func({N, X}) = ast_function(N, X),
-                parse_func(parse_nq_name, parse_source))],
+                parse_func(parse_nq_name, parse_source)),
+            parse_pragma],
         Result, !Tokens).
 
     % ImportDirective := import QualifiedIdent
@@ -602,7 +606,7 @@ parse_resource(ParseName, Result, !Tokens) :-
     %              | '->' '(' TypeExpr ( ',' TypeExpr )* ')'
     %
     % FuncBody := Block
-    %           | 'foreign'
+    %           | Foreign
     %
 :- pred parse_func(parsing.parser(Name, token_type),
     parse_type, parse_res({Name, ast_function}), tokens, tokens).
@@ -614,7 +618,7 @@ parse_func(ParseName, ParseType, Result, !Tokens) :-
     parse_func_decl(ParseName, ParseType, DeclResult, !Tokens),
     ( DeclResult = ok({Name, Decl}),
         or([parse_map(func(Bs) = ast_body_block(Bs), parse_block),
-            parse_map(func(_) = ast_body_foreign, match_token(foreign))],
+            parse_foreign],
            BodyResult, !Tokens),
         ( BodyResult = ok(Body),
             Result = ok({Name, ast_function(Decl, Body, Sharing, Entrypoint)})
@@ -759,6 +763,26 @@ parse_uses(Result, !Tokens) :-
         )
     ; UsesObservesResult = error(C, G, E),
         Result = error(C, G, E)
+    ).
+
+    % Foreign := 'foreign' '(' Ident ')'
+    %
+    % A foreign code declration. Plasma will attempt to link the foreign
+    % symbol named with the Ident.
+    %
+:- pred parse_foreign(parse_res(ast_body)::out,
+    tokens::in, tokens::out) is det.
+
+parse_foreign(Result, !Tokens) :-
+    match_token(foreign, ForeignMatch, !Tokens),
+    within(l_paren, match_token(ident), r_paren, MaybeName, !Tokens),
+    ( if
+        ForeignMatch = ok(_),
+        MaybeName = ok(Name)
+    then
+        Result = ok(ast_body_foreign(Name))
+    else
+        Result = combine_errors_2(ForeignMatch, MaybeName)
     ).
 
     % Block := '{' ( Statment | Definition )* ReturnExpr? '}'
@@ -1576,6 +1600,44 @@ maybe_parse_export(Sharing, !Tokens) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+    % Pragma := 'pragma' Ident ('(' ( PragmaArg PragmaArgs )?  ')')
+    %
+    % PragmaArgs := ',' PragmaArg PragmaArgs
+    %             | empty
+    %
+    % PragmaArg := String
+    %
+:- pred parse_pragma(parse_res(ast_entry)::out, tokens::in, tokens::out)
+    is det.
+
+parse_pragma(Result, !Tokens) :-
+    match_token(pragma_, MatchPragma, !Tokens),
+    match_token(ident, MatchIdent, !Tokens),
+    within(l_paren, zero_or_more_delimited(comma, parse_pragma_arg),
+        r_paren, MatchArgs, !Tokens),
+    ( if
+        MatchPragma = ok(_),
+        MatchIdent = ok(Ident),
+        MatchArgs = ok(Args)
+    then
+        Result = ok(ast_pragma(ast_pragma(Ident, Args)))
+    else
+        Result = combine_errors_3(MatchPragma, MatchIdent, MatchArgs)
+    ).
+
+:- pred parse_pragma_arg(parse_res(ast_pragma_arg)::out,
+    tokens::in, tokens::out) is det.
+
+parse_pragma_arg(Result, !Tokens) :-
+    parse_string(StringRes, !Tokens),
+    ( StringRes = ok(String),
+        Result = ok(ast_pragma_arg(String))
+    ; StringRes = error(C, G, E),
+        Result = error(C, G, E)
+    ).
+
+%-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
 
 :- pred parse_plasma_interface(
@@ -1647,7 +1709,6 @@ parse_abs_thing(Token, Result, !Tokens) :-
     ; ResourceMatch = error(C, G, E),
         Result = error(C, G, E)
     ).
-
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%

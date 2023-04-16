@@ -6,11 +6,13 @@
 
 module ImportFunction
 
+pragma foreign_include("import_function.h")
+
 func getpid() -> Int
-    foreign
+    foreign(my_getpid)
 
 func foo() uses IO
-    foreign
+    foreign(foo)
 
 entrypoint
 func hello() uses IO -> Int {

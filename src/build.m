@@ -326,36 +326,46 @@ not_found_error(Context, Key) =
 
 :- type dep_target
     --->    dt_program(
-                dtp_name    :: nq_name,
-                dtp_output  :: string,
-                dtp_inputs  :: list(string)
+                dtp_name            :: nq_name,
+                dtp_output          :: string,
+                dtp_inputs          :: list(string)
             )
     ;       dt_object(
-                dto_name    :: q_name,
-                dto_output  :: string,
-                dto_input   :: string,
-                dto_depfile :: string
+                dto_name            :: q_name,
+                dto_output          :: string,
+                dto_input           :: string,
+                dto_depfile         :: string
             )
     ;       dt_interface(
-                dti_name    :: q_name,
-                dti_output  :: string,
-                dti_input   :: string,
-                dti_depfile :: string
+                dti_name            :: q_name,
+                dti_output          :: string,
+                dti_input           :: string,
+                dti_depfile         :: string
             )
     ;       dt_typeres(
-                dttr_name   :: q_name,
-                dttr_output :: string,
-                dttr_input  :: string
+                dttr_name           :: q_name,
+                dttr_output         :: string,
+                dttr_input          :: string
+            )
+    ;       dt_foreign_hooks(
+                dtcg_name           :: q_name,
+                dtcg_output         :: string,
+                dtcg_input          :: string
             )
     ;       dt_c_link(
-                dtcl_name   :: nq_name,
-                dtcl_output :: string,
-                dtcl_input  :: list(string)
+                dtcl_name           :: nq_name,
+                dtcl_output         :: string,
+                dtcl_input          :: list(string)
             )
     ;       dt_c_compile(
-                dtcc_output :: string,
-                dtcc_input  :: string
+                dtcc_output         :: string,
+                dtcc_input          :: string,
+                dtcc_generated      :: generated
             ).
+
+:- type generated
+    --->    was_generated
+    ;       hand_written.
 
 :- pred build_dependency_info(list(target)::in,
     result(dep_info, string)::out, dir_info::in, dir_info::out,
@@ -459,13 +469,20 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     Targets = [
         dt_interface(ModuleName, InterfaceName, SourceName, IDepFile),
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
-        dt_typeres(ModuleName, TyperesName, SourceName)
+        dt_typeres(ModuleName, TyperesName, SourceName),
+        dt_foreign_hooks(ModuleName,
+            module_to_foreign_hooks(ModuleName), SourceName),
+        dt_c_compile(
+            module_to_foreign_object(ModuleName),
+            module_to_foreign_hooks(ModuleName),
+            was_generated)
     ].
 
 :- func make_foreign_link_target(target) = maybe(dep_target).
 
 make_foreign_link_target(Target) = Dep :-
     ForeignSources = Target ^ t_c_sources,
+    Modules = Target ^ t_modules,
     ( ForeignSources = [],
         Dep = no
     ; ForeignSources = [_ | _],
@@ -474,7 +491,9 @@ make_foreign_link_target(Target) = Dep :-
             map(file_change_extension(cpp_extension, native_object_extension),
                 ForeignSources, ForeignObjects)
         then
-            Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects))
+            ModuleForeignObjects = map(module_to_foreign_object, Modules),
+            Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects ++
+                ModuleForeignObjects))
         else
             compile_error($file, $pred, "Unrecognised source file extension")
         )
@@ -492,10 +511,20 @@ make_foreign_target(CFileName) = Target :-
         file_change_extension(cpp_extension, native_object_extension,
             CFileName, ObjectName)
     then
-        Target = dt_c_compile(ObjectName, CFileName)
+        Target = dt_c_compile(ObjectName, CFileName, hand_written)
     else
         compile_error($file, $pred, "Unrecognised source file extension")
     ).
+
+:- func module_to_foreign_hooks(q_name) = string.
+
+module_to_foreign_hooks(Module) =
+    canonical_base_name(Module) ++ "_f" ++ cpp_extension.
+
+:- func module_to_foreign_object(q_name) = string.
+
+module_to_foreign_object(Module) =
+    canonical_base_name(Module) ++ "_f" ++ native_object_extension.
 
 %-----------------------------------------------------------------------%
 
@@ -564,10 +593,12 @@ write_build_var(File, Var - Val, !IO) :-
     format(File, "    %s = %s\n", [s(Var), s(Val)], !IO).
 
 :- pred write_build_statement(output_stream::in, string::in, string::in,
-    string::in, string::in, maybe(string)::in, io::di, io::uo) is det.
+    string::in, string::in, string::in, maybe(string)::in, io::di, io::uo)
+    is det.
 
-write_build_statement(File, Command, Name, Output, Input, MaybeBinary, !IO) :-
-    write_build_statement(File, Command, Name, Output, ["../" ++ Input],
+write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
+        !IO) :-
+    write_build_statement(File, Command, Name, Output, [Path ++ Input],
         MaybeBinary, [], no, [], !IO).
 
 :- pred write_build_and_dep_statements(output_stream::in,
@@ -617,13 +648,23 @@ write_target(File,
 write_target(File,
         dt_typeres(ModuleName, TyperesFile, SourceFile), !IO) :-
     write_build_statement(File, "plztyperes", q_name_to_string(ModuleName),
-        TyperesFile, SourceFile, yes("plzc"), !IO).
+        TyperesFile, "../", SourceFile, yes("plzc"), !IO).
+write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
+    format(File, "build %s : plzgf ../%s\n",
+        [s(Output), s(Source)], !IO),
+    format(File, "    name = %s\n\n",
+        [s(q_name_to_string(ModuleName))], !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
-write_target(File, dt_c_compile(Object, Source), !IO) :-
-    write_build_statement(File, "c_compile", Source,
-        Object, Source, no, !IO).
+write_target(File, dt_c_compile(Object, Source, SrcWasGenerated), !IO) :-
+    ( SrcWasGenerated = was_generated,
+        Path = ""
+    ; SrcWasGenerated = hand_written,
+        Path = "../"
+    ),
+    write_build_statement(File, "c_compile", Path ++ Source,
+        Object, Path, Source, no, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -774,6 +815,13 @@ rule plzc
 		--source-path $source_path $
 		$in -o $out
     description = Compiling $name
+
+rule plzgf
+    command = $path/plzc $pcflags --mode generate-foreign $
+		--module-name-check $name $
+		--source-path $source_path $
+		$in -o $out
+    description = Generating foreign hooks for $name
 
 rule plzlink
     command = $path/plzlnk $plflags -n $name -o $out $in

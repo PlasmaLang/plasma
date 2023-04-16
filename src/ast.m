@@ -2,7 +2,7 @@
 % Plasma AST
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module represents the AST for plasma programs.
@@ -40,7 +40,8 @@
     --->    ast_import(ast_import)
     ;       ast_type(nq_name, ast_type(nq_name))
     ;       ast_resource(nq_name, ast_resource)
-    ;       ast_function(nq_name, ast_function).
+    ;       ast_function(nq_name, ast_function)
+    ;       ast_pragma(ast_pragma).
 
 :- type ast_interface_entry
     --->    asti_resource(q_name, ast_resource)
@@ -100,7 +101,9 @@
     --->    ast_body_block(
                 list(ast_block_thing)
             )
-    ;       ast_body_foreign.
+    ;       ast_body_foreign(
+                abf_foreign_sym     :: string
+            ).
 
 :- type ast_block_thing(Info)
     --->    astbt_statement(ast_statement(Info))
@@ -303,6 +306,15 @@
                              % constructor with zero args.
     ;       p_list_nil
     ;       p_list_cons(ast_pattern, ast_pattern).
+
+:- type ast_pragma
+    --->    ast_pragma(
+                astp_name           :: string,
+                astp_args           :: list(ast_pragma_arg)
+            ).
+
+:- type ast_pragma_arg
+    --->    ast_pragma_arg(string).
 
 %-----------------------------------------------------------------------%
 

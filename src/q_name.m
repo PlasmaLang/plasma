@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module q_name.
 %
-% Copyright (C) 2015-2016, 2019-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Qualified name ADT
@@ -41,6 +41,10 @@
 :- func q_name_from_strings_2(list(string), string) = q_name.
 
 :- func q_name_to_string(q_name) = string.
+
+    % Provide a clobbered version of this string suitable as a C++
+    % identifier.
+:- func q_name_clobber(q_name) = string.
 
 :- pred q_name_parts(q_name, maybe(q_name), nq_name).
 :- mode q_name_parts(in, out, out) is det.
@@ -150,6 +154,15 @@ q_name_to_string(QName) = String :-
     q_name_break(QName, Quals, Name),
     ( Quals = [_ | _],
         String = join_list(".", map(nq_name_to_string, Quals)) ++ "." ++
+            nq_name_to_string(Name)
+    ; Quals = [],
+        String = nq_name_to_string(Name)
+    ).
+
+q_name_clobber(QName) = String :-
+    q_name_break(QName, Quals, Name),
+    ( Quals = [_ | _],
+        String = join_list("_", map(nq_name_to_string, Quals)) ++ "_" ++
             nq_name_to_string(Name)
     ; Quals = [],
         String = nq_name_to_string(Name)

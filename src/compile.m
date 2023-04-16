@@ -2,7 +2,7 @@
 % Plasma compilation process
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module drives the compilation process.  It sits between plzc.m which
@@ -55,7 +55,7 @@
     %
 :- pred filter_entries(list(ast_entry)::in, list(ast_import)::out,
     list(nq_named(ast_resource))::out, list(nq_named(ast_type(nq_name)))::out,
-    list(nq_named(ast_function))::out) is det.
+    list(nq_named(ast_function))::out, list(ast_pragma)::out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -150,7 +150,7 @@ process_declarations(GeneralOpts, ast(ModuleName, Context, Entries), Result,
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs, _),
 
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
@@ -182,7 +182,7 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources0, Types0, Funcs),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs, _),
 
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
@@ -322,7 +322,7 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, _, Resources0, Types0, _),
+        filter_entries(Entries, _, Resources0, Types0, _, _),
 
         filter_map((pred(NamedRes::in, Name::out) is semidet :-
                 NamedRes = nq_named(NQName, ast_resource(_, s_public, _)),
@@ -349,9 +349,9 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
 
 %-----------------------------------------------------------------------%
 
-filter_entries([], [], [], [], []).
-filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
-    filter_entries(Es, !:Is, !:Rs, !:Ts, !:Fs),
+filter_entries([], [], [], [], [], []).
+filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs, !:Ps) :-
+    filter_entries(Es, !:Is, !:Rs, !:Ts, !:Fs, !:Ps),
     ( E = ast_import(I),
         !:Is = [I | !.Is]
     ; E = ast_resource(N, R),
@@ -360,6 +360,8 @@ filter_entries([E | Es], !:Is, !:Rs, !:Ts, !:Fs) :-
         !:Ts = [nq_named(N, T) | !.Ts]
     ; E = ast_function(N, F),
         !:Fs = [nq_named(N, F) | !.Fs]
+    ; E = ast_pragma(P),
+        !:Ps = [P | !.Ps]
     ).
 
 %-----------------------------------------------------------------------%

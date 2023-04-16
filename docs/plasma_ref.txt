@@ -2,8 +2,8 @@ Plasma Language Reference
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: February 2022
-:Copyright: Copyright (C) 2015-2022 Plasma Team
+:Date: April 2023
+:Copyright: Copyright (C) Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 
@@ -57,9 +57,8 @@ Plasma := ModuleDecl ToplevelItem*
 ToplevelItem := ImportDirective
               | TypeDefinition
               | ResourceDefinition
-              | Definition
-
-Definition := FuncDefinition
+              | FuncDefinition
+              | Pragma
 
 ModuleQualifiers := ( ident . )*
 QualifiedIdent := ModuleQualifiers ident
@@ -1261,7 +1260,46 @@ This hides both the lambda expression and the pattern match.  Note that
 lambda or generator syntax is not specified yet so this may be different in
 reality, or not implemented at all.
 
-==== Ideas
+== Pragmas
+
+----
+Pragma := 'pragma' Ident '(' PragmaArgs? ')'
+
+PragmaArgs := PragmaArg (',' PragmaArg)*
+
+PragmaArg = String 
+----
+
+Pragmas provide a way for the programmer to communicate something "out of
+bound" to the compiler/other tools.  This is usually not something that's
+part of the program's meaning, but how it should be interpreted.  For
+example what library to include or how to compile something.
+They take the form above with the identifier being the name of the pragma
+which the compiler or other tools will use as a first step to interpret the
+pragma.
+
+Pragmas will generally have the form:
+
+----
+pragma Verb(Noun0, Noun1 ... NounN)
+----
+
+There may be any number of nouns including zero.  A Plasma implementation
+will define what verbs are meaningful and which nouns (if any) are
+meaningful for that verb.  A Plasma implementation *should* issue a warning
+but *must not* issue an error (except for a warnings-as-errors mode) for a
+pragma it doesn't understand.
+
+This Plasma implementation understand the following pragma:
+
+----
+pragma foreign_include(String)
+----
+
+Which says that the foreign code elsewhere in this file requires the foreign
+(C language) header file named by the string literal.
+
+== Ideas
 
 These are just ideas at this stage, they are probably bad ideas.
 
