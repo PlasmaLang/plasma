@@ -90,14 +90,10 @@ main(!IO) :-
                         run_and_catch(
                             do_make_typeres_exports(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ;
-                        ( Mode = make_interface_depends(Target),
-                          ImportType = typeres_import
-                        ; Mode = make_depends(Target),
-                          ImportType = interface_import
-                        ),
-                        run_and_catch(do_make_dep_info(ImportType, GeneralOpts,
-                                Target, PlasmaAst),
+                    ; Mode = make_depends(TargetBytecode, TargetInterface),
+                        run_and_catch(
+                            do_make_dep_info(GeneralOpts, TargetBytecode,
+                                TargetInterface, PlasmaAst),
                             plzc, HadErrors, !IO)
                     ; Mode = make_foreign,
                         run_and_catch(do_make_foreign(GeneralOpts, PlasmaAst),
@@ -208,10 +204,11 @@ do_make_interface(GeneralOpts, PlasmaAst, !IO) :-
 
 %-----------------------------------------------------------------------%
 
-:- pred do_make_dep_info(import_type::in, general_options::in,
-    string::in, ast::in, io::di, io::uo) is det.
+:- pred do_make_dep_info(general_options::in,
+    string::in, string::in, ast::in, io::di, io::uo) is det.
 
-do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
+do_make_dep_info(GeneralOpts, TargetBytecode, TargetInterface, PlasmaAst,
+        !IO) :-
     check_module_name(GeneralOpts, PlasmaAst ^ a_context,
         PlasmaAst ^ a_module_name, init, ModuleNameErrors),
     ( if has_fatal_errors(ModuleNameErrors) then
@@ -219,22 +216,18 @@ do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
         set_exit_status(1, !IO)
     else
         filter_entries(PlasmaAst ^ a_entries, Imports0, _, _, _, _),
-        ( ImportType = interface_import,
-            Imports1 = Imports0
-        ; ImportType = typeres_import,
-            % TODO: Include only dependencies required to build interface files,
-            % that is those that are used by types and resources only.
-            Imports1 = Imports0
-        ),
+        % TODO: Include only dependencies required to build interface files,
+        % that is those that are used by types and resources only.
         ast_to_import_list(PlasmaAst ^ a_module_name, "..",
-            GeneralOpts ^ go_import_whitelist_file, Imports1, Imports, !IO),
+            GeneralOpts ^ go_import_whitelist_file, Imports0, Imports, !IO),
 
         WriteOutput = GeneralOpts ^ go_write_output,
         ( WriteOutput = write_output,
             % The interface is within the core representation. We will
             % extract and pretty print the parts we need.
             OutputFile = GeneralOpts ^ go_output_file,
-            write_dep_info(ImportType, OutputFile, Target, Imports, Result, !IO),
+            write_dep_info(OutputFile, TargetBytecode, TargetInterface,
+                Imports, Result, !IO),
             ( Result = ok
             ; Result = error(ErrMsg),
                 exit_error(ErrMsg, !IO)
@@ -243,18 +236,22 @@ do_make_dep_info(ImportType, GeneralOpts, Target, PlasmaAst, !IO) :-
         )
     ).
 
-:- pred write_dep_info(import_type::in, string::in, string::in,
+:- pred write_dep_info(string::in, string::in, string::in,
     list(import_info)::in, maybe_error::out, io::di, io::uo) is det.
 
-write_dep_info(ImportType, Filename, Target, Info, Result, !IO) :-
+write_dep_info(Filename, TargetBytecode, TargetInterface, Info, Result, !IO) :-
     open_output(Filename, OpenRes, !IO),
     ( OpenRes = ok(File),
         Result = ok,
         write_string(File, "ninja_dyndep_version = 1\n\n", !IO),
-        Deps = string_join(" ",
-            filter_map(ii_potential_interface_file(ImportType), Info)),
-        format(File, "build %s : dyndep | %s\n\n", [s(Target), s(Deps)],
-            !IO),
+        BytecodeDeps = string_join(" ",
+            filter_map(ii_potential_interface_file(interface_import), Info)),
+        InterfaceDeps = string_join(" ",
+            filter_map(ii_potential_interface_file(typeres_import), Info)),
+        format(File, "build %s : dyndep | %s\n\n",
+            [s(TargetBytecode), s(BytecodeDeps)], !IO),
+        format(File, "build %s : dyndep | %s\n\n",
+            [s(TargetInterface), s(InterfaceDeps)], !IO),
         close_output(File, !IO)
     ; OpenRes = error(Error),
         Result = error(format("%s: %s", [s(Filename), s(error_message(Error))]))
@@ -343,8 +340,10 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
             )
     ;       make_interface
     ;       make_typeres_exports
-    ;       make_depends(string)
-    ;       make_interface_depends(string)
+    ;       make_depends(
+                pmo_d_output        :: string,
+                pmo_d_interface     :: string
+            )
     ;       make_foreign.
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
@@ -387,7 +386,6 @@ process_options(Args0, Result, !IO) :-
 
 process_options_mode(OptionTable, OutputExtension, Result) :-
     lookup_string_option(OptionTable, mode_, Mode),
-    lookup_string_option(OptionTable, target_file, TargetFile),
     ( if Mode = "compile" then
         DoSimplify = handle_bool_option(OptionTable, simplify,
             do_simplify_pass, skip_simplify_pass),
@@ -403,11 +401,10 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
         Result = ok(make_typeres_exports),
         OutputExtension = constant.typeres_extension
     else if Mode = "make-depends" then
-        Result = ok(make_depends(TargetFile)),
+        lookup_string_option(OptionTable, target_bytecode, TargetBytecode),
+        lookup_string_option(OptionTable, target_interface, TargetInterface),
+        Result = ok(make_depends(TargetBytecode, TargetInterface)),
         OutputExtension = constant.depends_extension
-    else if Mode = "make-interface-depends" then
-        Result = ok(make_interface_depends(TargetFile)),
-        OutputExtension = constant.interface_depends_extension
     else if Mode = "generate-foreign" then
         Result = ok(make_foreign),
         OutputExtension = constant.cpp_extension
@@ -546,7 +543,8 @@ usage(!IO) :-
     ;       version
     ;       mode_
     ;       output_file
-    ;       target_file
+    ;       target_bytecode
+    ;       target_interface
     ;       import_whitelist
     ;       module_name_check
     ;       source_path
@@ -570,7 +568,8 @@ long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("mode",                 mode_).
 long_option("output-file",          output_file).
-long_option("target-file",          target_file).
+long_option("target-bytecode",      target_bytecode).
+long_option("target-interface",     target_interface).
 long_option("import-whitelist",     import_whitelist).
 long_option("module-name-check",    module_name_check).
 long_option("source-path",          source_path).
@@ -588,7 +587,8 @@ option_default(verbose,             bool(no)).
 option_default(version,             bool(no)).
 option_default(mode_,               string("compile")).
 option_default(output_file,         string("")).
-option_default(target_file,         string("")).
+option_default(target_bytecode,     string("")).
+option_default(target_interface,    string("")).
 option_default(import_whitelist,    string("")).
 option_default(module_name_check,   string("")).
 option_default(source_path,         string("")).
