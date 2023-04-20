@@ -562,20 +562,19 @@ do_write_dependency_file(DepInfo, BuildFile, !IO) :-
     format(BuildFile, "include %s\n\n", [s(ninja_vars_file)], !IO),
     foldl(write_target(BuildFile), DepInfo, !IO).
 
-:- pred write_build_statement(output_stream::in,
+:- pred write_statement(output_stream::in,
     string::in, string::in, string::in, list(string)::in, maybe(string)::in,
-    list(string)::in, maybe(string)::in,
-    list(pair(string, string))::in, io::di, io::uo) is det.
+    maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
 
-write_build_statement(File, Command, Name, Output, Inputs, MaybeBinary,
-        ExtraDeps, MaybeDynDep, Vars, !IO) :-
+write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
+        MaybeDynDep, Vars, !IO) :-
     InputsStr = string_join(" ", Inputs),
     ( MaybeBinary = yes(Binary),
         BinaryInput = ["$path/" ++ Binary]
     ; MaybeBinary = no,
         BinaryInput = []
     ),
-    ExtraDepsStr = string_join(" ", BinaryInput ++ ExtraDeps),
+    ExtraDepsStr = string_join(" ", BinaryInput),
     ( MaybeDynDep = yes(DynDep),
         DynDepStr = " || " ++ DynDep
     ; MaybeDynDep = no,
@@ -585,18 +584,18 @@ write_build_statement(File, Command, Name, Output, Inputs, MaybeBinary,
         "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ " | "
             ++ ExtraDepsStr ++ DynDepStr ++ "\n",
         !IO),
-    write_build_var(File, "name" - Name, !IO),
+    write_var(File, "name" - Name, !IO),
     ( MaybeDynDep = yes(DynDep_),
-        write_build_var(File, "dyndep" - DynDep_, !IO)
+        write_var(File, "dyndep" - DynDep_, !IO)
     ; MaybeDynDep = no
     ),
-    foldl(write_build_var(File), Vars, !IO),
+    foldl(write_var(File), Vars, !IO),
     nl(File, !IO).
 
-:- pred write_build_var(output_stream::in, pair(string, string)::in,
+:- pred write_var(output_stream::in, pair(string, string)::in,
     io::di, io::uo) is det.
 
-write_build_var(File, Var - Val, !IO) :-
+write_var(File, Var - Val, !IO) :-
     format(File, "    %s = %s\n", [s(Var), s(Val)], !IO).
 
 :- pred write_build_statement(output_stream::in, string::in, string::in,
@@ -605,8 +604,17 @@ write_build_var(File, Var - Val, !IO) :-
 
 write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
         !IO) :-
-    write_build_statement(File, Command, Name, Output, [Path ++ Input],
-        MaybeBinary, [], no, [], !IO).
+    write_statement(File, Command, Name, Output, [Path ++ Input],
+        MaybeBinary, no, [], !IO).
+
+:- pred write_plzc_statement(output_stream::in, string::in, q_name::in,
+    string::in, string::in, string::in, list(pair(string, string))::in,
+    io::di, io::uo) is det.
+
+write_plzc_statement(File, Command, Name, Output, Input,
+        DepFile, Vars, !IO) :-
+    write_statement(File, Command, q_name_to_string(Name),
+        Output, ["../" ++ Input], yes("plzc"), yes(DepFile), Vars, !IO).
 
 :- pred write_link_statement(output_stream::in, string::in, nq_name::in,
     string::in, list(string)::in, maybe(string)::in,
@@ -614,8 +622,8 @@ write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
 
 write_link_statement(File, Command, Name, Output, Objects, MaybeBinary,
         !IO) :-
-    write_build_statement(File, Command, nq_name_to_string(Name),
-        "../" ++ Output, Objects, MaybeBinary, [], no, [], !IO).
+    write_statement(File, Command, nq_name_to_string(Name),
+        "../" ++ Output, Objects, MaybeBinary, no, [], !IO).
 
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
@@ -628,15 +636,12 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
     % remove it from this step and avoid some extra rebuilds.
     ImportWhitelistVar = "import_whitelist" -
         import_whitelist_file_no_directroy,
-    Inputs = ["../" ++ SourceFile],
-    write_build_statement(File, "plzc", q_name_to_string(ModuleName),
-        ObjectFile, Inputs, yes("plzc"), [], yes(DepFile), [ImportWhitelistVar],
-        !IO).
+    write_plzc_statement(File, "plzc", ModuleName, ObjectFile, SourceFile,
+        DepFile, [ImportWhitelistVar], !IO).
 write_target(File,
         dt_interface(ModuleName, InterfaceFile, SourceFile, DepFile), !IO) :-
-    Inputs = ["../" ++ SourceFile],
-    write_build_statement(File, "plzi", q_name_to_string(ModuleName),
-        InterfaceFile, Inputs, yes("plzc"), [], yes(DepFile), [], !IO).
+    write_plzc_statement(File, "plzi", ModuleName, InterfaceFile,
+        SourceFile, DepFile, [], !IO).
 write_target(File,
         dt_typeres(ModuleName, TyperesFile, SourceFile), !IO) :-
     write_build_statement(File, "plztyperes", q_name_to_string(ModuleName),
@@ -645,16 +650,14 @@ write_target(File,
         dt_dep(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
         !IO) :-
     Inputs = ["../" ++ SourceFile],
-    write_build_statement(File, "plzdep", q_name_to_string(ModuleName),
-        DepFile, Inputs, yes("plzc"), [], no,
+    write_statement(File, "plzdep", q_name_to_string(ModuleName),
+        DepFile, Inputs, yes("plzc"), no,
         ["target"       - BytecodeFile,
          "interface"    - InterfaceFile],
         !IO).
 write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
-    format(File, "build %s : plzgf ../%s\n",
-        [s(Output), s(Source)], !IO),
-    format(File, "    name = %s\n\n",
-        [s(q_name_to_string(ModuleName))], !IO).
+    write_build_statement(File, "plzgf", q_name_to_string(ModuleName),
+        Output, "../", Source, no, !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
