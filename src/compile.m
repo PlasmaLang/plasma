@@ -130,7 +130,6 @@ check_module_name(GOptions, Context, ModuleName, !Errors) :-
         ; Extension = interface_extension
         ; Extension = typeres_extension
         ; Extension = depends_extension
-        ; Extension = interface_depends_extension
         ),
         filename_extension(Extension, OutputFileName, OutputFileNameBase),
         strip_file_name_punctuation(OutputFileNameBase) = ModuleNameStripped

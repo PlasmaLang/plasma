@@ -347,6 +347,13 @@ not_found_error(Context, Key) =
                 dttr_output         :: string,
                 dttr_input          :: string
             )
+    ;       dt_dep(
+                dtd_name            :: q_name,
+                dtd_dep_file        :: string,
+                dtd_source          :: string,
+                dtd_interface       :: string,
+                dtd_bytecode        :: string
+            )
     ;       dt_foreign_hooks(
                 dtcg_name           :: q_name,
                 dtcg_output         :: string,
@@ -465,9 +472,9 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     InterfaceName = BaseName ++ interface_extension,
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ depends_extension,
-    IDepFile = BaseName ++ interface_depends_extension,
     Targets = [
-        dt_interface(ModuleName, InterfaceName, SourceName, IDepFile),
+        dt_dep(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
+        dt_interface(ModuleName, InterfaceName, SourceName, DepFile),
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
         dt_typeres(ModuleName, TyperesName, SourceName),
         dt_foreign_hooks(ModuleName,
@@ -555,20 +562,19 @@ do_write_dependency_file(DepInfo, BuildFile, !IO) :-
     format(BuildFile, "include %s\n\n", [s(ninja_vars_file)], !IO),
     foldl(write_target(BuildFile), DepInfo, !IO).
 
-:- pred write_build_statement(output_stream::in,
+:- pred write_statement(output_stream::in,
     string::in, string::in, string::in, list(string)::in, maybe(string)::in,
-    list(string)::in, maybe(string)::in,
-    list(pair(string, string))::in, io::di, io::uo) is det.
+    maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
 
-write_build_statement(File, Command, Name, Output, Inputs, MaybeBinary,
-        ExtraDeps, MaybeDynDep, Vars, !IO) :-
+write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
+        MaybeDynDep, Vars, !IO) :-
     InputsStr = string_join(" ", Inputs),
     ( MaybeBinary = yes(Binary),
         BinaryInput = ["$path/" ++ Binary]
     ; MaybeBinary = no,
         BinaryInput = []
     ),
-    ExtraDepsStr = string_join(" ", BinaryInput ++ ExtraDeps),
+    ExtraDepsStr = string_join(" ", BinaryInput),
     ( MaybeDynDep = yes(DynDep),
         DynDepStr = " || " ++ DynDep
     ; MaybeDynDep = no,
@@ -578,18 +584,18 @@ write_build_statement(File, Command, Name, Output, Inputs, MaybeBinary,
         "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ " | "
             ++ ExtraDepsStr ++ DynDepStr ++ "\n",
         !IO),
-    write_build_var(File, "name" - Name, !IO),
+    write_var(File, "name" - Name, !IO),
     ( MaybeDynDep = yes(DynDep_),
-        write_build_var(File, "dyndep" - DynDep_, !IO)
+        write_var(File, "dyndep" - DynDep_, !IO)
     ; MaybeDynDep = no
     ),
-    foldl(write_build_var(File), Vars, !IO),
+    foldl(write_var(File), Vars, !IO),
     nl(File, !IO).
 
-:- pred write_build_var(output_stream::in, pair(string, string)::in,
+:- pred write_var(output_stream::in, pair(string, string)::in,
     io::di, io::uo) is det.
 
-write_build_var(File, Var - Val, !IO) :-
+write_var(File, Var - Val, !IO) :-
     format(File, "    %s = %s\n", [s(Var), s(Val)], !IO).
 
 :- pred write_build_statement(output_stream::in, string::in, string::in,
@@ -598,28 +604,17 @@ write_build_var(File, Var - Val, !IO) :-
 
 write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
         !IO) :-
-    write_build_statement(File, Command, Name, Output, [Path ++ Input],
-        MaybeBinary, [], no, [], !IO).
+    write_statement(File, Command, Name, Output, [Path ++ Input],
+        MaybeBinary, no, [], !IO).
 
-:- pred write_build_and_dep_statements(output_stream::in,
-    string::in, string::in, q_name::in, string::in, string::in, string::in,
+:- pred write_plzc_statement(output_stream::in, string::in, q_name::in,
+    string::in, string::in, string::in, list(pair(string, string))::in,
     io::di, io::uo) is det.
 
-write_build_and_dep_statements(File, Rule1, Rule2, Name, Output, Source, Dep,
-        !IO) :-
-    NameStr = q_name_to_string(Name),
-    Sources = ["../" ++ Source],
-    MbBinary = yes("plzc"),
-    ImportWhitelistVar = "import_whitelist" -
-        import_whitelist_file_no_directroy,
-    ExtraDeps = [import_whitelist_file_no_directroy],
-
-    write_build_statement(File, Rule1, NameStr,
-        Output, Sources, MbBinary, ExtraDeps, yes(Dep),
-        [ImportWhitelistVar], !IO),
-    write_build_statement(File, Rule2, NameStr,
-        Dep, Sources, MbBinary, ExtraDeps, no,
-        [ImportWhitelistVar, "target" - Output], !IO).
+write_plzc_statement(File, Command, Name, Output, Input,
+        DepFile, Vars, !IO) :-
+    write_statement(File, Command, q_name_to_string(Name),
+        Output, ["../" ++ Input], yes("plzc"), yes(DepFile), Vars, !IO).
 
 :- pred write_link_statement(output_stream::in, string::in, nq_name::in,
     string::in, list(string)::in, maybe(string)::in,
@@ -627,8 +622,8 @@ write_build_and_dep_statements(File, Rule1, Rule2, Name, Output, Source, Dep,
 
 write_link_statement(File, Command, Name, Output, Objects, MaybeBinary,
         !IO) :-
-    write_build_statement(File, Command, nq_name_to_string(Name),
-        "../" ++ Output, Objects, MaybeBinary, [], no, [], !IO).
+    write_statement(File, Command, nq_name_to_string(Name),
+        "../" ++ Output, Objects, MaybeBinary, no, [], !IO).
 
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
@@ -639,21 +634,30 @@ write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
         !IO) :-
     % If we can detect import errors when building dependencies we can
     % remove it from this step and avoid some extra rebuilds.
-    write_build_and_dep_statements(File, "plzc", "plzdep", ModuleName,
-        ObjectFile, SourceFile, DepFile, !IO).
+    ImportWhitelistVar = "import_whitelist" -
+        import_whitelist_file_no_directroy,
+    write_plzc_statement(File, "plzc", ModuleName, ObjectFile, SourceFile,
+        DepFile, [ImportWhitelistVar], !IO).
 write_target(File,
         dt_interface(ModuleName, InterfaceFile, SourceFile, DepFile), !IO) :-
-    write_build_and_dep_statements(File, "plzi", "plzidep", ModuleName,
-        InterfaceFile, SourceFile, DepFile, !IO).
+    write_plzc_statement(File, "plzi", ModuleName, InterfaceFile,
+        SourceFile, DepFile, [], !IO).
 write_target(File,
         dt_typeres(ModuleName, TyperesFile, SourceFile), !IO) :-
     write_build_statement(File, "plztyperes", q_name_to_string(ModuleName),
         TyperesFile, "../", SourceFile, yes("plzc"), !IO).
+write_target(File,
+        dt_dep(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
+        !IO) :-
+    Inputs = ["../" ++ SourceFile],
+    write_statement(File, "plzdep", q_name_to_string(ModuleName),
+        DepFile, Inputs, yes("plzc"), no,
+        ["target"       - BytecodeFile,
+         "interface"    - InterfaceFile],
+        !IO).
 write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
-    format(File, "build %s : plzgf ../%s\n",
-        [s(Output), s(Source)], !IO),
-    format(File, "    name = %s\n\n",
-        [s(q_name_to_string(ModuleName))], !IO).
+    write_build_statement(File, "plzgf", q_name_to_string(ModuleName),
+        Output, "../", Source, no, !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
@@ -785,14 +789,6 @@ rule plztyperes
         $in -o $out
     description = Calculating type & resource exports for $name
 
-rule plzidep
-    command = $path/plzc $pcflags --mode make-interface-depends $
-		--target-file $target $
-		--module-name-check $name $
-        --source-path $source_path $
-		$in -o $out
-    description = Calculating interface dependencies for $name
-
 rule plzi
     command = $path/plzc $pcflags --mode make-interface $
 		--module-name-check $name $
@@ -802,7 +798,7 @@ rule plzi
 
 rule plzdep
     command = $path/plzc $pcflags --mode make-depends $
-		--target-file $target --import-whitelist $import_whitelist $
+		--target-bytecode $target --target-interface $interface $
 		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
