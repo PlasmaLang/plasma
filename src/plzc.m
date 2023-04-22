@@ -481,12 +481,22 @@ usage(!IO) :-
     io.format("    %s [-v] -o <output> [compilation opts] <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Compilation mode.\n\n", !IO),
-    io.format("    %s [-v] --make-interface -o <output> <input>\n",
+    io.format("    %s [-v] --mode make-interface -o <output> <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Make interface mode.\n\n", !IO),
-    io.format("    %s [-v] --make-depend-info <target> -o <output> <input>\n",
+    io.format("    %s [-v] --mode make-typeres-exports -o <output> <input>\n",
         [s(ProgName)], !IO),
-    io.write_string("        Make depend info mode.\n\n", !IO),
+    io.write_string("        Make the typeres interface file.\n\n", !IO),
+    io.format("    %s [-v] --mode make-depends \n",
+        [s(ProgName)], !IO),
+    io.write_string("            --target-bytecode $bytecode\n", !IO),
+    io.write_string("            --target-interface $interface\n", !IO),
+    io.write_string("            -o <output> <input>\n", !IO),
+    io.write_string("        Generate dependency infomation.\n\n", !IO),
+    io.format("    %s [-v] --mode generate-foreign -o <output> <input>\n",
+        [s(ProgName)], !IO),
+    io.write_string("        Generate runtime code required to register foeign functions.\n\n", !IO),
+
     io.write_string("General options:\n\n", !IO),
     io.write_string("    -h | --help\n" ++
         "        Help text (you're looking at it)\n\n", !IO),
@@ -499,9 +509,14 @@ usage(!IO) :-
         "        Specify output file (compiler will guess otherwise)\n\n", !IO),
     io.write_string("    --mode MODE\n" ++
         "        Specify what the compiler should do:\n" ++
-        "        make-depend-info  - Generate dependency info for ninja,\n" ++
-        "        make-interface    - Generate the interface file,\n" ++
-        "        compile (default) - Compile the module,\n\n", !IO),
+        "        make-depend-info     - " ++
+        "Generate dependency info for ninja,\n" ++
+        "        make-interface       - Generate the interface file,\n" ++
+        "        make-typeres-exports - " ++
+        "Generate the typeres interface file.\n" ++
+        "        compile (default)    - Compile the module,\n" ++
+        "        generate-foreign     - " ++
+        "Generate foreign code registration.\n\n", !IO),
 
     io.write_string("Make depend info options:\n\n", !IO),
     io.write_string("    --target-file <target>\n" ++
@@ -535,7 +550,11 @@ usage(!IO) :-
         "        Subtract this path from source filenames when printing\n" ++
         "        errors.\n\n", !IO),
     io.write_string("    --report-timing\n" ++
-        "        Report the time taken to execute the compiler.\n\n", !IO).
+        "        Report the time taken to execute the compiler.\n\n", !IO),
+    io.write_string("    --target-bytecode <file>\n" ++
+                    "    --target-interface <file>\n" ++
+        "        The names of the bytecode and interface files the build\n" ++
+        "        tool wants dependency information for.\n\n", !IO).
 
 :- type option
     --->    help
