@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module varmap.
 %
-% Copyright (C) 2015-2016, 2019-2020 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma variable map data structure.

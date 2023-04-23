@@ -2,7 +2,7 @@
 % Plasma arity checking
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2017-2020 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Annotate each expression with its arity (the number of things it returns).

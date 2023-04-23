@@ -2,7 +2,7 @@
  * PZ C++ future library functions.
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2019, 2021-2022 Plasma Team
+ * Copyright (C) Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file contains library code that has been added to a more recent C++

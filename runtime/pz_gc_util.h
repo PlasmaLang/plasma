@@ -2,7 +2,7 @@
  * Plasma GC rooting, scopes & C++ allocation utilities
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2018-2021 Plasma Team
+ * Copyright (C) Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 

@@ -2,7 +2,7 @@
  * Plasma bytecode reader
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2916, 2020-2021 Plasma Team
+ * Copyright (C) Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 

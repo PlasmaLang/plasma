@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.simplify.
 %
-% Copyright (C) 2018-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma simplifcation step

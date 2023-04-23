@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module file_utils.
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % File handling utils specific to Plasma.  These are general for the

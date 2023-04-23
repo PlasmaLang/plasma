@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.import.
 %
-% Copyright (C) 2020-2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Process imports by reading interface files.

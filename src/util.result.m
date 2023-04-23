@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module util.result.
 %
-% Copyright (C) 2015, 2018, 2020-2021, 2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % A result type, like maybe_error however it can track multiple compilation

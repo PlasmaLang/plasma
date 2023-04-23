@@ -2,7 +2,7 @@
 % Solver for typechecking/inference.
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2016-2018, 2020-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % This module implements a FD solver over types.

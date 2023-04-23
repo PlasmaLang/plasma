@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module core.branch_chk.
 %
-% Copyright (C) 2017-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT see ../LICENSE.code
 %
 % Plasma branch checking.

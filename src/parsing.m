@@ -5,7 +5,7 @@
 %
 % Parsing utils.
 %
-% Copyright (C) 2015, 2019-2020 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%

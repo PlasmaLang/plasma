@@ -3,7 +3,7 @@ Mercury Grades
 :Author: Paul Bone
 :Email: paul@plasmalang.org
 :Date: March 2020
-:Copyright: Copyright (C) 2018, 2020 Plasma Team
+:Copyright: Copyright (C) Plasma Team
 :License: CC BY-SA 4.0
 
 Plasma is written in Mercury
