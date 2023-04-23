@@ -6,8 +6,8 @@
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  */
 
-#ifndef PZ_String_H
-#define PZ_String_H
+#ifndef PZ_STRING_H
+#define PZ_STRING_H
 
 #include "pz_gc_util.h"
 
