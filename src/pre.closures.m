@@ -2,7 +2,7 @@
 % Plasma AST symbol resolution
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2015-2016, 2019-2020 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module computes nonlocals within the pre-core representation.

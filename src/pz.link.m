@@ -2,7 +2,7 @@
 % Plasma linking code
 % vim: ts=4 sw=4 et
 %
-% Copyright (C) 2020-2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This program links the pz intermediate representation.

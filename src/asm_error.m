@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module asm_error.
 %
-% Copyright (C) 2015, 2017-2018, 2020-2021, 2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Error type for the PZ assembler.

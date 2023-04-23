@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module pre.to_core.
 %
-% Copyright (C) 2015-2020, 2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Plasma parse tree to core representation conversion

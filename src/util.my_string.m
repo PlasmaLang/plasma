@@ -5,7 +5,7 @@
 %
 % String manipulation utils.
 %
-% Copyright (C) 2016, 2020, 2022 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % Routines for escaping and unescaping strings.

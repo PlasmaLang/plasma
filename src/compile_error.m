@@ -3,7 +3,7 @@
 %-----------------------------------------------------------------------%
 :- module compile_error.
 %
-% Copyright (C) 2015-2018, 2020-2023 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 % This module defines possible Plasma compilation errors.

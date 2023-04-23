@@ -3,7 +3,7 @@ Plasma Language Design Principles
 :Author: Paul Bone
 :Email: paul@plasmalang.org
 :Date: June 2021
-:Copyright: Copyright (C) 2019, 2021 Plasma Team
+:Copyright: Copyright (C) Plasma Team
 :License: CC BY-SA 4.0
 :toc:
 

@@ -2,7 +2,7 @@
  * Plasma bytecode format constants
  * vim: ts=4 sw=4 et
  *
- * Copyright (C) 2015-2016, 2019, 2021 Plasma Team
+ * Copyright (C) Plasma Team
  * Distributed under the terms of the MIT license, see ../LICENSE.code
  *
  * This file is used by both the tools in runtime/ and src/

@@ -5,7 +5,7 @@
 %
 % Parse the PZ textual representation.
 %
-% Copyright (C) 2015, 2017-2021 Plasma Team
+% Copyright (C) Plasma Team
 % Distributed under the terms of the MIT License see ../LICENSE.code
 %
 %-----------------------------------------------------------------------%
