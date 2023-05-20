@@ -90,7 +90,7 @@ main(!IO) :-
                         run_and_catch(
                             do_make_typeres_exports(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_depends(TargetBytecode, TargetInterface),
+                    ; Mode = scan(TargetBytecode, TargetInterface),
                         run_and_catch(
                             do_make_dep_info(GeneralOpts, TargetBytecode,
                                 TargetInterface, PlasmaAst),
@@ -340,7 +340,7 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
             )
     ;       make_interface
     ;       make_typeres_exports
-    ;       make_depends(
+    ;       scan(
                 pmo_d_output        :: string,
                 pmo_d_interface     :: string
             )
@@ -400,10 +400,10 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
     else if Mode = "make-typeres-exports" then
         Result = ok(make_typeres_exports),
         OutputExtension = constant.typeres_extension
-    else if Mode = "make-depends" then
+    else if Mode = "scan" then
         lookup_string_option(OptionTable, target_bytecode, TargetBytecode),
         lookup_string_option(OptionTable, target_interface, TargetInterface),
-        Result = ok(make_depends(TargetBytecode, TargetInterface)),
+        Result = ok(scan(TargetBytecode, TargetInterface)),
         OutputExtension = constant.depends_extension
     else if Mode = "generate-foreign" then
         Result = ok(make_foreign),
@@ -487,12 +487,12 @@ usage(!IO) :-
     io.format("    %s [-v] --mode make-typeres-exports -o <output> <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Make the typeres interface file.\n\n", !IO),
-    io.format("    %s [-v] --mode make-depends \n",
+    io.format("    %s [-v] --mode scan \n",
         [s(ProgName)], !IO),
     io.write_string("            --target-bytecode $bytecode\n", !IO),
     io.write_string("            --target-interface $interface\n", !IO),
     io.write_string("            -o <output> <input>\n", !IO),
-    io.write_string("        Generate dependency infomation.\n\n", !IO),
+    io.write_string("        Scan source for dependencies.\n\n", !IO),
     io.format("    %s [-v] --mode generate-foreign -o <output> <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Generate runtime code required to register foeign functions.\n\n", !IO),
@@ -509,8 +509,8 @@ usage(!IO) :-
         "        Specify output file (compiler will guess otherwise)\n\n", !IO),
     io.write_string("    --mode MODE\n" ++
         "        Specify what the compiler should do:\n" ++
-        "        make-depend-info     - " ++
-        "Generate dependency info for ninja,\n" ++
+        "        scan                 - " ++
+        "Scan code for dependency information,\n" ++
         "        make-interface       - Generate the interface file,\n" ++
         "        make-typeres-exports - " ++
         "Generate the typeres interface file.\n" ++
@@ -518,9 +518,14 @@ usage(!IO) :-
         "        generate-foreign     - " ++
         "Generate foreign code registration.\n\n", !IO),
 
-    io.write_string("Make depend info options:\n\n", !IO),
-    io.write_string("    --target-file <target>\n" ++
-        "        <target> is the name of the target in the ninja file\n\n",
+    io.write_string("Scan options:\n\n", !IO),
+    io.write_string("    --target-bytecode <file>\n" ++
+        "        <file> is the name of the bytecode file in the ninja\n" ++
+        "        build file\n\n",
+        !IO),
+    io.write_string("   --target-interface <file>\n" ++
+        "        <file> is the name of the interface file in the ninja\n" ++
+        "        build file\n\n",
         !IO),
 
     io.write_string("Compilation options:\n\n", !IO),
@@ -550,11 +555,7 @@ usage(!IO) :-
         "        Subtract this path from source filenames when printing\n" ++
         "        errors.\n\n", !IO),
     io.write_string("    --report-timing\n" ++
-        "        Report the time taken to execute the compiler.\n\n", !IO),
-    io.write_string("    --target-bytecode <file>\n" ++
-                    "    --target-interface <file>\n" ++
-        "        The names of the bytecode and interface files the build\n" ++
-        "        tool wants dependency information for.\n\n", !IO).
+        "        Report the time taken to execute the compiler.\n\n", !IO).
 
 :- type option
     --->    help

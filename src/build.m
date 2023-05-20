@@ -347,12 +347,12 @@ not_found_error(Context, Key) =
                 dttr_output         :: string,
                 dttr_input          :: string
             )
-    ;       dt_dep(
-                dtd_name            :: q_name,
-                dtd_dep_file        :: string,
-                dtd_source          :: string,
-                dtd_interface       :: string,
-                dtd_bytecode        :: string
+    ;       dt_scan(
+                dts_name            :: q_name,
+                dts_dep_file        :: string,
+                dts_source          :: string,
+                dts_interface       :: string,
+                dts_bytecode        :: string
             )
     ;       dt_foreign_hooks(
                 dtcg_name           :: q_name,
@@ -473,7 +473,7 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ depends_extension,
     Targets = [
-        dt_dep(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
+        dt_scan(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
         dt_interface(ModuleName, InterfaceName, SourceName, DepFile),
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
         dt_typeres(ModuleName, TyperesName, SourceName),
@@ -647,10 +647,10 @@ write_target(File,
     write_build_statement(File, "plztyperes", q_name_to_string(ModuleName),
         TyperesFile, "../", SourceFile, yes("plzc"), !IO).
 write_target(File,
-        dt_dep(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
+        dt_scan(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
         !IO) :-
     Inputs = ["../" ++ SourceFile],
-    write_statement(File, "plzdep", q_name_to_string(ModuleName),
+    write_statement(File, "plzscan", q_name_to_string(ModuleName),
         DepFile, Inputs, yes("plzc"), no,
         ["target"       - BytecodeFile,
          "interface"    - InterfaceFile],
@@ -796,13 +796,13 @@ rule plzi
 		$in -o $out
     description = Making interface for $name
 
-rule plzdep
-    command = $path/plzc $pcflags --mode make-depends $
+rule plzscan
+    command = $path/plzc $pcflags --mode scan $
 		--target-bytecode $target --target-interface $interface $
 		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
-    description = Calculating dependencies for $name
+    description = Scanning $name for dependencies
 
 rule plzc
     command = $path/plzc $pcflags --mode compile $
