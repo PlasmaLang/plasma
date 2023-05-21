@@ -114,6 +114,7 @@ progs : \
 	src/plzbuild \
 	src/plzc \
 	src/plzdisasm \
+	src/plzgeninit \
 	src/plzlnk
 
 .PHONY: install
@@ -131,6 +132,7 @@ install_progs : install_dirs progs
 	$(INSTALL_STRIP) src/plzbuild $(DEST_DIR)$(BINDIR)
 	$(INSTALL_STRIP) src/plzc $(DEST_DIR)$(BINDIR)
 	$(INSTALL_STRIP) src/plzdisasm $(DEST_DIR)$(BINDIR)
+	$(INSTALL_STRIP) src/plzgeninit $(DEST_DIR)$(BINDIR)
 	$(INSTALL_STRIP) src/plzlnk $(DEST_DIR)$(BINDIR)
 
 .PHONY: install_docs
@@ -169,6 +171,8 @@ src/plzc : .mer_progs
 	touch src/plzc
 src/plzdisasm : .mer_progs
 	touch src/plzdisasm
+src/plzgeninit : .mer_progs
+	touch src/plzgeninit
 src/plzlnk : .mer_progs 
 	touch src/plzlnk
 .mer_progs : $(MERCURY_SOURCES) runtime/pz_config.h $(C_HEADERS)
@@ -177,6 +181,7 @@ src/plzlnk : .mer_progs
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzbuild)
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzc)
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzdisasm)
+	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzgeninit)
 	(cd src; $(MMC_MAKE) --cflags="$(C_CXX_FLAGS_BASE)" $(MCFLAGS) plzlnk)
 	touch .mer_progs
 
@@ -258,7 +263,8 @@ realclean : localclean
 	find tests -name *.so \
 		| xargs -r rm
 	rm -f src/tags 
-	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzlnk
+	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzgeninit \
+		src/plzlnk
 	rm -rf src/Mercury
 	rm -f .mer_progs
 	rm -rf runtime/tags runtime/plzrun

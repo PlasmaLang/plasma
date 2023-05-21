@@ -60,6 +60,7 @@
 :- type tool
     --->    plzc
     ;       plzasm
+    ;       plzgeninit
     ;       plzlnk.
 
 :- type had_errors
@@ -172,6 +173,7 @@ exit_exception_field(Name - Value, !IO) :-
 tool_name(plzc) = "Plasma compiler".
 tool_name(plzasm) = "Plasma bytecode assembler".
 tool_name(plzlnk) = "Plasma bytecode linker".
+tool_name(plzgeninit) = "Plasma foreign interface generator".
 
 :- func tool_short_name(tool) = string.
 
