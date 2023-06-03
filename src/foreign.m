@@ -128,16 +128,10 @@ write_foreign_hooks(Filename, ModuleName, ForeignIncludes, ForeignFuncs,
         foldl(write_include(File), ForeignIncludes, !IO),
         nl(File, !IO),
 
-        % XXX: Only one registration function.
-        write_string(File, "extern \"C\" {\n", !IO),
-        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_);\n",
-            !IO),
-        write_string(File, "}\n\n", !IO),
-
         write_string(File, "using namespace pz;\n\n", !IO),
 
-        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_) {\n",
-            !IO),
+        format(File, "bool pz_init_foreign_code_%s(void *f_, void *gc_) {\n",
+            [s(q_name_clobber(ModuleName))], !IO),
         write_string(File,
             "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);\n", !IO),
         write_string(File,

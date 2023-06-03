@@ -359,6 +359,12 @@ not_found_error(Context, Key) =
                 dtcg_output         :: string,
                 dtcg_input          :: string
             )
+            % Generate an init file for the FFI from the info files.
+    ;       dt_gen_init(
+                dtgi_name           :: nq_name,
+                dtgi_output         :: string,
+                dtgi_modules        :: list(q_name)
+            )
     ;       dt_c_link(
                 dtcl_name           :: nq_name,
                 dtcl_output         :: string,
@@ -389,12 +395,13 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
       MaybeForeignSources = ok(ForeignSources),
         ModuleTargets = map(make_module_targets, ModuleFiles),
         ProgramTargets = map(make_program_target, Targets),
-        ForeignLinkTargets = map(make_foreign_link_target, Targets),
+        ForeignLinkTargets = condense(map(make_foreign_link_targets,
+            Targets)),
         ForeignCompileTargets = map(make_foreign_target, ForeignSources),
 
         MaybeDeps = ok(condense(ModuleTargets) ++
             ForeignCompileTargets ++
-            list_maybe_to_list(ForeignLinkTargets) ++ ProgramTargets)
+            ForeignLinkTargets ++ ProgramTargets)
 
     ; MaybeModuleFiles = ok(_),
       MaybeForeignSources = errors(Errors),
@@ -485,13 +492,13 @@ make_module_targets(ModuleName - SourceName) = Targets :-
             was_generated)
     ].
 
-:- func make_foreign_link_target(target) = maybe(dep_target).
+:- func make_foreign_link_targets(target) = list(dep_target).
 
-make_foreign_link_target(Target) = Dep :-
+make_foreign_link_targets(Target) = Deps :-
     ForeignSources = Target ^ t_c_sources,
     Modules = Target ^ t_modules,
     ( ForeignSources = [],
-        Dep = no
+        Deps = []
     ; ForeignSources = [_ | _],
         Output = make_c_library_name(Target),
         ( if
@@ -499,8 +506,18 @@ make_foreign_link_target(Target) = Dep :-
                 ForeignSources, ForeignObjects)
         then
             ModuleForeignObjects = map(module_to_foreign_object, Modules),
-            Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects ++
-                ModuleForeignObjects))
+            InitBaseName = nq_name_to_string(Target ^ t_name) ++ "_init",
+            InitSourceName = InitBaseName ++ cpp_extension,
+            InitObjectName = InitBaseName ++ native_object_extension,
+            InitTargetSource = dt_gen_init(Target ^ t_name, InitSourceName,
+                Modules),
+            InitTargetObject = dt_c_compile(InitObjectName, InitSourceName,
+                was_generated),
+            LinkTarget = dt_c_link(Target ^ t_name, Output,
+                ForeignObjects ++
+                ModuleForeignObjects ++
+                [InitObjectName]),
+            Deps = [InitTargetSource, InitTargetObject, LinkTarget]
         else
             compile_error($file, $pred, "Unrecognised source file extension")
         )
@@ -658,6 +675,11 @@ write_target(File,
 write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
     write_build_statement(File, "plzgf", q_name_to_string(ModuleName),
         Output, "../", Source, no, !IO).
+write_target(File, dt_gen_init(ModuleName, Output, Inputs), !IO) :-
+    InputsString = string_join(" ", map(q_name_to_string, Inputs)),
+    write_statement(File, "gen_init", nq_name_to_string(ModuleName),
+        Output, [], yes("plzgeninit"), no,
+        ["modules" - InputsString], !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
@@ -818,6 +840,11 @@ rule plzgf
 		--source-path $source_path $
 		$in -o $out
     description = Generating foreign hooks for $name
+
+rule gen_init
+    command = $path/plzgeninit $
+        $modules -o $out
+    description = Generating foreign initialisation code for $name
 
 rule plzlink
     command = $path/plzlnk $plflags -n $name -o $out $in
