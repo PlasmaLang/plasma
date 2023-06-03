@@ -138,8 +138,10 @@ write_foreign_hooks(Filename, ModuleName, ForeignIncludes, ForeignFuncs,
 
         write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_) {\n",
             !IO),
-        write_string(File, "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);", !IO),
-        write_string(File, "  Foreign *f = reinterpret_cast<Foreign*>(f_);", !IO),
+        write_string(File,
+            "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);\n", !IO),
+        write_string(File,
+            "  Foreign *f = reinterpret_cast<Foreign*>(f_);\n", !IO),
 
         foldl(write_register_foreign_func(File, ModuleName), ForeignFuncs, !IO),
         write_string(File, "  return true;\n", !IO),
