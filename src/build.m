@@ -689,7 +689,7 @@ write_target(File, dt_c_compile(Object, Source, SrcWasGenerated), !IO) :-
     ; SrcWasGenerated = hand_written,
         Path = "../"
     ),
-    write_build_statement(File, "c_compile", Path ++ Source,
+    write_build_statement(File, "c_compile", Source,
         Object, Path, Source, no, !IO).
 
 %-----------------------------------------------------------------------%
