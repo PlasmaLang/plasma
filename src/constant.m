@@ -25,6 +25,7 @@
 :- func native_object_extension = string.
 :- func native_dylib_extension = string.
 :- func cpp_extension = string.
+:- func c_header_extension = string.
 
 :- func build_file = string.
 :- func build_directory = string.
@@ -61,6 +62,7 @@ library_extension = ".pz".
 native_object_extension = ".o".
 native_dylib_extension = ".so".
 cpp_extension = ".cpp".
+c_header_extension = ".h".
 
 build_file = "BUILD.plz".
 build_directory = "_build".

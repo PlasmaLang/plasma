@@ -356,7 +356,8 @@ not_found_error(Context, Key) =
             )
     ;       dt_foreign_hooks(
                 dtcg_name           :: q_name,
-                dtcg_output         :: string,
+                dtcg_output_code    :: string,
+                dtcg_output_header  :: string,
                 dtcg_input          :: string
             )
             % Generate an init file for the FFI from the info files.
@@ -485,10 +486,11 @@ make_module_targets(ModuleName - SourceName) = Targets :-
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
         dt_typeres(ModuleName, TyperesName, SourceName),
         dt_foreign_hooks(ModuleName,
-            module_to_foreign_hooks(ModuleName), SourceName),
+            module_to_foreign_hooks_code(ModuleName),
+            module_to_foreign_hooks_header(ModuleName), SourceName),
         dt_c_compile(
             module_to_foreign_object(ModuleName),
-            module_to_foreign_hooks(ModuleName),
+            module_to_foreign_hooks_code(ModuleName),
             was_generated)
     ].
 
@@ -540,10 +542,20 @@ make_foreign_target(CFileName) = Target :-
         compile_error($file, $pred, "Unrecognised source file extension")
     ).
 
-:- func module_to_foreign_hooks(q_name) = string.
+:- func module_to_foreign_hooks_code(q_name) = string.
 
-module_to_foreign_hooks(Module) =
-    canonical_base_name(Module) ++ "_f" ++ cpp_extension.
+module_to_foreign_hooks_code(Module) =
+    module_to_foreign_hooks_base(Module) ++ cpp_extension.
+
+:- func module_to_foreign_hooks_header(q_name) = string.
+
+module_to_foreign_hooks_header(Module) =
+    module_to_foreign_hooks_base(Module) ++ c_header_extension.
+
+:- func module_to_foreign_hooks_base(q_name) = string.
+
+module_to_foreign_hooks_base(Module) =
+    canonical_base_name(Module) ++ "_f".
 
 :- func module_to_foreign_object(q_name) = string.
 
@@ -672,9 +684,11 @@ write_target(File,
         ["target"       - BytecodeFile,
          "interface"    - InterfaceFile],
         !IO).
-write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
-    write_build_statement(File, "plzgf", q_name_to_string(ModuleName),
-        Output, "../", Source, no, !IO).
+write_target(File, dt_foreign_hooks(ModuleName, OutCode, OutHeader, Source),
+        !IO) :-
+    write_statement(File, "plzgf", q_name_to_string(ModuleName),
+        OutCode, ["../" ++ Source], no, no,
+        ["header"       - OutHeader], !IO).
 write_target(File, dt_gen_init(ModuleName, Output, Inputs), !IO) :-
     InputsString = string_join(" ", map(q_name_to_string, Inputs)),
     write_statement(File, "gen_init", nq_name_to_string(ModuleName),
@@ -838,6 +852,7 @@ rule plzgf
     command = $path/plzc $pcflags --mode generate-foreign $
 		--module-name-check $name $
 		--source-path $source_path $
+		--output-header $header $
 		$in -o $out
     description = Generating foreign hooks for $name
 
