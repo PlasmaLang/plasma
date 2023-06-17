@@ -95,8 +95,9 @@ main(!IO) :-
                             do_make_dep_info(GeneralOpts, TargetBytecode,
                                 TargetInterface, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_foreign,
-                        run_and_catch(do_make_foreign(GeneralOpts, PlasmaAst),
+                    ; Mode = make_foreign(OutputHeader),
+                        run_and_catch(do_make_foreign(GeneralOpts,
+                                OutputHeader, PlasmaAst),
                             plzc, HadErrors, !IO)
                     ),
                     ReportTiming = GeneralOpts ^ go_report_timing,
@@ -344,7 +345,9 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
                 pmo_d_output        :: string,
                 pmo_d_interface     :: string
             )
-    ;       make_foreign.
+    ;       make_foreign(
+                pmo_f_output_header :: string
+            ).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -406,7 +409,8 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
         Result = ok(scan(TargetBytecode, TargetInterface)),
         OutputExtension = constant.depends_extension
     else if Mode = "generate-foreign" then
-        Result = ok(make_foreign),
+        lookup_string_option(OptionTable, output_header, OutputHeader),
+        Result = ok(make_foreign(OutputHeader)),
         OutputExtension = constant.cpp_extension
     else
         Result = error(
@@ -563,6 +567,7 @@ usage(!IO) :-
     ;       version
     ;       mode_
     ;       output_file
+    ;       output_header
     ;       target_bytecode
     ;       target_interface
     ;       import_whitelist
@@ -588,6 +593,7 @@ long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("mode",                 mode_).
 long_option("output-file",          output_file).
+long_option("output-header",        output_header).
 long_option("target-bytecode",      target_bytecode).
 long_option("target-interface",     target_interface).
 long_option("import-whitelist",     import_whitelist).
@@ -607,6 +613,7 @@ option_default(verbose,             bool(no)).
 option_default(version,             bool(no)).
 option_default(mode_,               string("compile")).
 option_default(output_file,         string("")).
+option_default(output_header,       string("")).
 option_default(target_bytecode,     string("")).
 option_default(target_interface,    string("")).
 option_default(import_whitelist,    string("")).

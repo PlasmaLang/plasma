@@ -20,7 +20,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred do_make_foreign(general_options::in, ast::in, io::di, io::uo) is det.
+:- pred do_make_foreign(general_options::in, string::in, ast::in, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -50,13 +50,13 @@
 
 %-----------------------------------------------------------------------%
 
-do_make_foreign(GeneralOpts, PlasmaAst, !IO) :-
+do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
     ForeignIncludes = find_foreign_includes(PlasmaAst),
     ForeignFuncs = find_foreign_funcs(PlasmaAst),
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         OutputFile = GeneralOpts ^ go_output_file,
-        write_foreign_hooks(OutputFile, PlasmaAst ^ a_module_name,
+        write_foreign_hooks(OutputFile, OutputHeader, PlasmaAst ^ a_module_name,
             ForeignIncludes, ForeignFuncs, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
@@ -111,15 +111,15 @@ find_foreign_funcs(Ast) = ForeignFuncs :-
 
 %-----------------------------------------------------------------------%
 
-:- pred write_foreign_hooks(string::in, q_name::in,
+:- pred write_foreign_hooks(string::in, string::in, q_name::in,
     list(foreign_include)::in, list(foreign_func)::in, maybe_error::out,
     io::di, io::uo) is det.
 
-write_foreign_hooks(Filename, ModuleName, ForeignIncludes, ForeignFuncs,
-        Result, !IO) :-
+write_foreign_hooks(FilenameCode, _FilenameHeader, ModuleName,
+        ForeignIncludes, ForeignFuncs, Result, !IO) :-
     write_temp_and_move(open_output, close_output,
         write_foreign_hooks_2(ModuleName, ForeignIncludes, ForeignFuncs),
-        Filename, Result, !IO).
+        FilenameCode, Result, !IO).
 
 :- pred write_foreign_hooks_2(q_name::in, list(foreign_include)::in,
     list(foreign_func)::in, output_stream::in, maybe_error::out,
