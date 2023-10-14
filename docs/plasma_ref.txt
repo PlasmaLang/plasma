@@ -1129,6 +1129,12 @@ step to use any generator (below) with `break` to create something as
 general as a while loop.  It may even look very similar to a while loop
 with the right sugar.
 
+TODO: Consider also the "scan" or "search" loop pattern, where once we find
+what we're looking for we break, maybe potentially removing the item from a
+collection?
+
+Is filter part of the scan pattern or the fold pattern?
+
 === Expressions
 
 Expressions are broken into two parts.  This allows us to parse call
