@@ -73,6 +73,38 @@
 
 %-----------------------------------------------------------------------%
 
+:- type temp_file_info
+    --->    temp_file_info(
+                tfi_temp_file       :: string,
+                tfi_final_file      :: string
+            ).
+
+    % Write a temporary file that represents the final file.
+    %
+    % The result, if successful, contains the temporary and final filename.
+    % It can later be used by move_temps_if_successful to move the temporary
+    % file over the final file.
+    %
+    % write_temp(Write, Open, Close, FinalFilename, Result, !IO),
+    %
+:- pred write_temp(
+    pred(string, io.res(S), io, io),
+    pred(S, io, io),
+    pred(S, maybe_error, io, io),
+    string, maybe_error(temp_file_info), io, io).
+:- mode write_temp(
+    pred(in, out, di, uo) is det,
+    pred(in, di, uo) is det,
+    pred(in, out, di, uo) is det,
+    in, out, di, uo) is det.
+
+    % Given a list of results from multiple calls to write_temp. If they all
+    % succeed then move all the files into their correct position.  If any
+    % of them fail then return the failure.
+    %
+:- pred move_temps_if_successful(list(maybe_error(temp_file_info))::in,
+    maybe_error::out, io::di, io::uo) is det.
+
     % write_temp_and_move(OpenPred, ClosePred, WritePred, Filename, Result,
     %    !IO)
     %
@@ -317,22 +349,56 @@ combine_read_7(Res1, Res2, Res3, Res4, Res5, Res6, Res7) = Res :-
 
 %-----------------------------------------------------------------------%
 
-write_temp_and_move(Open, Close, Write, Filename, Result, !IO) :-
+write_temp(Open, Close, Write, Filename, Result, !IO) :-
     TempFilename = make_temp_filename(Filename),
     Open(TempFilename, MaybeFile, !IO),
     ( MaybeFile = ok(File),
-        Write(File, Result0, !IO),
+        Write(File, Result1, !IO),
         Close(File, !IO),
-        io.rename_file(TempFilename, Filename, MoveRes, !IO),
-        ( MoveRes = ok,
-            Result = Result0
-        ; MoveRes = error(Error),
-            Result =
-                error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+        ( Result1 = ok,
+            Result = ok(temp_file_info(TempFilename, Filename))
+        ; Result1 = error(Error),
+            Result = error(Error)
         )
     ; MaybeFile = error(Error),
         Result =
             error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+    ).
+
+move_temps_if_successful([], ok, !IO).
+move_temps_if_successful([R | Rs], Result, !IO) :-
+    ( R = ok(TempFileInfo),
+        move_temps_if_successful(Rs, Result0, !IO),
+        ( Result0 = ok,
+            TempFilename = TempFileInfo ^ tfi_temp_file,
+            Filename = TempFileInfo ^ tfi_final_file,
+            io.rename_file(TempFilename, Filename, MoveRes, !IO),
+            ( MoveRes = ok,
+                Result = ok
+            ; MoveRes = error(Error),
+                Result =
+                    error(format("%s: %s", 
+                        [s(Filename), s(error_message(Error))]))
+            )
+        ; Result0 = error(_),
+            Result = Result0
+        )
+    ; R = error(Error),
+        Result = error(Error)
+    ).
+
+write_temp_and_move(Open, Close, Write, Filename, Result, !IO) :-
+    write_temp(Open, Close, Write, Filename, Result0, !IO),
+    ( Result0 = ok(TempFileInfo),
+        io.rename_file(TempFileInfo ^ tfi_temp_file, Filename, MoveRes, !IO),
+        ( MoveRes = ok,
+            Result = ok
+        ; MoveRes = error(Error),
+            Result =
+                error(format("%s: %s", [s(Filename), s(error_message(Error))]))
+        )
+    ; Result0 = error(Error),
+        Result = error(Error)
     ).
 
 %-----------------------------------------------------------------------%
