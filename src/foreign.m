@@ -115,17 +115,21 @@ find_foreign_funcs(Ast) = ForeignFuncs :-
     list(foreign_include)::in, list(foreign_func)::in, maybe_error::out,
     io::di, io::uo) is det.
 
-write_foreign_hooks(FilenameCode, _FilenameHeader, ModuleName,
+write_foreign_hooks(FilenameCode, FilenameHeader, ModuleName,
         ForeignIncludes, ForeignFuncs, Result, !IO) :-
-    write_temp_and_move(open_output, close_output,
-        write_foreign_hooks_2(ModuleName, ForeignIncludes, ForeignFuncs),
-        FilenameCode, Result, !IO).
+    write_temp(open_output, close_output,
+        write_foreign_hooks_code(ModuleName, ForeignIncludes, ForeignFuncs),
+        FilenameCode, ResultCode, !IO),
+    write_temp(open_output, close_output,
+        write_foreign_hooks_header(ModuleName),
+        FilenameHeader, ResultHeader, !IO),
+    move_temps_if_successful([ResultCode, ResultHeader], Result, !IO).
 
-:- pred write_foreign_hooks_2(q_name::in, list(foreign_include)::in,
+:- pred write_foreign_hooks_code(q_name::in, list(foreign_include)::in,
     list(foreign_func)::in, output_stream::in, maybe_error::out,
     io::di, io::uo) is det.
 
-write_foreign_hooks_2(ModuleName, ForeignIncludes, ForeignFuncs, File,
+write_foreign_hooks_code(ModuleName, ForeignIncludes, ForeignFuncs, File,
         ok, !IO) :-
     format(File, "// Foreign hooks for %s\n\n",
         [s(q_name_to_string(ModuleName))], !IO),
@@ -149,6 +153,17 @@ write_foreign_hooks_2(ModuleName, ForeignIncludes, ForeignFuncs, File,
     foldl(write_register_foreign_func(File, ModuleName), ForeignFuncs, !IO),
     write_string(File, "  return true;\n", !IO),
     write_string(File, "}\n", !IO).
+
+:- pred write_foreign_hooks_header(q_name::in, output_stream::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_foreign_hooks_header(ModuleName, File, ok, !IO) :-
+    format(File, "// Foreign hooks for %s\n\n",
+        [s(q_name_to_string(ModuleName))], !IO),
+
+    format(File, "bool pz_init_foreign_code_%s(void *f, void *gc);\n",
+        [s(q_name_clobber(ModuleName))], !IO),
+    nl(File, !IO).
 
 :- pred write_include(output_stream::in, foreign_include::in,
     io::di, io::uo) is det.
