@@ -72,6 +72,7 @@
 :- import_module int.
 :- import_module list.
 :- import_module pair.
+:- import_module require.
 :- import_module string.
 
 %-----------------------------------------------------------------------%
@@ -122,7 +123,12 @@ is_relative(Path) :-
 
 %-----------------------------------------------------------------------%
 
-make_temp_filename(Orig) = Orig ++ "~".
+make_temp_filename(Orig) =
+    ( if Orig = "" then
+        unexpected($file, $pred, "Empty filename")
+    else
+        Orig ++ "~"
+    ).
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
