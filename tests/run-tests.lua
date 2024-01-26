@@ -630,19 +630,20 @@ function run_test(test)
   if (test.config.build_args) then
     build_args = test.config.build_args
   end
+  local extra_args = {"--rebuild"} 
   if test.type == "plzbuild" then
     result = test_step(test, "build", result,
       function()
-        return execute_test_command(test, "build", plzbuild_bin, build_args, nil,
-          nil, nil, 0)
+        return execute_test_command(test, "build", plzbuild_bin,
+          list_append(extra_args, build_args), nil, nil, nil, 0)
       end)
   elseif test.type == "run" then
     if (test.build_file) then
       result = test_step(test, "build", result,
         function()
           local build_dir = test.name .. ".dir"
-          local extra_args = 
-            {"--build-file", test.build_file, "--build-dir", build_dir}
+          extra_args = list_append(extra_args,
+            {"--build-file", test.build_file, "--build-dir", build_dir, "--rebuild"})
           return execute_test_command(test, "build", plzbuild_bin,
             list_append(extra_args, build_args),
             nil, nil, nil, 0)
