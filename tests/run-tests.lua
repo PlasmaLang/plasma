@@ -200,7 +200,11 @@ function execute(dir, bin, args, mb_input_file, mb_output_file, mb_stderr_file)
     repeat
       local str = U.read(stream, 4096)
       if str then
-        output = output .. str
+        str = string.gsub(str, "%s*$", "")
+        if str ~= "" then
+          log(str)
+          output = output .. str
+        end
       end
     until not str or str == ""
     return output
