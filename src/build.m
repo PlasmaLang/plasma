@@ -603,15 +603,18 @@ write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
     ; MaybeBinary = no,
         BinaryInput = []
     ),
-    ExtraDepsStr = string_join(" ", BinaryInput),
+    ( BinaryInput = [_ | _],
+        ExtraDepsStr = " | " ++ string_join(" ", BinaryInput)
+    ; BinaryInput = [],
+        ExtraDepsStr = ""
+    ),
     ( MaybeDynDep = yes(DynDep),
         DynDepStr = " || " ++ DynDep
     ; MaybeDynDep = no,
         DynDepStr = ""
     ),
     write_string(File,
-        "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ " | "
-            ++ ExtraDepsStr ++ DynDepStr ++ "\n",
+        "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ ExtraDepsStr ++ DynDepStr ++ "\n",
         !IO),
     write_var(File, "name" - Name, !IO),
     ( MaybeDynDep = yes(DynDep_),
