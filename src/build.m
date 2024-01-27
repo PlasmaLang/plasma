@@ -374,6 +374,7 @@ not_found_error(Context, Key) =
     ;       dt_c_compile(
                 dtcc_output         :: string,
                 dtcc_input          :: string,
+                dtcc_headers        :: list(string),
                 dtcc_generated      :: generated
             ).
 
@@ -491,6 +492,7 @@ make_module_targets(ModuleName - SourceName) = Targets :-
         dt_c_compile(
             module_to_foreign_object(ModuleName),
             module_to_foreign_hooks_code(ModuleName),
+            [module_to_foreign_hooks_header(ModuleName)],
             was_generated)
     ].
 
@@ -514,7 +516,7 @@ make_foreign_link_targets(Target) = Deps :-
             InitTargetSource = dt_gen_init(Target ^ t_name, InitSourceName,
                 Modules),
             InitTargetObject = dt_c_compile(InitObjectName, InitSourceName,
-                was_generated),
+                map(module_to_foreign_hooks_header, Modules), was_generated),
             LinkTarget = dt_c_link(Target ^ t_name, Output,
                 ForeignObjects ++
                 ModuleForeignObjects ++
@@ -537,7 +539,7 @@ make_foreign_target(CFileName) = Target :-
         file_change_extension(cpp_extension, native_object_extension,
             CFileName, ObjectName)
     then
-        Target = dt_c_compile(ObjectName, CFileName, hand_written)
+        Target = dt_c_compile(ObjectName, CFileName, [], hand_written)
     else
         compile_error($file, $pred, "Unrecognised source file extension")
     ).
@@ -592,20 +594,26 @@ do_write_dependency_file(DepInfo, BuildFile, !IO) :-
     foldl(write_target(BuildFile), DepInfo, !IO).
 
 :- pred write_statement(output_stream::in,
-    string::in, string::in, string::in, list(string)::in, maybe(string)::in,
-    maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
+    string::in, string::in, string::in, list(string)::in, list(string)::in, maybe(string)::in,
+    list(string)::in, maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
 
-write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
-        MaybeDynDep, Vars, !IO) :-
+write_statement(File, Command, Name, Output, ImplicitOutputs, Inputs, MaybeBinary,
+        ImplicitDeps, MaybeDynDep, Vars, !IO) :-
+    ( ImplicitOutputs = [],
+        ImplicitOutput = ""
+    ; ImplicitOutputs = [_ | _],
+        ImplicitOutput = " | " ++ string_join(" ", ImplicitOutputs)
+    ),
     InputsStr = string_join(" ", Inputs),
     ( MaybeBinary = yes(Binary),
         BinaryInput = ["$path/" ++ Binary]
     ; MaybeBinary = no,
         BinaryInput = []
     ),
-    ( BinaryInput = [_ | _],
-        ExtraDepsStr = " | " ++ string_join(" ", BinaryInput)
-    ; BinaryInput = [],
+    ExtraDeps = BinaryInput ++ ImplicitDeps,
+    ( ExtraDeps = [_ | _],
+        ExtraDepsStr = " | " ++ string_join(" ", ExtraDeps)
+    ; ExtraDeps = [],
         ExtraDepsStr = ""
     ),
     ( MaybeDynDep = yes(DynDep),
@@ -614,7 +622,8 @@ write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
         DynDepStr = ""
     ),
     write_string(File,
-        "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ ExtraDepsStr ++ DynDepStr ++ "\n",
+        "build " ++ Output ++ ImplicitOutput ++ " : " ++ Command ++ " " ++
+            InputsStr ++ ExtraDepsStr ++ DynDepStr ++ "\n",
         !IO),
     write_var(File, "name" - Name, !IO),
     ( MaybeDynDep = yes(DynDep_),
@@ -636,8 +645,17 @@ write_var(File, Var - Val, !IO) :-
 
 write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
         !IO) :-
-    write_statement(File, Command, Name, Output, [Path ++ Input],
-        MaybeBinary, no, [], !IO).
+    write_statement(File, Command, Name, Output, [], [Path ++ Input],
+        MaybeBinary, [], no, [], !IO).
+
+:- pred write_c_compile_statement(output_stream::in, string::in,
+    string::in, string::in, string::in, list(string)::in,
+    io::di, io::uo) is det.
+
+write_c_compile_statement(File, Name, Output, Path, Input, Headers,
+        !IO) :-
+    write_statement(File, "c_compile", Name, Output, [], [Path ++ Input],
+        no, Headers, no, [], !IO).
 
 :- pred write_plzc_statement(output_stream::in, string::in, q_name::in,
     string::in, string::in, string::in, list(pair(string, string))::in,
@@ -646,7 +664,7 @@ write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
 write_plzc_statement(File, Command, Name, Output, Input,
         DepFile, Vars, !IO) :-
     write_statement(File, Command, q_name_to_string(Name),
-        Output, ["../" ++ Input], yes("plzc"), yes(DepFile), Vars, !IO).
+        Output, [], ["../" ++ Input], yes("plzc"), [], yes(DepFile), Vars, !IO).
 
 :- pred write_link_statement(output_stream::in, string::in, nq_name::in,
     string::in, list(string)::in, maybe(string)::in,
@@ -655,7 +673,7 @@ write_plzc_statement(File, Command, Name, Output, Input,
 write_link_statement(File, Command, Name, Output, Objects, MaybeBinary,
         !IO) :-
     write_statement(File, Command, nq_name_to_string(Name),
-        "../" ++ Output, Objects, MaybeBinary, no, [], !IO).
+        "../" ++ Output, [], Objects, MaybeBinary, [], no, [], !IO).
 
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
@@ -683,31 +701,31 @@ write_target(File,
         !IO) :-
     Inputs = ["../" ++ SourceFile],
     write_statement(File, "plzscan", q_name_to_string(ModuleName),
-        DepFile, Inputs, yes("plzc"), no,
+        DepFile, [], Inputs, yes("plzc"), [], no,
         ["target"       - BytecodeFile,
          "interface"    - InterfaceFile],
         !IO).
 write_target(File, dt_foreign_hooks(ModuleName, OutCode, OutHeader, Source),
         !IO) :-
     write_statement(File, "plzgf", q_name_to_string(ModuleName),
-        OutCode, ["../" ++ Source], no, no,
+        OutCode, [OutHeader], ["../" ++ Source], no, [], no,
         ["header"       - OutHeader], !IO).
 write_target(File, dt_gen_init(ModuleName, Output, Inputs), !IO) :-
     InputsString = string_join(" ", map(q_name_to_string, Inputs)),
     write_statement(File, "gen_init", nq_name_to_string(ModuleName),
-        Output, [], yes("plzgeninit"), no,
+        Output, [], [], yes("plzgeninit"), [], no,
         ["modules" - InputsString], !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
-write_target(File, dt_c_compile(Object, Source, SrcWasGenerated), !IO) :-
+write_target(File, dt_c_compile(Object, Source, Headers, SrcWasGenerated),
+        !IO) :-
     ( SrcWasGenerated = was_generated,
         Path = ""
     ; SrcWasGenerated = hand_written,
         Path = "../"
     ),
-    write_build_statement(File, "c_compile", Source,
-        Object, Path, Source, no, !IO).
+    write_c_compile_statement(File, Source, Object, Path, Source, Headers, !IO).
 
 %-----------------------------------------------------------------------%
 
