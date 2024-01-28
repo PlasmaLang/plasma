@@ -4,7 +4,7 @@
  * See ../LICENSE.unlicense
  */
 
-module ImportTwoModules2 
+module ImportFromTwoModules2 
 
 pragma foreign_include("import_function.h")
 

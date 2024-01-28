@@ -4,9 +4,9 @@
  * See ../LICENSE.unlicense
  */
 
-module ImportTwoModules1 
+module ImportFromTwoModules1 
 
-import ImportTwoModules2 as I2M2
+import ImportFromTwoModules2 as I2M2
 
 pragma foreign_include("import_function.h")
 
