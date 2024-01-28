@@ -6,15 +6,15 @@
 
 module ImportFromTwoModules2 
 
-pragma foreign_include("import_function.h")
+pragma foreign_include("import_from_two_modules.h")
 
-func foo() uses IO
-    foreign(foo)
+func bar() uses IO
+    foreign(bar)
 
 export
 func test() uses IO {
     print!("Doing another foreign call\n")
-    foo!()
+    bar!()
     print!("done\n")
 }
 

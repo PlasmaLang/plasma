@@ -15,7 +15,7 @@
 
 using namespace pz;
 
-unsigned foo(void * stack_, unsigned sp)
+unsigned bar(void * stack_, unsigned sp)
 {
     printf("Hi mum\n");
     return sp;

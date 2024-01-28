@@ -8,7 +8,7 @@ module ImportFromTwoModules1
 
 import ImportFromTwoModules2 as I2M2
 
-pragma foreign_include("import_function.h")
+pragma foreign_include("import_from_two_modules.h")
 
 func getpid() -> Int
     foreign(my_getpid)
