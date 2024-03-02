@@ -347,17 +347,24 @@ not_found_error(Context, Key) =
                 dttr_output         :: string,
                 dttr_input          :: string
             )
-    ;       dt_dep(
-                dtd_name            :: q_name,
-                dtd_dep_file        :: string,
-                dtd_source          :: string,
-                dtd_interface       :: string,
-                dtd_bytecode        :: string
+    ;       dt_scan(
+                dts_name            :: q_name,
+                dts_dep_file        :: string,
+                dts_source          :: string,
+                dts_interface       :: string,
+                dts_bytecode        :: string
             )
     ;       dt_foreign_hooks(
                 dtcg_name           :: q_name,
-                dtcg_output         :: string,
+                dtcg_output_code    :: string,
+                dtcg_output_header  :: string,
                 dtcg_input          :: string
+            )
+            % Generate an init file for the FFI from the info files.
+    ;       dt_gen_init(
+                dtgi_name           :: nq_name,
+                dtgi_output         :: string,
+                dtgi_modules        :: list(q_name)
             )
     ;       dt_c_link(
                 dtcl_name           :: nq_name,
@@ -367,6 +374,7 @@ not_found_error(Context, Key) =
     ;       dt_c_compile(
                 dtcc_output         :: string,
                 dtcc_input          :: string,
+                dtcc_headers        :: list(string),
                 dtcc_generated      :: generated
             ).
 
@@ -389,12 +397,13 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
       MaybeForeignSources = ok(ForeignSources),
         ModuleTargets = map(make_module_targets, ModuleFiles),
         ProgramTargets = map(make_program_target, Targets),
-        ForeignLinkTargets = map(make_foreign_link_target, Targets),
+        ForeignLinkTargets = condense(map(make_foreign_link_targets,
+            Targets)),
         ForeignCompileTargets = map(make_foreign_target, ForeignSources),
 
         MaybeDeps = ok(condense(ModuleTargets) ++
             ForeignCompileTargets ++
-            list_maybe_to_list(ForeignLinkTargets) ++ ProgramTargets)
+            ForeignLinkTargets ++ ProgramTargets)
 
     ; MaybeModuleFiles = ok(_),
       MaybeForeignSources = errors(Errors),
@@ -473,25 +482,27 @@ make_module_targets(ModuleName - SourceName) = Targets :-
     ObjectName = BaseName ++ output_extension,
     DepFile = BaseName ++ depends_extension,
     Targets = [
-        dt_dep(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
+        dt_scan(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
         dt_interface(ModuleName, InterfaceName, SourceName, DepFile),
         dt_object(ModuleName, ObjectName, SourceName, DepFile),
         dt_typeres(ModuleName, TyperesName, SourceName),
         dt_foreign_hooks(ModuleName,
-            module_to_foreign_hooks(ModuleName), SourceName),
+            module_to_foreign_hooks_code(ModuleName),
+            module_to_foreign_hooks_header(ModuleName), SourceName),
         dt_c_compile(
             module_to_foreign_object(ModuleName),
-            module_to_foreign_hooks(ModuleName),
+            module_to_foreign_hooks_code(ModuleName),
+            [module_to_foreign_hooks_header(ModuleName)],
             was_generated)
     ].
 
-:- func make_foreign_link_target(target) = maybe(dep_target).
+:- func make_foreign_link_targets(target) = list(dep_target).
 
-make_foreign_link_target(Target) = Dep :-
+make_foreign_link_targets(Target) = Deps :-
     ForeignSources = Target ^ t_c_sources,
     Modules = Target ^ t_modules,
     ( ForeignSources = [],
-        Dep = no
+        Deps = []
     ; ForeignSources = [_ | _],
         Output = make_c_library_name(Target),
         ( if
@@ -499,8 +510,18 @@ make_foreign_link_target(Target) = Dep :-
                 ForeignSources, ForeignObjects)
         then
             ModuleForeignObjects = map(module_to_foreign_object, Modules),
-            Dep = yes(dt_c_link(Target ^ t_name, Output, ForeignObjects ++
-                ModuleForeignObjects))
+            InitBaseName = nq_name_to_string(Target ^ t_name) ++ "_init",
+            InitSourceName = InitBaseName ++ cpp_extension,
+            InitObjectName = InitBaseName ++ native_object_extension,
+            InitTargetSource = dt_gen_init(Target ^ t_name, InitSourceName,
+                Modules),
+            InitTargetObject = dt_c_compile(InitObjectName, InitSourceName,
+                map(module_to_foreign_hooks_header, Modules), was_generated),
+            LinkTarget = dt_c_link(Target ^ t_name, Output,
+                ForeignObjects ++
+                ModuleForeignObjects ++
+                [InitObjectName]),
+            Deps = [InitTargetSource, InitTargetObject, LinkTarget]
         else
             compile_error($file, $pred, "Unrecognised source file extension")
         )
@@ -518,15 +539,25 @@ make_foreign_target(CFileName) = Target :-
         file_change_extension(cpp_extension, native_object_extension,
             CFileName, ObjectName)
     then
-        Target = dt_c_compile(ObjectName, CFileName, hand_written)
+        Target = dt_c_compile(ObjectName, CFileName, [], hand_written)
     else
         compile_error($file, $pred, "Unrecognised source file extension")
     ).
 
-:- func module_to_foreign_hooks(q_name) = string.
+:- func module_to_foreign_hooks_code(q_name) = string.
 
-module_to_foreign_hooks(Module) =
-    canonical_base_name(Module) ++ "_f" ++ cpp_extension.
+module_to_foreign_hooks_code(Module) =
+    module_to_foreign_hooks_base(Module) ++ cpp_extension.
+
+:- func module_to_foreign_hooks_header(q_name) = string.
+
+module_to_foreign_hooks_header(Module) =
+    module_to_foreign_hooks_base(Module) ++ c_header_extension.
+
+:- func module_to_foreign_hooks_base(q_name) = string.
+
+module_to_foreign_hooks_base(Module) =
+    canonical_base_name(Module) ++ "_f".
 
 :- func module_to_foreign_object(q_name) = string.
 
@@ -563,26 +594,36 @@ do_write_dependency_file(DepInfo, BuildFile, !IO) :-
     foldl(write_target(BuildFile), DepInfo, !IO).
 
 :- pred write_statement(output_stream::in,
-    string::in, string::in, string::in, list(string)::in, maybe(string)::in,
-    maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
+    string::in, string::in, string::in, list(string)::in, list(string)::in, maybe(string)::in,
+    list(string)::in, maybe(string)::in, list(pair(string, string))::in, io::di, io::uo) is det.
 
-write_statement(File, Command, Name, Output, Inputs, MaybeBinary,
-        MaybeDynDep, Vars, !IO) :-
+write_statement(File, Command, Name, Output, ImplicitOutputs, Inputs, MaybeBinary,
+        ImplicitDeps, MaybeDynDep, Vars, !IO) :-
+    ( ImplicitOutputs = [],
+        ImplicitOutput = ""
+    ; ImplicitOutputs = [_ | _],
+        ImplicitOutput = " | " ++ string_join(" ", ImplicitOutputs)
+    ),
     InputsStr = string_join(" ", Inputs),
     ( MaybeBinary = yes(Binary),
         BinaryInput = ["$path/" ++ Binary]
     ; MaybeBinary = no,
         BinaryInput = []
     ),
-    ExtraDepsStr = string_join(" ", BinaryInput),
+    ExtraDeps = BinaryInput ++ ImplicitDeps,
+    ( ExtraDeps = [_ | _],
+        ExtraDepsStr = " | " ++ string_join(" ", ExtraDeps)
+    ; ExtraDeps = [],
+        ExtraDepsStr = ""
+    ),
     ( MaybeDynDep = yes(DynDep),
         DynDepStr = " || " ++ DynDep
     ; MaybeDynDep = no,
         DynDepStr = ""
     ),
     write_string(File,
-        "build " ++ Output ++ " : " ++ Command ++ " " ++ InputsStr ++ " | "
-            ++ ExtraDepsStr ++ DynDepStr ++ "\n",
+        "build " ++ Output ++ ImplicitOutput ++ " : " ++ Command ++ " " ++
+            InputsStr ++ ExtraDepsStr ++ DynDepStr ++ "\n",
         !IO),
     write_var(File, "name" - Name, !IO),
     ( MaybeDynDep = yes(DynDep_),
@@ -604,8 +645,17 @@ write_var(File, Var - Val, !IO) :-
 
 write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
         !IO) :-
-    write_statement(File, Command, Name, Output, [Path ++ Input],
-        MaybeBinary, no, [], !IO).
+    write_statement(File, Command, Name, Output, [], [Path ++ Input],
+        MaybeBinary, [], no, [], !IO).
+
+:- pred write_c_compile_statement(output_stream::in, string::in,
+    string::in, string::in, string::in, list(string)::in,
+    io::di, io::uo) is det.
+
+write_c_compile_statement(File, Name, Output, Path, Input, Headers,
+        !IO) :-
+    write_statement(File, "c_compile", Name, Output, [], [Path ++ Input],
+        no, Headers, no, [], !IO).
 
 :- pred write_plzc_statement(output_stream::in, string::in, q_name::in,
     string::in, string::in, string::in, list(pair(string, string))::in,
@@ -614,7 +664,7 @@ write_build_statement(File, Command, Name, Output, Path, Input, MaybeBinary,
 write_plzc_statement(File, Command, Name, Output, Input,
         DepFile, Vars, !IO) :-
     write_statement(File, Command, q_name_to_string(Name),
-        Output, ["../" ++ Input], yes("plzc"), yes(DepFile), Vars, !IO).
+        Output, [], ["../" ++ Input], yes("plzc"), [], yes(DepFile), Vars, !IO).
 
 :- pred write_link_statement(output_stream::in, string::in, nq_name::in,
     string::in, list(string)::in, maybe(string)::in,
@@ -623,7 +673,7 @@ write_plzc_statement(File, Command, Name, Output, Input,
 write_link_statement(File, Command, Name, Output, Objects, MaybeBinary,
         !IO) :-
     write_statement(File, Command, nq_name_to_string(Name),
-        "../" ++ Output, Objects, MaybeBinary, no, [], !IO).
+        "../" ++ Output, [], Objects, MaybeBinary, [], no, [], !IO).
 
 :- pred write_target(output_stream::in, dep_target::in, io::di, io::uo) is det.
 
@@ -647,28 +697,35 @@ write_target(File,
     write_build_statement(File, "plztyperes", q_name_to_string(ModuleName),
         TyperesFile, "../", SourceFile, yes("plzc"), !IO).
 write_target(File,
-        dt_dep(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
+        dt_scan(ModuleName, DepFile, SourceFile, InterfaceFile, BytecodeFile),
         !IO) :-
     Inputs = ["../" ++ SourceFile],
-    write_statement(File, "plzdep", q_name_to_string(ModuleName),
-        DepFile, Inputs, yes("plzc"), no,
+    write_statement(File, "plzscan", q_name_to_string(ModuleName),
+        DepFile, [], Inputs, yes("plzc"), [], no,
         ["target"       - BytecodeFile,
          "interface"    - InterfaceFile],
         !IO).
-write_target(File, dt_foreign_hooks(ModuleName, Output, Source), !IO) :-
-    write_build_statement(File, "plzgf", q_name_to_string(ModuleName),
-        Output, "../", Source, no, !IO).
+write_target(File, dt_foreign_hooks(ModuleName, OutCode, OutHeader, Source),
+        !IO) :-
+    write_statement(File, "plzgf", q_name_to_string(ModuleName),
+        OutCode, [OutHeader], ["../" ++ Source], no, [], no,
+        ["header"       - OutHeader], !IO).
+write_target(File, dt_gen_init(ModuleName, Output, Inputs), !IO) :-
+    InputsString = string_join(" ", map(q_name_to_string, Inputs)),
+    write_statement(File, "gen_init", nq_name_to_string(ModuleName),
+        Output, [], [], yes("plzgeninit"), [], no,
+        ["modules" - InputsString], !IO).
 write_target(File, dt_c_link(ModuleName, Output, Inputs), !IO) :-
     write_link_statement(File, "c_link", ModuleName, Output, Inputs,
         no, !IO).
-write_target(File, dt_c_compile(Object, Source, SrcWasGenerated), !IO) :-
+write_target(File, dt_c_compile(Object, Source, Headers, SrcWasGenerated),
+        !IO) :-
     ( SrcWasGenerated = was_generated,
         Path = ""
     ; SrcWasGenerated = hand_written,
         Path = "../"
     ),
-    write_build_statement(File, "c_compile", Path ++ Source,
-        Object, Path, Source, no, !IO).
+    write_c_compile_statement(File, Source, Object, Path, Source, Headers, !IO).
 
 %-----------------------------------------------------------------------%
 
@@ -796,13 +853,13 @@ rule plzi
 		$in -o $out
     description = Making interface for $name
 
-rule plzdep
-    command = $path/plzc $pcflags --mode make-depends $
+rule plzscan
+    command = $path/plzc $pcflags --mode scan $
 		--target-bytecode $target --target-interface $interface $
 		--module-name-check $name $
 		--source-path $source_path $
 		$in -o $out
-    description = Calculating dependencies for $name
+    description = Scanning $name for dependencies
 
 rule plzc
     command = $path/plzc $pcflags --mode compile $
@@ -816,8 +873,14 @@ rule plzgf
     command = $path/plzc $pcflags --mode generate-foreign $
 		--module-name-check $name $
 		--source-path $source_path $
+		--output-header $header $
 		$in -o $out
     description = Generating foreign hooks for $name
+
+rule gen_init
+    command = $path/plzgeninit $
+        $modules -o $out
+    description = Generating foreign initialisation code for $name
 
 rule plzlink
     command = $path/plzlnk $plflags -n $name -o $out $in

@@ -10,3 +10,8 @@ type = program
 modules = [ImportFunction]
 c_sources = [import_function.cpp]
 
+[import_from_two_modules]
+type = program
+modules = [ImportFromTwoModules1, ImportFromTwoModules2]
+c_sources = [import_from_two_modules.cpp]
+

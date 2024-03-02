@@ -35,6 +35,8 @@
 
 :- func one_item_in_set(set(T)) = T.
 
+:- func first_item(list(T)) = T.
+
 :- func maybe_list(maybe(X)) = list(X).
 
 :- func list_maybe_to_list(list(maybe(X))) = list(X).
@@ -137,6 +139,11 @@ one_item(Xs) =
     else
         unexpected($file, $pred, "Expected a list with only one item")
     ).
+
+first_item([]) =
+    unexpected($file, $pred, "Expected a list with at least one item").
+first_item([X | _]) =
+    X.
 
 one_item_in_set(Set) = X :-
     ( if is_singleton(Set, X0) then

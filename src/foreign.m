@@ -20,7 +20,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred do_make_foreign(general_options::in, ast::in, io::di, io::uo) is det.
+:- pred do_make_foreign(general_options::in, string::in, ast::in, io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -37,6 +37,7 @@
 :- import_module util.
 :- import_module util.mercury.
 :- import_module util.my_exception.
+:- import_module util.my_io.
 :- import_module util.result.
 
 %-----------------------------------------------------------------------%
@@ -49,13 +50,13 @@
 
 %-----------------------------------------------------------------------%
 
-do_make_foreign(GeneralOpts, PlasmaAst, !IO) :-
+do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
     ForeignIncludes = find_foreign_includes(PlasmaAst),
     ForeignFuncs = find_foreign_funcs(PlasmaAst),
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         OutputFile = GeneralOpts ^ go_output_file,
-        write_foreign_hooks(OutputFile, PlasmaAst ^ a_module_name,
+        write_foreign_hooks(OutputFile, OutputHeader, PlasmaAst ^ a_module_name,
             ForeignIncludes, ForeignFuncs, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
@@ -110,47 +111,59 @@ find_foreign_funcs(Ast) = ForeignFuncs :-
 
 %-----------------------------------------------------------------------%
 
-:- pred write_foreign_hooks(string::in, q_name::in,
+:- pred write_foreign_hooks(string::in, string::in, q_name::in,
     list(foreign_include)::in, list(foreign_func)::in, maybe_error::out,
     io::di, io::uo) is det.
 
-write_foreign_hooks(Filename, ModuleName, ForeignIncludes, ForeignFuncs,
-        Result, !IO) :-
-    open_output(Filename, OpenRes, !IO),
-    ( OpenRes = ok(File),
-        format(File, "// Foreign hooks for %s\n\n",
-            [s(q_name_to_string(ModuleName))], !IO),
+write_foreign_hooks(FilenameCode, FilenameHeader, ModuleName,
+        ForeignIncludes, ForeignFuncs, Result, !IO) :-
+    write_temp(open_output, close_output,
+        write_foreign_hooks_code(ModuleName, ForeignIncludes, ForeignFuncs),
+        FilenameCode, ResultCode, !IO),
+    write_temp(open_output, close_output,
+        write_foreign_hooks_header(ModuleName),
+        FilenameHeader, ResultHeader, !IO),
+    move_temps_if_successful([ResultCode, ResultHeader], Result, !IO).
 
-        % XXX Fix include path.
-        write_string(File, "#include \"../../../runtime/pz_common.h\"\n", !IO),
-        write_string(File, "#include \"../../../runtime/pz_foreign.h\"\n", !IO),
-        write_string(File, "#include \"../../../runtime/pz_generic_run.h\"\n\n", !IO),
-        foldl(write_include(File), ForeignIncludes, !IO),
-        nl(File, !IO),
+:- pred write_foreign_hooks_code(q_name::in, list(foreign_include)::in,
+    list(foreign_func)::in, output_stream::in, maybe_error::out,
+    io::di, io::uo) is det.
 
-        % XXX: Only one registration function.
-        write_string(File, "extern \"C\" {\n", !IO),
-        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_);\n",
-            !IO),
-        write_string(File, "}\n\n", !IO),
+write_foreign_hooks_code(ModuleName, ForeignIncludes, ForeignFuncs, File,
+        ok, !IO) :-
+    format(File, "// Foreign hooks for %s\n\n",
+        [s(q_name_to_string(ModuleName))], !IO),
 
-        write_string(File, "using namespace pz;\n\n", !IO),
+    % XXX Fix include path.
+    write_string(File, "#include \"../../../runtime/pz_common.h\"\n", !IO),
+    write_string(File, "#include \"../../../runtime/pz_foreign.h\"\n", !IO),
+    write_string(File, "#include \"../../../runtime/pz_generic_run.h\"\n\n", !IO),
+    foldl(write_include(File), ForeignIncludes, !IO),
+    nl(File, !IO),
 
-        write_string(File, "bool pz_init_foreign_code(void *f_, void *gc_) {\n",
-            !IO),
-        write_string(File, "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);", !IO),
-        write_string(File, "  Foreign *f = reinterpret_cast<Foreign*>(f_);", !IO),
+    write_string(File, "using namespace pz;\n\n", !IO),
 
-        foldl(write_register_foreign_func(File, ModuleName), ForeignFuncs, !IO),
-        write_string(File, "  return true;\n", !IO),
-        write_string(File, "}\n", !IO),
+    format(File, "bool pz_init_foreign_code_%s(void *f_, void *gc_) {\n",
+        [s(q_name_clobber(ModuleName))], !IO),
+    write_string(File,
+        "  GCTracer &gc = *reinterpret_cast<GCTracer*>(gc_);\n", !IO),
+    write_string(File,
+        "  Foreign *f = reinterpret_cast<Foreign*>(f_);\n", !IO),
 
-        close_output(File, !IO),
-        Result = ok
-    ; OpenRes = error(Error),
-        Result = error(format("%s: %s\n",
-            [s(Filename), s(error_message(Error))]))
-    ).
+    foldl(write_register_foreign_func(File, ModuleName), ForeignFuncs, !IO),
+    write_string(File, "  return true;\n", !IO),
+    write_string(File, "}\n", !IO).
+
+:- pred write_foreign_hooks_header(q_name::in, output_stream::in,
+    maybe_error::out, io::di, io::uo) is det.
+
+write_foreign_hooks_header(ModuleName, File, ok, !IO) :-
+    format(File, "// Foreign hooks for %s\n\n",
+        [s(q_name_to_string(ModuleName))], !IO),
+
+    format(File, "bool pz_init_foreign_code_%s(void *f, void *gc);\n",
+        [s(q_name_clobber(ModuleName))], !IO),
+    nl(File, !IO).
 
 :- pred write_include(output_stream::in, foreign_include::in,
     io::di, io::uo) is det.

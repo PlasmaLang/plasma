@@ -90,13 +90,14 @@ main(!IO) :-
                         run_and_catch(
                             do_make_typeres_exports(GeneralOpts, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_depends(TargetBytecode, TargetInterface),
+                    ; Mode = scan(TargetBytecode, TargetInterface),
                         run_and_catch(
                             do_make_dep_info(GeneralOpts, TargetBytecode,
                                 TargetInterface, PlasmaAst),
                             plzc, HadErrors, !IO)
-                    ; Mode = make_foreign,
-                        run_and_catch(do_make_foreign(GeneralOpts, PlasmaAst),
+                    ; Mode = make_foreign(OutputHeader),
+                        run_and_catch(do_make_foreign(GeneralOpts,
+                                OutputHeader, PlasmaAst),
                             plzc, HadErrors, !IO)
                     ),
                     ReportTiming = GeneralOpts ^ go_report_timing,
@@ -340,11 +341,13 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
             )
     ;       make_interface
     ;       make_typeres_exports
-    ;       make_depends(
+    ;       scan(
                 pmo_d_output        :: string,
                 pmo_d_interface     :: string
             )
-    ;       make_foreign.
+    ;       make_foreign(
+                pmo_f_output_header :: string
+            ).
 
 :- pred process_options(list(string)::in, maybe_error(plasmac_options)::out,
     io::di, io::uo) is det.
@@ -400,13 +403,14 @@ process_options_mode(OptionTable, OutputExtension, Result) :-
     else if Mode = "make-typeres-exports" then
         Result = ok(make_typeres_exports),
         OutputExtension = constant.typeres_extension
-    else if Mode = "make-depends" then
+    else if Mode = "scan" then
         lookup_string_option(OptionTable, target_bytecode, TargetBytecode),
         lookup_string_option(OptionTable, target_interface, TargetInterface),
-        Result = ok(make_depends(TargetBytecode, TargetInterface)),
+        Result = ok(scan(TargetBytecode, TargetInterface)),
         OutputExtension = constant.depends_extension
     else if Mode = "generate-foreign" then
-        Result = ok(make_foreign),
+        lookup_string_option(OptionTable, output_header, OutputHeader),
+        Result = ok(make_foreign(OutputHeader)),
         OutputExtension = constant.cpp_extension
     else
         Result = error(
@@ -487,12 +491,12 @@ usage(!IO) :-
     io.format("    %s [-v] --mode make-typeres-exports -o <output> <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Make the typeres interface file.\n\n", !IO),
-    io.format("    %s [-v] --mode make-depends \n",
+    io.format("    %s [-v] --mode scan \n",
         [s(ProgName)], !IO),
     io.write_string("            --target-bytecode $bytecode\n", !IO),
     io.write_string("            --target-interface $interface\n", !IO),
     io.write_string("            -o <output> <input>\n", !IO),
-    io.write_string("        Generate dependency infomation.\n\n", !IO),
+    io.write_string("        Scan source for dependencies.\n\n", !IO),
     io.format("    %s [-v] --mode generate-foreign -o <output> <input>\n",
         [s(ProgName)], !IO),
     io.write_string("        Generate runtime code required to register foeign functions.\n\n", !IO),
@@ -509,8 +513,8 @@ usage(!IO) :-
         "        Specify output file (compiler will guess otherwise)\n\n", !IO),
     io.write_string("    --mode MODE\n" ++
         "        Specify what the compiler should do:\n" ++
-        "        make-depend-info     - " ++
-        "Generate dependency info for ninja,\n" ++
+        "        scan                 - " ++
+        "Scan code for dependency information,\n" ++
         "        make-interface       - Generate the interface file,\n" ++
         "        make-typeres-exports - " ++
         "Generate the typeres interface file.\n" ++
@@ -518,9 +522,14 @@ usage(!IO) :-
         "        generate-foreign     - " ++
         "Generate foreign code registration.\n\n", !IO),
 
-    io.write_string("Make depend info options:\n\n", !IO),
-    io.write_string("    --target-file <target>\n" ++
-        "        <target> is the name of the target in the ninja file\n\n",
+    io.write_string("Scan options:\n\n", !IO),
+    io.write_string("    --target-bytecode <file>\n" ++
+        "        <file> is the name of the bytecode file in the ninja\n" ++
+        "        build file\n\n",
+        !IO),
+    io.write_string("   --target-interface <file>\n" ++
+        "        <file> is the name of the interface file in the ninja\n" ++
+        "        build file\n\n",
         !IO),
 
     io.write_string("Compilation options:\n\n", !IO),
@@ -550,11 +559,7 @@ usage(!IO) :-
         "        Subtract this path from source filenames when printing\n" ++
         "        errors.\n\n", !IO),
     io.write_string("    --report-timing\n" ++
-        "        Report the time taken to execute the compiler.\n\n", !IO),
-    io.write_string("    --target-bytecode <file>\n" ++
-                    "    --target-interface <file>\n" ++
-        "        The names of the bytecode and interface files the build\n" ++
-        "        tool wants dependency information for.\n\n", !IO).
+        "        Report the time taken to execute the compiler.\n\n", !IO).
 
 :- type option
     --->    help
@@ -562,6 +567,7 @@ usage(!IO) :-
     ;       version
     ;       mode_
     ;       output_file
+    ;       output_header
     ;       target_bytecode
     ;       target_interface
     ;       import_whitelist
@@ -587,6 +593,7 @@ long_option("verbose",              verbose).
 long_option("version",              version).
 long_option("mode",                 mode_).
 long_option("output-file",          output_file).
+long_option("output-header",        output_header).
 long_option("target-bytecode",      target_bytecode).
 long_option("target-interface",     target_interface).
 long_option("import-whitelist",     import_whitelist).
@@ -606,6 +613,7 @@ option_default(verbose,             bool(no)).
 option_default(version,             bool(no)).
 option_default(mode_,               string("compile")).
 option_default(output_file,         string("")).
+option_default(output_header,       string("")).
 option_default(target_bytecode,     string("")).
 option_default(target_interface,    string("")).
 option_default(import_whitelist,    string("")).
