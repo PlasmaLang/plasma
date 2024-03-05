@@ -45,11 +45,11 @@ The "front end" passes of Plasma compilation work as follows:
 
 === Parsing
 
-Plasma's EBNF is given in prices throughout this document as concepts are
+Plasma's grammar is given in pieces throughout this document as concepts are
 introduced.
 However the top level and some shared definitions are given here.
-In this ENBF syntax I use ( and ) to denote groups and ? + and * to denote
-optional, one or more, and zero or more.
+In the grammar definitions I use ( and ) to denote groups and ? + and * to
+denote optional, one or more, and zero or more.
 
 ----
 Plasma := ModuleDecl ToplevelItem*
