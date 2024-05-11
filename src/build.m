@@ -171,7 +171,8 @@ build(Options, Result, !IO) :-
                 % The modules that make up the program
                 t_modules           :: list(q_name),
                 t_modules_context   :: context,
-                t_c_sources         :: list(string)
+                t_c_sources         :: list(string),
+                t_c_sources_context :: context
             ).
 
 :- pred read_project(string::in, result(list(target), string)::out,
@@ -218,7 +219,7 @@ make_target(TOML, TargetStr) = Result :-
                 Target, "c_sources"),
             (
                 ModulesResult = ok(Modules - ModulesContext),
-                CSourcesResult = ok(CSources - _),
+                CSourcesResult = ok(CSources - CSourcesContext),
 
                 ( if
                     find_duplicates(Modules, DupModules),
@@ -233,7 +234,7 @@ make_target(TOML, TargetStr) = Result :-
                         [s(string_join(", ", DupModulesStrings))]))
                 else
                     Result = ok(yes(target(TargetName, Modules, ModulesContext,
-                        CSources)))
+                        CSources, CSourcesContext)))
                 )
             ;
                 ModulesResult = ok(_),
@@ -397,13 +398,18 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
       MaybeForeignSources = ok(ForeignSources),
         ModuleTargets = map(make_module_targets, ModuleFiles),
         ProgramTargets = map(make_program_target, Targets),
-        ForeignLinkTargets = condense(map(make_foreign_link_targets,
-            Targets)),
-        ForeignCompileTargets = map(make_foreign_target, ForeignSources),
+        ForeignLinkTargetsRes = result_list_to_result(map(make_foreign_link_targets, Targets)),
 
-        MaybeDeps = ok(condense(ModuleTargets) ++
-            ForeignCompileTargets ++
-            ForeignLinkTargets ++ ProgramTargets)
+        ( ForeignLinkTargetsRes = ok(ForeignLinkTargets0),
+            ForeignCompileTargets = map(make_foreign_target, ForeignSources),
+
+            ForeignLinkTargets = condense(ForeignLinkTargets0),
+            MaybeDeps = ok(condense(ModuleTargets) ++
+                ForeignCompileTargets ++
+                ForeignLinkTargets ++ ProgramTargets)
+        ; ForeignLinkTargetsRes = errors(Errors),
+            MaybeDeps = errors(Errors)
+        )
 
     ; MaybeModuleFiles = ok(_),
       MaybeForeignSources = errors(Errors),
@@ -496,19 +502,29 @@ make_module_targets(ModuleName - SourceName) = Targets :-
             was_generated)
     ].
 
-:- func make_foreign_link_targets(target) = list(dep_target).
+:- func make_foreign_link_targets(target) =
+    result(list(dep_target), string).
 
-make_foreign_link_targets(Target) = Deps :-
+make_foreign_link_targets(Target) = DepsResult :-
     ForeignSources = Target ^ t_c_sources,
     Modules = Target ^ t_modules,
     ( ForeignSources = [],
-        Deps = []
+        DepsResult = ok([])
     ; ForeignSources = [_ | _],
         Output = make_c_library_name(Target),
-        ( if
-            map(file_change_extension(cpp_extension, native_object_extension),
-                ForeignSources, ForeignObjects)
-        then
+        map((pred(In::in, Out::out) is det :-
+                ( if
+                    file_change_extension(cpp_extension,
+                        native_object_extension, In, Out0)
+                then
+                    Out = ok(Out0)
+                else
+                    Out = error(In)
+                )
+            ),
+            ForeignSources, ForeignObjectsResults),
+        ForeignObjectsResult = maybe_error_list(ForeignObjectsResults),
+        ( ForeignObjectsResult = ok(ForeignObjects),
             ModuleForeignObjects = map(module_to_foreign_object, Modules),
             InitBaseName = nq_name_to_string(Target ^ t_name) ++ "_init",
             InitSourceName = InitBaseName ++ cpp_extension,
@@ -521,9 +537,13 @@ make_foreign_link_targets(Target) = Deps :-
                 ForeignObjects ++
                 ModuleForeignObjects ++
                 [InitObjectName]),
-            Deps = [InitTargetSource, InitTargetObject, LinkTarget]
-        else
-            compile_error($file, $pred, "Unrecognised source file extension")
+            DepsResult =
+                ok([InitTargetSource, InitTargetObject, LinkTarget])
+        ; ForeignObjectsResult = error(Errors),
+            DepsResult = return_error(
+                Target ^ t_c_sources_context,
+                format("Unrecognised extensions on these files: %s",
+                    [s(join_list(", ", Errors))]))
         )
     ).
 
