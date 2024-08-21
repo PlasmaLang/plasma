@@ -18,5 +18,10 @@ c_sources = [import_from_two_modules.cpp]
 [import_two_sources]
 type = program
 modules = [ImportTwoSources]
-c_sources = [import_two_sources.cpp, extra.cpp]
+c_sources = [import_two_sources.cpp, import_shared_module.cpp]
+
+[import_shared_module]
+type = program
+modules = [ImportSharedModule]
+c_sources = [import_shared_module.cpp]
 

@@ -3,10 +3,10 @@
  * See ../LICENSE.unlicense
  */
 
-#ifndef EXTRA_H
-#define EXTRA_H
+#ifndef IMPORT_SHARED_MODULE_H
+#define IMPORT_SHARED_MODULE_H
 
 unsigned test_extra(void * stack_, unsigned sp);
 
-#endif /* ! EXTRA_H */
+#endif /* ! IMPORT_SHARED_MODULE_H */
 

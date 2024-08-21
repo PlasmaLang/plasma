@@ -395,7 +395,8 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
     find_foreign_sources(Targets, MaybeForeignSources, !DirInfo, !IO),
 
     ( MaybeModuleFiles = ok(ModuleFiles),
-      MaybeForeignSources = ok(ForeignSources),
+      MaybeForeignSources = ok(ForeignSources0),
+        ForeignSources = sort_and_remove_dups(ForeignSources0),
         ModuleTargets = map(make_module_targets, ModuleFiles),
         ProgramTargets = map(make_program_target, Targets),
         ForeignLinkTargetsRes = result_list_to_result(map(make_foreign_link_targets, Targets)),

@@ -9,7 +9,7 @@
 #include "../../runtime/pz_foreign.h"
 #include "../../runtime/pz_generic_run.h"
 
-#include "extra.h"
+#include "import_shared_module.h"
 
 using namespace pz;
 
