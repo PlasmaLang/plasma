@@ -15,3 +15,8 @@ type = program
 modules = [ImportFromTwoModules1, ImportFromTwoModules2]
 c_sources = [import_from_two_modules.cpp]
 
+[import_two_sources]
+type = program
+modules = [ImportTwoSources]
+c_sources = [import_two_sources.cpp, extra.cpp]
+
