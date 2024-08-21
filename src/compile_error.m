@@ -89,7 +89,8 @@
     ;       ce_unnecessary_bang
 
     % Pragma related.
-    ;       ce_pragma_unknown(string).
+    ;       ce_pragma_unknown(string)
+    ;       ce_pragma_bad_argument.
 
 :- type type_error
     --->    type_unification_failed(pretty, pretty, maybe(type_error))
@@ -342,6 +343,8 @@ ce_to_pretty(_, ce_pragma_unknown(Pragma), Para, []) :-
     Para = p_words("Pragma") ++ p_spc_nl ++
         [p_quote("'", p_str(Pragma))] ++ p_spc_nl ++
         p_words("is unrecognised and will be ignored").
+ce_to_pretty(_, ce_pragma_bad_argument, Para, []) :-
+    Para = p_words("Unrecognised argument for this pragma").
 
 :- func type_error_pretty(type_error) = list(pretty).
 

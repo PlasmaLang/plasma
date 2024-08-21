@@ -331,8 +331,13 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
     io::di, io::uo) is det.
 
 do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
-    ForeignInfo = make_foreign(PlasmaAst),
-    write_foreign(GeneralOpts, OutputHeader, ForeignInfo, !IO).
+    MaybeForeignInfo = make_foreign(PlasmaAst),
+    ( MaybeForeignInfo = ok(ForeignInfo),
+        write_foreign(GeneralOpts, OutputHeader, ForeignInfo, !IO)
+    ; MaybeForeignInfo = errors(Errors),
+        report_errors(GeneralOpts ^ go_source_dir, Errors, !IO),
+        set_exit_status(1, !IO)
+    ).
 
 %-----------------------------------------------------------------------%
 

@@ -233,9 +233,15 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
 :- pred check_pragma(ast_pragma::in,
     errors(compile_error)::in, errors(compile_error)::out) is det.
 
-check_pragma(ast_pragma(Name, _Args, Context), !Errors) :-
+check_pragma(ast_pragma(Name, Args, Context), !Errors) :-
     ( if Name = "foreign_include" then
-        true
+        % This is already checked in foreign.m but that only runs if we're
+        % actually generating foreign code.  Check it again here.
+        ( if Args = [_] then
+            true
+        else
+            add_error(Context, ce_pragma_bad_argument, !Errors)
+        )
     else
         add_error(Context, ce_pragma_unknown(Name), !Errors)
     ).
