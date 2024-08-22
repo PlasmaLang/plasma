@@ -81,7 +81,7 @@ find_foreign_includes(Ast) = ForeignIncludes :-
 :- pred find_foreign_include_pragma(ast_pragma::in,
     list(foreign_include)::in, list(foreign_include)::out) is det.
 
-find_foreign_include_pragma(ast_pragma(Name, Args), !Includes) :-
+find_foreign_include_pragma(ast_pragma(Name, Args, _Context), !Includes) :-
     ( if Name = "foreign_include" then
         ( if Args = [ast_pragma_arg(String)] then
             Include = foreign_include(String),

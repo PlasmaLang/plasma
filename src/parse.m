@@ -1612,6 +1612,7 @@ maybe_parse_export(Sharing, !Tokens) :-
     is det.
 
 parse_pragma(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
     match_token(pragma_, MatchPragma, !Tokens),
     match_token(ident, MatchIdent, !Tokens),
     within(l_paren, zero_or_more_delimited(comma, parse_pragma_arg),
@@ -1621,7 +1622,7 @@ parse_pragma(Result, !Tokens) :-
         MatchIdent = ok(Ident),
         MatchArgs = ok(Args)
     then
-        Result = ok(ast_pragma(ast_pragma(Ident, Args)))
+        Result = ok(ast_pragma(ast_pragma(Ident, Args, Context)))
     else
         Result = combine_errors_3(MatchPragma, MatchIdent, MatchArgs)
     ).
