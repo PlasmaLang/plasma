@@ -255,7 +255,7 @@ make_target(TOML, TargetStr) = Result :-
 
 %-----------------------------------------------------------------------%
 
-:- type search_result(T) == result(pair(list(T), context), string).
+:- type search_result(T) == result(pair(T, context), string).
 
     % search_toml_q_names(NotFoundResult, WrapError, Toml, Key) = Result
     %
@@ -263,8 +263,8 @@ make_target(TOML, TargetStr) = Result :-
     % Context, if found try to parse it as a list of q_names.  WrapError
     % lets the caller explain the context of the error.
     %
-:- func search_toml_q_names(search_result(q_name), func(string) = string,
-    toml, toml_key) = search_result(q_name).
+:- func search_toml_q_names(search_result(list(q_name)), func(string) = string,
+    toml, toml_key) = search_result(list(q_name)).
 
 search_toml_q_names(NotFoundResult, WrapError, TOML, Key) =
     search_toml_array(NotFoundResult, WrapError, q_name_from_dotted_string,
@@ -272,16 +272,16 @@ search_toml_q_names(NotFoundResult, WrapError, TOML, Key) =
 
     % search_toml_q_names(NotFoundResult, WrapError, Toml, Key) = Result
     %
-:- func search_toml_filenames(search_result(string), func(string) = string,
-    toml, toml_key) = search_result(string).
+:- func search_toml_filenames(search_result(list(string)), func(string) = string,
+    toml, toml_key) = search_result(list(string)).
 
 search_toml_filenames(NotFoundResult, WrapError, TOML, Key) =
     search_toml_array(NotFoundResult, WrapError, func(X) = ok(X), TOML, Key).
 
-:- func search_toml_array(result(pair(list(T), context), string),
+:- func search_toml_array(search_result(list(T)),
         func(string) = string,
         func(string) = maybe_error(T), toml, toml_key) =
-    search_result(T).
+    search_result(list(T)).
 
 search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
         Result :-
