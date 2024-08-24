@@ -213,7 +213,7 @@ make_target(TOML, TargetStr) = Result :-
                 func(E) = "Invalid modules field: " ++ E,
                 Target, "modules"),
             CSourcesResult = search_toml_filenames(
-                ok([] - TargetContext),
+                toml_search_default([], TargetContext),
                 func(E) = "Invalid c_sources field: " ++ E,
                 Target, "c_sources"),
             (
@@ -319,6 +319,10 @@ search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
 
 not_found_error(Context, Key) =
     return_error(Context, format("Key not found '%s'", [s(Key)])).
+
+:- func toml_search_default(T, context) = search_result(T).
+
+toml_search_default(X, C) = ok(X - C).
 
 %-----------------------------------------------------------------------%
 
