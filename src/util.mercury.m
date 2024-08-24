@@ -15,6 +15,7 @@
 :- import_module getopt.
 :- import_module io.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 :- import_module pair.
 :- import_module set.
@@ -110,6 +111,11 @@
 %-----------------------------------------------------------------------%
 
 :- func handle_bool_option(option_table(O), O, T, T) = T.
+
+%-----------------------------------------------------------------------%
+
+:- pred map_set_or_update(func(V) = V, K, V, map(K, V), map(K, V)).
+:- mode map_set_or_update(in, in, in, in, out) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -345,6 +351,15 @@ handle_bool_option(OptionTable, Option, True, False) = Result :-
         Result = True
     ; Bool = no,
         Result = False
+    ).
+
+%-----------------------------------------------------------------------%
+
+map_set_or_update(UpdateFn, Key, Value, !Map) :-
+    ( if search(!.Map, Key, OldValue) then
+        det_update(Key, UpdateFn(OldValue), !Map)
+    else
+        set(Key, Value, !Map)
     ).
 
 %-----------------------------------------------------------------------%

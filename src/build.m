@@ -387,15 +387,18 @@ not_found_error(Context, Key) =
     io::di, io::uo) is det.
 
 build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
+    Modules0 = make_module_info(Targets),
+
     % The term Target is overloaded here, it means both the whole things
     % that plzbuild is trying to build, but also the steps that ninja does
     % to build them.
-    find_module_files(Targets, MaybeModuleFiles, !DirInfo, !IO),
+    map_foldl2(find_module_file, Modules0, MaybeModules0, !DirInfo, !IO),
+    MaybeModules = result_list_to_result(MaybeModules0),
     find_foreign_sources(Targets, MaybeForeignSources, !DirInfo, !IO),
 
-    ( MaybeModuleFiles = ok(ModuleFiles),
+    ( MaybeModules = ok(Modules),
       MaybeForeignSources = ok(ForeignSources),
-        ModuleTargets = map(make_module_targets, ModuleFiles),
+        ModuleTargets = map(make_module_targets, Modules),
         ProgramTargets = map(make_program_target, Targets),
         ForeignLinkTargets = condense(map(make_foreign_link_targets,
             Targets)),
@@ -405,56 +408,68 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
             ForeignCompileTargets ++
             ForeignLinkTargets ++ ProgramTargets)
 
-    ; MaybeModuleFiles = ok(_),
+    ; MaybeModules = ok(_),
       MaybeForeignSources = errors(Errors),
         MaybeDeps = errors(Errors)
-    ; MaybeModuleFiles = errors(Errors),
+    ; MaybeModules = errors(Errors),
       MaybeForeignSources = ok(_),
         MaybeDeps = errors(Errors)
-    ; MaybeModuleFiles = errors(ErrorsA),
+    ; MaybeModules = errors(ErrorsA),
       MaybeForeignSources = errors(ErrorsB),
         MaybeDeps = errors(ErrorsA ++ ErrorsB)
     ).
 
-:- pred find_module_files(list(target)::in,
-    result(assoc_list(q_name, string), string)::out,
+:- type module_info
+    --->    module_info(
+                mi_name         :: q_name,
+                mi_context      :: context,
+                mi_file         :: string
+            ).
+
+:- func make_module_info(list(target)) = list(module_info).
+
+make_module_info(Targets) = Modules :-
+    Modules0 = condense(map(target_get_modules, Targets)),
+    foldl(resolve_duplicate_modules, Modules0, init, Modules1),
+    Modules = map.values(Modules1).
+
+:- func target_get_modules(target) = list(module_info).
+
+target_get_modules(Target) = Modules :-
+    Context = Target ^ t_modules_context,
+    Modules = map(func(N) = module_info(N, Context, ""),
+        Target ^ t_modules).
+
+:- pred resolve_duplicate_modules(module_info::in,
+    map(q_name, module_info)::in, map(q_name, module_info)::out) is det.
+
+resolve_duplicate_modules(Module, !Map) :-
+    Name = Module ^ mi_name,
+    map_set_or_update(func(M) = module_merge(M, Module),
+            Name, Module, !Map).
+
+:- func module_merge(module_info, module_info) = module_info.
+
+module_merge(Ma, Mb) =
+    module_info(Ma ^ mi_name,
+        context_earliest(Ma ^ mi_context, Mb ^ mi_context),
+        Ma ^ mi_file).
+
+:- pred find_module_file(module_info::in,
+    result(module_info, string)::out,
     dir_info::in, dir_info::out, io::di, io::uo) is det.
 
-find_module_files(Targets, MaybeModuleFiles, !DirInfo, !IO) :-
-    ModulesList = condense(map((func(T) = L :-
-            C0 = T ^ t_modules_context,
-            L = map(func(M0) = M0 - C0, T ^ t_modules)
-        ), Targets)) `with_type` list(pair(q_name, context)),
-
-    foldl((pred((M1 - C1)::in, Ma0::in, Ma::out) is det :-
-            ( if search(Ma0, M1, C1P) then
-                % Replace it if C is before C0.
-                ( if compare((>), C1, C1P) then
-                    Ma = Ma0
-                else
-                    det_update(M1, C1, Ma0, Ma)
-                )
-            else
-                det_insert(M1, C1, Ma0, Ma)
-            )
-        ), ModulesList, init, Modules),
-
-    map_foldl2(
-        (pred(M - Context::in, R::out, Di0::in, Di::out, IO0::di, IO::uo)
-                is det :-
-            find_module_file(".", source_extension, M, R0, Di0, Di, IO0, IO),
-            ( R0 = yes(F),
-                R = ok(M - F)
-            ; R0 = no,
-                R = return_error(Context,
-                    format("Can't find source for %s module",
-                        [s(q_name_to_string(M))]))
-            ; R0 = error(Path, Message),
-                R = return_error(context(Path), Message)
-            )
-        ),
-        to_assoc_list(Modules), MaybeModuleFiles0, !DirInfo, !IO),
-    MaybeModuleFiles = result_list_to_result(MaybeModuleFiles0).
+find_module_file(Module, ModuleResult, !DirInfo, !IO) :-
+    find_module_file(".", source_extension, Module ^ mi_name, FileRes, !DirInfo, !IO),
+    ( FileRes = yes(File),
+        ModuleResult = ok(Module ^ mi_file := File)
+    ; FileRes = no,
+        ModuleResult = return_error(Module ^ mi_context,
+            format("Can't find source for %s module",
+                [s(q_name_to_string(Module ^ mi_name))]))
+    ; FileRes = error(Path, Message),
+        ModuleResult = return_error(context(Path), Message)
+    ).
 
 :- pred find_foreign_sources(list(target)::in,
     result(list(string), string)::out,
@@ -473,9 +488,10 @@ make_program_target(Target) = DepTarget :-
         Target ^ t_modules),
     DepTarget = dt_program(Target ^ t_name, FileName, ObjectNames).
 
-:- func make_module_targets(pair(q_name, string)) = list(dep_target).
+:- func make_module_targets(module_info) = list(dep_target).
 
-make_module_targets(ModuleName - SourceName) = Targets :-
+make_module_targets(ModuleInfo) = Targets :-
+    module_info(ModuleName, _, SourceName) = ModuleInfo,
     BaseName = canonical_base_name(ModuleName),
     TyperesName = BaseName ++ typeres_extension,
     InterfaceName = BaseName ++ interface_extension,
