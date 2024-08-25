@@ -210,11 +210,9 @@ make_target(TOML, TargetStr) = Result :-
         ( TargetResult = ok(TargetName),
             ModulesResult = search_toml_q_names(
                 not_found_error(TargetContext, "modules"),
-                func(E) = "Invalid modules field: " ++ E,
                 Target, "modules"),
             CSourcesResult = search_toml_filenames(
                 toml_search_default([], TargetContext),
-                func(E) = "Invalid c_sources field: " ++ E,
                 Target, "c_sources"),
             (
                 ModulesResult = ok(Modules - ModulesContext),
@@ -263,27 +261,26 @@ make_target(TOML, TargetStr) = Result :-
     % Context, if found try to parse it as a list of q_names.  WrapError
     % lets the caller explain the context of the error.
     %
-:- func search_toml_q_names(search_result(list(q_name)), func(string) = string,
-    toml, toml_key) = search_result(list(q_name)).
+:- func search_toml_q_names(search_result(list(q_name)), toml, toml_key) =
+    search_result(list(q_name)).
 
-search_toml_q_names(NotFoundResult, WrapError, TOML, Key) =
-    search_toml_array(NotFoundResult, WrapError, q_name_from_dotted_string,
+search_toml_q_names(NotFoundResult, TOML, Key) =
+    search_toml_array(NotFoundResult, q_name_from_dotted_string,
         TOML, Key).
 
     % search_toml_q_names(NotFoundResult, WrapError, Toml, Key) = Result
     %
-:- func search_toml_filenames(search_result(list(string)), func(string) = string,
-    toml, toml_key) = search_result(list(string)).
+:- func search_toml_filenames(search_result(list(string)), toml, toml_key) =
+    search_result(list(string)).
 
-search_toml_filenames(NotFoundResult, WrapError, TOML, Key) =
-    search_toml_array(NotFoundResult, WrapError, func(X) = ok(X), TOML, Key).
+search_toml_filenames(NotFoundResult, TOML, Key) =
+    search_toml_array(NotFoundResult, func(X) = ok(X), TOML, Key).
 
 :- func search_toml_array(search_result(list(T)),
-        func(string) = string,
         func(string) = maybe_error(T), toml, toml_key) =
     search_result(list(T)).
 
-search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
+search_toml_array(NotFoundResult, MakeResult, TOML, Key) =
         Result :-
     ( if search(TOML, Key, Value - Context) then
         ( if Value = tv_array(Values) then
@@ -294,8 +291,9 @@ search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
                         ( R0 = ok(N),
                             R = ok(N)
                         ; R0 = error(Why),
-                            R = return_error(Context, WrapError(
-                                format("'%s' %s", [s(S), s(Why)])))
+                            R = return_error(Context,
+                                field_error(Key,
+                                    format("'%s' %s", [s(S), s(Why)])))
                         )
                     else
                         R = return_error(Context, "Name in array is a string")
@@ -309,11 +307,15 @@ search_toml_array(NotFoundResult, WrapError, MakeResult, TOML, Key) =
             )
         else
             Result = return_error(Context,
-                WrapError("Value is not an array"))
+                field_error(Key, "Value is not an array"))
         )
     else
         Result = NotFoundResult
     ).
+
+:- func field_error(string, string) = string.
+
+field_error(Field, Msg) = format("Invalid %s field: %s", [s(Field), s(Msg)]).
 
 :- func not_found_error(context, toml_key) = search_result(T).
 
