@@ -863,40 +863,40 @@ ninja_required_version = 1.10
 
 rule plztyperes
     command = $path/plzc $pcflags_global --mode make-typeres-exports $
-		--module-name-check $name $
+        --module-name-check $name $
         --source-path $source_path $
         $in -o $out
     description = Calculating type & resource exports for $name
 
 rule plzi
     command = $path/plzc $pcflags_global --mode make-interface $
-		--module-name-check $name $
+        --module-name-check $name $
         --source-path $source_path $
-		$in -o $out
+        $in -o $out
     description = Making interface for $name
 
 rule plzscan
     command = $path/plzc $pcflags_global --mode scan $
-		--target-bytecode $target --target-interface $interface $
-		--module-name-check $name $
-		--source-path $source_path $
-		$in -o $out
+        --target-bytecode $target --target-interface $interface $
+        --module-name-check $name $
+        --source-path $source_path $
+        $in -o $out
     description = Scanning $name for dependencies
 
 rule plzc
     command = $path/plzc $pcflags_global --mode compile $
-		--import-whitelist $import_whitelist $
-		--module-name-check $name $
-		--source-path $source_path $
-		$in -o $out
+        --import-whitelist $import_whitelist $
+        --module-name-check $name $
+        --source-path $source_path $
+        $in -o $out
     description = Compiling $name
 
 rule plzgf
     command = $path/plzc $pcflags_global --mode generate-foreign $
-		--module-name-check $name $
-		--source-path $source_path $
-		--output-header $header $
-		$in -o $out
+        --module-name-check $name $
+        --source-path $source_path $
+        --output-header $header $
+        $in -o $out
     description = Generating foreign hooks for $name
 
 rule gen_init
