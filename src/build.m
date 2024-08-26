@@ -171,6 +171,7 @@ build(Options, Result, !IO) :-
                 % The modules that make up the program
                 t_modules           :: list(q_name),
                 t_modules_context   :: context,
+                t_pcflags           :: maybe(string),
                 t_c_sources         :: list(string)
             ).
 
@@ -214,9 +215,11 @@ make_target(TOML, TargetStr) = Result :-
             CSourcesResult = search_toml_filenames(
                 toml_search_default([], TargetContext),
                 Target, "c_sources"),
+            CompilerOptsResult = search_toml_maybe_string(Target, "compiler_opts"),
             (
                 ModulesResult = ok(Modules - ModulesContext),
                 CSourcesResult = ok(CSources - _),
+                CompilerOptsResult = ok(CompilerOpts - _),
 
                 ( if
                     find_duplicates(Modules, DupModules),
@@ -231,8 +234,14 @@ make_target(TOML, TargetStr) = Result :-
                         [s(string_join(", ", DupModulesStrings))]))
                 else
                     Result = ok(yes(target(TargetName, Modules, ModulesContext,
-                        CSources)))
+                        CompilerOpts, CSources)))
                 )
+            ;
+                ModulesResult = ok(_),
+                CSourcesResult = ok(_),
+                CompilerOptsResult = errors(Errors),
+
+                Result = errors(Errors)
             ;
                 ModulesResult = ok(_),
                 CSourcesResult = errors(Errors),
@@ -313,6 +322,20 @@ search_toml_array(NotFoundResult, MakeResult, TOML, Key) =
         Result = NotFoundResult
     ).
 
+:- func search_toml_maybe_string(toml, toml_key) = search_result(maybe(string)).
+
+search_toml_maybe_string(TOML, Key) = Result :-
+    ( if search(TOML, Key, Value - Context) then
+        ( if Value = tv_string(String) then
+            Result = ok(yes(String) - Context)
+        else
+            Result = return_error(Context,
+                field_error(Key, "Value is not a string"))
+        )
+    else
+        Result = ok(no - nil_context)
+    ).
+
 :- func field_error(string, string) = string.
 
 field_error(Field, Msg) = format("Invalid %s field: %s", [s(Field), s(Msg)]).
@@ -340,7 +363,8 @@ toml_search_default(X, C) = ok(X - C).
                 dto_name            :: q_name,
                 dto_output          :: string,
                 dto_input           :: string,
-                dto_depfile         :: string
+                dto_depfile         :: string,
+                dto_flags           :: string
             )
     ;       dt_interface(
                 dti_name            :: q_name,
@@ -429,7 +453,8 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
     --->    module_info(
                 mi_name         :: q_name,
                 mi_context      :: context,
-                mi_file         :: string
+                mi_file         :: string,
+                mi_pcflags      :: string
             ).
 
 :- func make_module_info(list(target)) = list(module_info).
@@ -443,7 +468,8 @@ make_module_info(Targets) = Modules :-
 
 target_get_modules(Target) = Modules :-
     Context = Target ^ t_modules_context,
-    Modules = map(func(N) = module_info(N, Context, ""),
+    PCFlags = maybe_default("", Target ^ t_pcflags),
+    Modules = map(func(N) = module_info(N, Context, "", PCFlags),
         Target ^ t_modules).
 
 :- pred resolve_duplicate_modules(module_info::in,
@@ -457,9 +483,13 @@ resolve_duplicate_modules(Module, !Map) :-
 :- func module_merge(module_info, module_info) = module_info.
 
 module_merge(Ma, Mb) =
-    module_info(Ma ^ mi_name,
-        context_earliest(Ma ^ mi_context, Mb ^ mi_context),
-        Ma ^ mi_file).
+        module_info(Ma ^ mi_name,
+            context_earliest(Ma ^ mi_context, Mb ^ mi_context),
+            Ma ^ mi_file,
+            Ma ^ mi_pcflags) :-
+    expect(unify(Ma ^ mi_pcflags, Mb ^ mi_pcflags),
+        $module, $pred, "Flags set for module differently in different
+        programs").
 
 :- pred find_module_file(module_info::in,
     result(module_info, string)::out,
@@ -497,7 +527,7 @@ make_program_target(Target) = DepTarget :-
 :- func make_module_targets(module_info) = list(dep_target).
 
 make_module_targets(ModuleInfo) = Targets :-
-    module_info(ModuleName, _, SourceName) = ModuleInfo,
+    module_info(ModuleName, _, SourceName, PCFlags) = ModuleInfo,
     BaseName = canonical_base_name(ModuleName),
     TyperesName = BaseName ++ typeres_extension,
     InterfaceName = BaseName ++ interface_extension,
@@ -506,7 +536,7 @@ make_module_targets(ModuleInfo) = Targets :-
     Targets = [
         dt_scan(ModuleName, DepFile, SourceName, InterfaceName, ObjectName),
         dt_interface(ModuleName, InterfaceName, SourceName, DepFile),
-        dt_object(ModuleName, ObjectName, SourceName, DepFile),
+        dt_object(ModuleName, ObjectName, SourceName, DepFile, PCFlags),
         dt_typeres(ModuleName, TyperesName, SourceName),
         dt_foreign_hooks(ModuleName,
             module_to_foreign_hooks_code(ModuleName),
@@ -702,14 +732,16 @@ write_link_statement(File, Command, Name, Output, Objects, MaybeBinary,
 write_target(File, dt_program(ProgName, ProgFile, Objects), !IO) :-
     write_link_statement(File, "plzlink", ProgName, ProgFile, Objects,
         yes("plzlnk"), !IO).
-write_target(File, dt_object(ModuleName, ObjectFile, SourceFile, DepFile),
+write_target(File,
+        dt_object(ModuleName, ObjectFile, SourceFile, DepFile, Flags),
         !IO) :-
     % If we can detect import errors when building dependencies we can
     % remove it from this step and avoid some extra rebuilds.
     ImportWhitelistVar = "import_whitelist" -
         import_whitelist_file_no_directroy,
+    PCFlagsVar = "pcflags_file" - Flags,
     write_plzc_statement(File, "plzc", ModuleName, ObjectFile, SourceFile,
-        DepFile, [ImportWhitelistVar], !IO).
+        DepFile, [ImportWhitelistVar, PCFlagsVar], !IO).
 write_target(File,
         dt_interface(ModuleName, InterfaceFile, SourceFile, DepFile), !IO) :-
     write_plzc_statement(File, "plzi", ModuleName, InterfaceFile,
@@ -862,21 +894,24 @@ rules_contents =
 ninja_required_version = 1.10
 
 rule plztyperes
-    command = $path/plzc $pcflags_global --mode make-typeres-exports $
+    command = $path/plzc $pcflags_global $pcflags_file $
+        --mode make-typeres-exports $
         --module-name-check $name $
         --source-path $source_path $
         $in -o $out
     description = Calculating type & resource exports for $name
 
 rule plzi
-    command = $path/plzc $pcflags_global --mode make-interface $
+    command = $path/plzc $pcflags_global $pcflags_file $
+        --mode make-interface $
         --module-name-check $name $
         --source-path $source_path $
         $in -o $out
     description = Making interface for $name
 
 rule plzscan
-    command = $path/plzc $pcflags_global --mode scan $
+    command = $path/plzc $pcflags_global $pcflags_file $
+        --mode scan $
         --target-bytecode $target --target-interface $interface $
         --module-name-check $name $
         --source-path $source_path $
@@ -884,7 +919,8 @@ rule plzscan
     description = Scanning $name for dependencies
 
 rule plzc
-    command = $path/plzc $pcflags_global --mode compile $
+    command = $path/plzc $pcflags_global $pcflags_file $
+        --mode compile $
         --import-whitelist $import_whitelist $
         --module-name-check $name $
         --source-path $source_path $
@@ -892,7 +928,8 @@ rule plzc
     description = Compiling $name
 
 rule plzgf
-    command = $path/plzc $pcflags_global --mode generate-foreign $
+    command = $path/plzc $pcflags_global $pcflags_file $
+        --mode generate-foreign $
         --module-name-check $name $
         --source-path $source_path $
         --output-header $header $
