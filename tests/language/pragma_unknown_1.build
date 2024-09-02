@@ -1,0 +1,10 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure 
+
+[pragma_unknown_1]
+type = program
+modules = [PragmaUnknown1]
+compiler_opts = "--warnings-as-errors"
+

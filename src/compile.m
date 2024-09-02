@@ -181,7 +181,9 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         !:Errors = init,
 
         check_module_name(GeneralOpts, Context, ModuleName, !Errors),
-        filter_entries(Entries, Imports, Resources0, Types0, Funcs, _),
+        filter_entries(Entries, Imports, Resources0, Types0, Funcs, Pragmas),
+
+        foldl(check_pragma, Pragmas, !Errors),
 
         setup_env_and_core(ModuleName, !:ImportEnv, !:Env, !:Core),
 
@@ -224,6 +226,18 @@ compile(GeneralOpts, CompileOpts, ast(ModuleName, Context, Entries), Result,
         else
             Result = errors(!.Errors)
         )
+    ).
+
+%-----------------------------------------------------------------------%
+
+:- pred check_pragma(ast_pragma::in,
+    errors(compile_error)::in, errors(compile_error)::out) is det.
+
+check_pragma(ast_pragma(Name, _Args, Context), !Errors) :-
+    ( if Name = "foreign_include" then
+        true
+    else
+        add_error(Context, ce_pragma_unknown(Name), !Errors)
     ).
 
 %-----------------------------------------------------------------------%
