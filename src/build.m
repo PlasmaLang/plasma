@@ -417,36 +417,39 @@ toml_search_default(X, C) = ok(X - C).
     io::di, io::uo) is det.
 
 build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
-    Modules0 = make_module_info(Targets),
+    MaybeModules0 = make_module_info(Targets),
+    ( MaybeModules0 = ok(Modules0),
+        % The term Target is overloaded here, it means both the whole things
+        % that plzbuild is trying to build, but also the steps that ninja does
+        % to build them.
+        map_foldl2(find_module_file, Modules0, MaybeModules1, !DirInfo, !IO),
+        MaybeModules = result_list_to_result(MaybeModules1),
+        find_foreign_sources(Targets, MaybeForeignSources, !DirInfo, !IO),
 
-    % The term Target is overloaded here, it means both the whole things
-    % that plzbuild is trying to build, but also the steps that ninja does
-    % to build them.
-    map_foldl2(find_module_file, Modules0, MaybeModules0, !DirInfo, !IO),
-    MaybeModules = result_list_to_result(MaybeModules0),
-    find_foreign_sources(Targets, MaybeForeignSources, !DirInfo, !IO),
+        ( MaybeModules = ok(Modules),
+          MaybeForeignSources = ok(ForeignSources),
+            ModuleTargets = map(make_module_targets, Modules),
+            ProgramTargets = map(make_program_target, Targets),
+            ForeignLinkTargets = condense(map(make_foreign_link_targets,
+                Targets)),
+            ForeignCompileTargets = map(make_foreign_target, ForeignSources),
 
-    ( MaybeModules = ok(Modules),
-      MaybeForeignSources = ok(ForeignSources),
-        ModuleTargets = map(make_module_targets, Modules),
-        ProgramTargets = map(make_program_target, Targets),
-        ForeignLinkTargets = condense(map(make_foreign_link_targets,
-            Targets)),
-        ForeignCompileTargets = map(make_foreign_target, ForeignSources),
+            MaybeDeps = ok(condense(ModuleTargets) ++
+                ForeignCompileTargets ++
+                ForeignLinkTargets ++ ProgramTargets)
 
-        MaybeDeps = ok(condense(ModuleTargets) ++
-            ForeignCompileTargets ++
-            ForeignLinkTargets ++ ProgramTargets)
-
-    ; MaybeModules = ok(_),
-      MaybeForeignSources = errors(Errors),
+        ; MaybeModules = ok(_),
+          MaybeForeignSources = errors(Errors),
+            MaybeDeps = errors(Errors)
+        ; MaybeModules = errors(Errors),
+          MaybeForeignSources = ok(_),
+            MaybeDeps = errors(Errors)
+        ; MaybeModules = errors(ErrorsA),
+          MaybeForeignSources = errors(ErrorsB),
+            MaybeDeps = errors(ErrorsA ++ ErrorsB)
+        )
+    ; MaybeModules0 = errors(Errors),
         MaybeDeps = errors(Errors)
-    ; MaybeModules = errors(Errors),
-      MaybeForeignSources = ok(_),
-        MaybeDeps = errors(Errors)
-    ; MaybeModules = errors(ErrorsA),
-      MaybeForeignSources = errors(ErrorsB),
-        MaybeDeps = errors(ErrorsA ++ ErrorsB)
     ).
 
 :- type module_info
@@ -457,12 +460,16 @@ build_dependency_info(Targets, MaybeDeps, !DirInfo, !IO) :-
                 mi_pcflags      :: string
             ).
 
-:- func make_module_info(list(target)) = list(module_info).
+:- func make_module_info(list(target)) = result(list(module_info), string).
 
 make_module_info(Targets) = Modules :-
     Modules0 = condense(map(target_get_modules, Targets)),
-    foldl(resolve_duplicate_modules, Modules0, init, Modules1),
-    Modules = map.values(Modules1).
+    foldl_result(resolve_duplicate_modules, Modules0, init, MaybeModules1),
+    ( MaybeModules1 = ok(Modules1),
+        Modules = ok(map.values(Modules1))
+    ; MaybeModules1 = errors(Error),
+        Modules = errors(Error)
+    ).
 
 :- func target_get_modules(target) = list(module_info).
 
@@ -473,30 +480,34 @@ target_get_modules(Target) = Modules :-
         Target ^ t_modules).
 
 :- pred resolve_duplicate_modules(module_info::in,
-    map(q_name, module_info)::in, map(q_name, module_info)::out) is det.
+    map(q_name, module_info)::in,
+    result(map(q_name, module_info), string)::out) is det.
 
 resolve_duplicate_modules(Module, !Map) :-
     Name = Module ^ mi_name,
-    map_set_or_update(func(M) = module_merge(M, Module),
+    map_set_or_update_result(func(M) = module_merge(M, Module),
             Name, Module, !Map).
 
-:- func module_merge(module_info, module_info) = module_info.
+:- func module_merge(module_info, module_info) = result(module_info, string).
 
 module_merge(Ma, Mb) =
-        module_info(Ma ^ mi_name,
+    ( if Ma ^ mi_pcflags = Mb ^ mi_pcflags then
+        ok(module_info(Ma ^ mi_name,
             context_earliest(Ma ^ mi_context, Mb ^ mi_context),
             Ma ^ mi_file,
-            Ma ^ mi_pcflags) :-
-    expect(unify(Ma ^ mi_pcflags, Mb ^ mi_pcflags),
-        $module, $pred, "Flags set for module differently in different
-        programs").
+            Ma ^ mi_pcflags))
+    else
+        return_error(context_earliest(Ma ^ mi_context, Mb ^ mi_context),
+          "Flags set for the same module in different programs do not match")
+    ).
 
 :- pred find_module_file(module_info::in,
     result(module_info, string)::out,
     dir_info::in, dir_info::out, io::di, io::uo) is det.
 
 find_module_file(Module, ModuleResult, !DirInfo, !IO) :-
-    find_module_file(".", source_extension, Module ^ mi_name, FileRes, !DirInfo, !IO),
+    find_module_file(".", source_extension, Module ^ mi_name, FileRes,
+        !DirInfo, !IO),
     ( FileRes = yes(File),
         ModuleResult = ok(Module ^ mi_file := File)
     ; FileRes = no,
