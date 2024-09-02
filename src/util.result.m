@@ -16,6 +16,7 @@
 :- import_module io.
 :- import_module cord.
 :- import_module list.
+:- import_module map.
 :- import_module maybe.
 
 :- import_module context.
@@ -96,6 +97,23 @@
 :- func result_list_to_result(list(result(T, E))) = result(list(T), E).
 
 :- func result_map((func(T) = U), result(T, E)) = result(U, E).
+
+%-----------------------------------------------------------------------%
+
+    % foldl over a list except the accumulator includes a result that must
+    % be unpact before processing the next item.  If mercury had monads this
+    % would be bind.
+    %
+:- pred foldl_result(pred(X, A, result(A, E)), list(X),
+    A, result(A, E)).
+:- mode foldl_result(pred(in, in, out) is det, in, in, out) is det.
+
+    % Set or update the value within a map at the given key.  if the update
+    % function fails then return that error.
+    %
+:- pred map_set_or_update_result(func(V) = result(V, E),
+    K, V, map(K, V), result(map(K, V), E)).
+:- mode map_set_or_update_result(in, in, in, in, out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -202,6 +220,33 @@ build_result(errors(E), errors(Es0), errors(Es)) :-
 
 result_map(Func, ok(X)) = ok(Func(X)).
 result_map(_, errors(E)) = errors(E).
+
+%-----------------------------------------------------------------------%
+
+foldl_result(_, [], Acc, ok(Acc)).
+foldl_result(Pred, [X | Xs], Acc0, MaybeAcc) :-
+    Pred(X, Acc0, MaybeAcc1),
+    ( MaybeAcc1 = ok(Acc1),
+        foldl_result(Pred, Xs, Acc1, MaybeAcc)
+    ; MaybeAcc1 = errors(Error),
+        MaybeAcc = errors(Error)
+    ).
+
+%-----------------------------------------------------------------------%
+
+map_set_or_update_result(UpdateFn, Key, Value, !.Map, MaybeMap) :-
+    ( if search(!.Map, Key, Old) then
+        MaybeNew = UpdateFn(Old),
+        ( MaybeNew = ok(New),
+            det_update(Key, New, !Map),
+            MaybeMap = ok(!.Map)
+        ; MaybeNew = errors(Error),
+            MaybeMap = errors(Error)
+        )
+    else
+        set(Key, Value, !Map),
+        MaybeMap = ok(!.Map)
+    ).
 
 %-----------------------------------------------------------------------%
 

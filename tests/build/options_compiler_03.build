@@ -1,0 +1,17 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure
+
+# This test asks the build system to build the same module with different
+# settings, it should fail.
+
+[options_compiler_03a]
+type = program
+modules = [ OptionsCompiler03a, OptionsCompiler03 ]
+compiler_opts = "--no-simplify"
+
+[options_compiler_03b]
+type = program
+modules = [ OptionsCompiler03b, OptionsCompiler03 ]
+
