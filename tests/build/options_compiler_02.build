@@ -1,0 +1,10 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure
+
+[options_compiler_02]
+type = program
+modules = [ OptionsCompiler02 ]
+compiler_opts = "--nonexistant-option"
+
