@@ -29,7 +29,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: setup
       uses: PlasmaLang/ci/stable@v2_1
       with:
@@ -65,7 +65,7 @@ jobs:
 
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: docs
       uses: PlasmaLang/ci/docs@v1
 
@@ -78,7 +78,7 @@ jobs:
       fail-fast: false
     steps:
     - name: checkout
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
     - name: setup
       uses: PlasmaLang/ci/stable@v2_1
       with:
