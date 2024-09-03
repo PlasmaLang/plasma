@@ -310,7 +310,8 @@
 :- type ast_pragma
     --->    ast_pragma(
                 astp_name           :: string,
-                astp_args           :: list(ast_pragma_arg)
+                astp_args           :: list(ast_pragma_arg),
+                astp_context        :: context
             ).
 
 :- type ast_pragma_arg

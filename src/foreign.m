@@ -16,11 +16,19 @@
 :- import_module io.
 
 :- import_module ast.
+:- import_module compile_error.
 :- import_module options.
+:- import_module util.
+:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
-:- pred do_make_foreign(general_options::in, string::in, ast::in, io::di, io::uo) is det.
+:- type foreign_info.
+
+:- func make_foreign(ast) = result(foreign_info, compile_error).
+
+:- pred write_foreign(general_options::in, string::in, foreign_info::in,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -32,32 +40,42 @@
 :- import_module string.
 
 :- import_module compile.
-:- import_module compile_error.
 :- import_module q_name.
-:- import_module util.
 :- import_module util.mercury.
 :- import_module util.my_exception.
 :- import_module util.my_io.
-:- import_module util.result.
 
 %-----------------------------------------------------------------------%
 
-:- type foreign_func
-    --->    foreign_func(
-                ff_plasma_name      :: nq_name,
-                ff_foreign_name     :: string
+:- type foreign_info
+    --->    foreign_info(
+                fi_module_name      :: q_name,
+                fi_includes         :: list(foreign_include),
+                fi_funcs            :: list(foreign_func)
             ).
 
 %-----------------------------------------------------------------------%
 
-do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
-    ForeignIncludes = find_foreign_includes(PlasmaAst),
-    ForeignFuncs = find_foreign_funcs(PlasmaAst),
+make_foreign(PlasmaAst) = MaybeForeignInfo :-
+    MaybeIncludes = find_foreign_includes(PlasmaAst),
+    Funcs = find_foreign_funcs(PlasmaAst),
+    ( MaybeIncludes = ok(Includes),
+        MaybeForeignInfo = ok(foreign_info(PlasmaAst ^ a_module_name,
+            Includes, Funcs))
+    ; MaybeIncludes = errors(Errors),
+        MaybeForeignInfo = errors(Errors)
+    ).
+
+%-----------------------------------------------------------------------%
+
+write_foreign(GeneralOpts, OutputHeader, ForeignInfo, !IO) :-
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         OutputFile = GeneralOpts ^ go_output_file,
-        write_foreign_hooks(OutputFile, OutputHeader, PlasmaAst ^ a_module_name,
-            ForeignIncludes, ForeignFuncs, Result, !IO),
+        write_foreign_hooks(OutputFile, OutputHeader,
+            ForeignInfo ^ fi_module_name,
+            ForeignInfo ^ fi_includes,
+            ForeignInfo ^ fi_funcs, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
             exit_error(ErrMsg, !IO)
@@ -70,30 +88,40 @@ do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
 :- type foreign_include
     --->    foreign_include(string).
 
-:- func find_foreign_includes(ast) = list(foreign_include).
+:- func find_foreign_includes(ast) =
+    result(list(foreign_include), compile_error).
 
-find_foreign_includes(Ast) = ForeignIncludes :-
+find_foreign_includes(Ast) = MaybeForeignIncludes :-
     Ast = ast(_, _, Entries),
     filter_entries(Entries, _, _, _, _, Pragmas),
-    foldl(find_foreign_include_pragma, Pragmas, [], ForeignIncludes0),
-    ForeignIncludes = reverse(ForeignIncludes0).
+    foldl_result(find_foreign_include_pragma, Pragmas,
+        [], MaybeForeignIncludes0),
+    MaybeForeignIncludes = result_map(reverse, MaybeForeignIncludes0).
 
-:- pred find_foreign_include_pragma(ast_pragma::in,
-    list(foreign_include)::in, list(foreign_include)::out) is det.
+:- pred find_foreign_include_pragma(ast_pragma::in, list(foreign_include)::in,
+    result(list(foreign_include), compile_error)::out) is det.
 
-find_foreign_include_pragma(ast_pragma(Name, Args), !Includes) :-
+find_foreign_include_pragma(ast_pragma(Name, Args, Context),
+        Includes0, MaybeIncludes) :-
     ( if Name = "foreign_include" then
         ( if Args = [ast_pragma_arg(String)] then
             Include = foreign_include(String),
-            !:Includes = [Include | !.Includes]
+            MaybeIncludes = ok([Include | Includes0])
         else
-            compile_error($file, $pred, "Malformed pragma arg")
+            MaybeIncludes = return_error(Context,
+                ce_pragma_bad_argument)
         )
     else
-        true
+        MaybeIncludes = ok(Includes0)
     ).
 
 %-----------------------------------------------------------------------%
+
+:- type foreign_func
+    --->    foreign_func(
+                ff_plasma_name      :: nq_name,
+                ff_foreign_name     :: string
+            ).
 
 :- func find_foreign_funcs(ast) = list(foreign_func).
 

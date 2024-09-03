@@ -86,7 +86,11 @@
     ;       ce_resource_not_public_in_function(nq_name, nq_name)
     ;       ce_too_many_bangs_in_statement
     ;       ce_no_bang
-    ;       ce_unnecessary_bang.
+    ;       ce_unnecessary_bang
+
+    % Pragma related.
+    ;       ce_pragma_unknown(string)
+    ;       ce_pragma_bad_argument.
 
 :- type type_error
     --->    type_unification_failed(pretty, pretty, maybe(type_error))
@@ -114,6 +118,7 @@ ce_error_or_warning(Error) =
     ( if
         Error = ce_unnecessary_bang
       ; Error = ce_import_duplicate(_)
+      ; Error = ce_pragma_unknown(_)
     then
         warning
     else
@@ -333,6 +338,13 @@ ce_to_pretty(_, ce_no_bang,
     p_words("Call uses or observes a resource but has no !"), []).
 ce_to_pretty(_, ce_unnecessary_bang,
     p_words("Call has a ! but does not need it"), []).
+
+ce_to_pretty(_, ce_pragma_unknown(Pragma), Para, []) :-
+    Para = p_words("Pragma") ++ p_spc_nl ++
+        [p_quote("'", p_str(Pragma))] ++ p_spc_nl ++
+        p_words("is unrecognised and will be ignored").
+ce_to_pretty(_, ce_pragma_bad_argument, Para, []) :-
+    Para = p_words("Unrecognised argument for this pragma").
 
 :- func type_error_pretty(type_error) = list(pretty).
 
