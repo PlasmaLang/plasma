@@ -20,7 +20,12 @@
 
 %-----------------------------------------------------------------------%
 
-:- pred do_make_foreign(general_options::in, string::in, ast::in, io::di, io::uo) is det.
+:- type foreign_info.
+
+:- func make_foreign(ast) = foreign_info.
+
+:- pred write_foreign(general_options::in, string::in, foreign_info::in,
+    io::di, io::uo) is det.
 
 %-----------------------------------------------------------------------%
 %-----------------------------------------------------------------------%
@@ -42,22 +47,30 @@
 
 %-----------------------------------------------------------------------%
 
-:- type foreign_func
-    --->    foreign_func(
-                ff_plasma_name      :: nq_name,
-                ff_foreign_name     :: string
+:- type foreign_info
+    --->    foreign_info(
+                fi_module_name      :: q_name,
+                fi_includes         :: list(foreign_include),
+                fi_funcs            :: list(foreign_func)
             ).
 
 %-----------------------------------------------------------------------%
 
-do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
-    ForeignIncludes = find_foreign_includes(PlasmaAst),
-    ForeignFuncs = find_foreign_funcs(PlasmaAst),
+make_foreign(PlasmaAst) = ForeignInfo :-
+    Includes = find_foreign_includes(PlasmaAst),
+    Funcs = find_foreign_funcs(PlasmaAst),
+    ForeignInfo = foreign_info(PlasmaAst ^ a_module_name, Includes, Funcs).
+
+%-----------------------------------------------------------------------%
+
+write_foreign(GeneralOpts, OutputHeader, ForeignInfo, !IO) :-
     WriteOutput = GeneralOpts ^ go_write_output,
     ( WriteOutput = write_output,
         OutputFile = GeneralOpts ^ go_output_file,
-        write_foreign_hooks(OutputFile, OutputHeader, PlasmaAst ^ a_module_name,
-            ForeignIncludes, ForeignFuncs, Result, !IO),
+        write_foreign_hooks(OutputFile, OutputHeader,
+            ForeignInfo ^ fi_module_name,
+            ForeignInfo ^ fi_includes,
+            ForeignInfo ^ fi_funcs, Result, !IO),
         ( Result = ok
         ; Result = error(ErrMsg),
             exit_error(ErrMsg, !IO)
@@ -94,6 +107,12 @@ find_foreign_include_pragma(ast_pragma(Name, Args, _Context), !Includes) :-
     ).
 
 %-----------------------------------------------------------------------%
+
+:- type foreign_func
+    --->    foreign_func(
+                ff_plasma_name      :: nq_name,
+                ff_foreign_name     :: string
+            ).
 
 :- func find_foreign_funcs(ast) = list(foreign_func).
 

@@ -327,6 +327,15 @@ write_typeres_exports(Filename, ModuleName, Exports, Result, !IO) :-
 
 %-----------------------------------------------------------------------%
 
+:- pred do_make_foreign(general_options::in, string::in, ast::in,
+    io::di, io::uo) is det.
+
+do_make_foreign(GeneralOpts, OutputHeader, PlasmaAst, !IO) :-
+    ForeignInfo = make_foreign(PlasmaAst),
+    write_foreign(GeneralOpts, OutputHeader, ForeignInfo, !IO).
+
+%-----------------------------------------------------------------------%
+
 :- type plasmac_options
     --->    plasmac_options(
                 pco_general         :: general_options,
