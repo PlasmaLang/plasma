@@ -372,7 +372,7 @@ parse_import(Result, !Tokens) :-
 :- mode parse_type(in(parsing.parser), out, in, out) is det.
 
 parse_type(ParseName, Result, !Tokens) :-
-    optional(parse_export_type, ok(MaybeSharing), !Tokens),
+    parse_export_opaque(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
@@ -380,11 +380,6 @@ parse_type(ParseName, Result, !Tokens) :-
         MatchType = ok(_),
         NameResult = ok(Name)
     then
-        ( MaybeSharing = no,
-            Sharing = so_private
-        ; MaybeSharing = yes(Sharing)
-        ),
-
         match_token(slash, MatchSlash, !Tokens),
         ( MatchSlash = ok(_),
             % Abstract type
@@ -419,22 +414,6 @@ parse_type(ParseName, Result, !Tokens) :-
         )
     else
         Result = combine_errors_2(MatchType, NameResult)
-    ).
-
-:- pred parse_export_type(parse_res(sharing_opaque)::out,
-    tokens::in, tokens::out) is det.
-
-parse_export_type(Result, !Tokens) :-
-    match_token(export, ExportResult, !Tokens),
-    ( ExportResult = ok(_),
-        optional(match_token(opaque), ok(Abstract), !Tokens),
-        ( Abstract = yes(_),
-            Result = ok(so_public_opaque)
-        ; Abstract = no,
-            Result = ok(so_public)
-        )
-    ; ExportResult = error(C, G, E),
-        Result = error(C, G, E)
     ).
 
 :- pred parse_type_constructor(parsing.parser(N, token_type),
@@ -566,7 +545,7 @@ parse_func_type(Result, !Tokens) :-
 :- mode parse_resource(in(parsing.parser), out, in, out) is det.
 
 parse_resource(ParseName, Result, !Tokens) :-
-    maybe_parse_export(Sharing, !Tokens),
+    parse_export(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(resource, ResourceMatch, !Tokens),
     % Not really an any ident, but this should make errors easier to
@@ -1585,13 +1564,29 @@ maybe_parse_func_export(Sharing, IsEntrypoint, !Tokens) :-
         Sharing = s_public,
         IsEntrypoint = is_entrypoint
     ; MaybeEntrypoint = no,
-        maybe_parse_export(Sharing, !Tokens),
+        parse_export(Sharing, !Tokens),
         IsEntrypoint = not_entrypoint
     ).
 
-:- pred maybe_parse_export(sharing::out, tokens::in, tokens::out) is det.
+:- pred parse_export_opaque(sharing_opaque::out,
+    tokens::in, tokens::out) is det.
 
-maybe_parse_export(Sharing, !Tokens) :-
+parse_export_opaque(Result, !Tokens) :-
+    optional(match_token(export), ok(Export), !Tokens),
+    ( Export = yes(_),
+        optional(match_token(opaque), ok(Opaque), !Tokens),
+        ( Opaque = yes(_),
+            Result = so_public_opaque
+        ; Opaque = no,
+            Result = so_public
+        )
+    ; Export = no,
+        Result = so_private
+    ).
+
+:- pred parse_export(sharing::out, tokens::in, tokens::out) is det.
+
+parse_export(Sharing, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
     ( MaybeExport = yes(_),
         Sharing = s_public
