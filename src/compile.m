@@ -320,12 +320,12 @@ gather_type(ModuleName, nq_named(Name, Type), a2c_type(Name, TypeId, Type),
         env_add_type(q_name(Name), Arity, TypeId, !Env),
         Sharing = Type ^ at_export,
         (
-            ( Sharing = st_public
-            ; Sharing = st_public_opaque
+            ( Sharing = so_public
+            ; Sharing = so_public_opaque
             ),
             env_add_type(q_name_append(ModuleName, Name), Arity, TypeId,
                 !ImportEnv)
-        ; Sharing = st_private
+        ; Sharing = so_private
         )
     then
         true
@@ -351,8 +351,8 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
 
         filter_map((pred(NamedRes::in, {Name, Arity}::out) is semidet :-
                 NamedRes = nq_named(NQName, ast_type(Params, _, Sharing, _)),
-                ( Sharing = st_public
-                ; Sharing = st_public_opaque
+                ( Sharing = so_public
+                ; Sharing = so_public_opaque
                 ),
                 Name = q_name_append(ModuleName, NQName),
                 Arity = arity(length(Params))

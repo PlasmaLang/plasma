@@ -90,9 +90,9 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 type_decl_pretty(Core, Type) = p_expr(Pretty) :-
     Sharing = utype_get_sharing(Type),
-    ( Sharing = st_private,
+    ( Sharing = so_private,
         unexpected($file, $pred, "st_private")
-    ; Sharing = st_public,
+    ; Sharing = so_public,
         MaybeParams = utype_get_params(Type),
         ( MaybeParams = yes(Params)
         ; MaybeParams = no,
@@ -112,7 +112,7 @@ type_decl_pretty(Core, Type) = p_expr(Pretty) :-
             unexpected($file, $pred, "Public type without constructors")
         ),
         Pretty = PrettyHead ++ PrettyBody
-    ; Sharing = st_public_opaque,
+    ; Sharing = so_public_opaque,
         Pretty = [p_str("type "),
             q_name_pretty(utype_get_name(Type)),
             p_str("/"),

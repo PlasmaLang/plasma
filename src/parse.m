@@ -381,7 +381,7 @@ parse_type(ParseName, Result, !Tokens) :-
         NameResult = ok(Name)
     then
         ( MaybeSharing = no,
-            Sharing = st_private
+            Sharing = so_private
         ; MaybeSharing = yes(Sharing)
         ),
 
@@ -421,7 +421,7 @@ parse_type(ParseName, Result, !Tokens) :-
         Result = combine_errors_2(MatchType, NameResult)
     ).
 
-:- pred parse_export_type(parse_res(sharing_type)::out,
+:- pred parse_export_type(parse_res(sharing_opaque)::out,
     tokens::in, tokens::out) is det.
 
 parse_export_type(Result, !Tokens) :-
@@ -429,9 +429,9 @@ parse_export_type(Result, !Tokens) :-
     ( ExportResult = ok(_),
         optional(match_token(opaque), ok(Abstract), !Tokens),
         ( Abstract = yes(_),
-            Result = ok(st_public_opaque)
+            Result = ok(so_public_opaque)
         ; Abstract = no,
-            Result = ok(st_public)
+            Result = ok(so_public)
         )
     ; ExportResult = error(C, G, E),
         Result = error(C, G, E)

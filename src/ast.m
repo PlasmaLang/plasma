@@ -63,7 +63,7 @@
     --->    ast_type(
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor(Name)),
-                at_export           :: sharing_type,
+                at_export           :: sharing_opaque,
                 at_context          :: context
             )
             % An abstractly-imported type.

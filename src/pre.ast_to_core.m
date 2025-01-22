@@ -726,16 +726,16 @@ type_is_private(Core, TypeId) =
 
 type_is_private_2(Type) = Private :-
     Sharing = utype_get_sharing(Type),
-    ( Sharing = st_private,
+    ( Sharing = so_private,
         Imported = utype_get_imported(Type),
         ( Imported = i_imported,
             Private = is_not_private
         ; Imported = i_local,
             Private = is_private(utype_get_name(Type))
         )
-    ; Sharing = st_public,
+    ; Sharing = so_public,
         Private = is_not_private
-    ; Sharing = st_public_opaque,
+    ; Sharing = so_public_opaque,
         Private = is_not_private
     ).
 
@@ -753,7 +753,7 @@ check_type_exports(Core) = Errors :-
 
 check_type_exports_2(Core, _ - Type) = Errors :-
     Sharing = utype_get_sharing(Type),
-    ( Sharing = st_public,
+    ( Sharing = so_public,
         ResourceErrors = cord_list_to_cord(
             map(check_type_resource(Core, Type),
                 set.to_sorted_list(utype_get_resources(Core, Type)))),
@@ -761,8 +761,8 @@ check_type_exports_2(Core, _ - Type) = Errors :-
             map(check_type_type(Core, Type),
                 set.to_sorted_list(utype_get_types(Core, Type)))),
         Errors = ResourceErrors ++ TypeErrors
-    ; ( Sharing = st_public_opaque
-      ; Sharing = st_private
+    ; ( Sharing = so_public_opaque
+      ; Sharing = so_private
       ),
       Errors = init
     ).
