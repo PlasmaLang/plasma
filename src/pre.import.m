@@ -653,7 +653,7 @@ do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
 
     ( if env_search_resource(Env, FromName, FromRes) then
         core_set_resource(ResId,
-            r_other(Name, FromRes, s_private, i_imported, Context), !Core)
+            r_other(Name, FromRes, so_private, i_imported, Context), !Core)
     else
         add_error(Context, ce_resource_unknown(FromName), !Errors)
     ).

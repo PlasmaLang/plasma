@@ -545,7 +545,7 @@ parse_func_type(Result, !Tokens) :-
 :- mode parse_resource(in(parsing.parser), out, in, out) is det.
 
 parse_resource(ParseName, Result, !Tokens) :-
-    parse_export(Sharing, !Tokens),
+    parse_export_opaque(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(resource, ResourceMatch, !Tokens),
     % Not really an any ident, but this should make errors easier to

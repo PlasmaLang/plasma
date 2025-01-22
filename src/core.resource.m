@@ -22,7 +22,7 @@
     ;       r_other(
                 ro_name     :: q_name,
                 ro_from     :: resource_id,
-                ro_sharing  :: sharing,
+                ro_sharing  :: sharing_opaque,
                 ro_imported :: imported,
                 ro_context  :: context
             )

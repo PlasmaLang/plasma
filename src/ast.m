@@ -77,7 +77,7 @@
 :- type ast_resource
     --->    ast_resource(
                 ar_from             :: q_name,
-                ar_sharing          :: sharing,
+                ar_sharing          :: sharing_opaque,
                 ar_context          :: context
             ).
 

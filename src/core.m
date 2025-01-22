@@ -280,9 +280,7 @@ core_all_exported_types(Core) =
 
 type_is_exported(_ - Type) :-
     Sharing = utype_get_sharing(Type),
-    ( Sharing = so_public
-    ; Sharing = so_public_opaque
-    ).
+    sharing_is_exported(Sharing).
 
 core_get_type(Core, TypeId) = Type :-
     lookup(Core ^ c_types, TypeId, Type).
@@ -334,6 +332,12 @@ core_all_exported_resources(Core) =
 
 :- pred resource_is_exported(pair(resource_id, resource)::in) is semidet.
 
-resource_is_exported(_ - r_other(_, _, s_public, _, _)).
+resource_is_exported(_ - r_other(_, _, Sharing, _, _)) :-
+    sharing_is_exported(Sharing).
+
+:- pred sharing_is_exported(sharing_opaque::in) is semidet.
+
+sharing_is_exported(so_public).
+sharing_is_exported(so_public_opaque).
 
 %-----------------------------------------------------------------------%

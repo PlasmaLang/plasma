@@ -298,10 +298,12 @@ gather_resource(ModuleName, nq_named(Name, Res),
     ( if
         env_add_resource(q_name(Name), ResId, !Env),
         Sharing = Res ^ ar_sharing,
-        ( Sharing = s_public,
+        (   ( Sharing = so_public
+            ; Sharing = so_public_opaque
+            ),
             env_add_resource(q_name_append(ModuleName, Name), ResId,
                 !ImportEnv)
-        ; Sharing = s_private
+        ; Sharing = so_private
         )
     then
         true
@@ -344,7 +346,10 @@ find_typeres_exports(GeneralOpts, ast(ModuleName, Context, Entries)) =
         filter_entries(Entries, _, Resources0, Types0, _, _),
 
         filter_map((pred(NamedRes::in, Name::out) is semidet :-
-                NamedRes = nq_named(NQName, ast_resource(_, s_public, _)),
+                NamedRes = nq_named(NQName, ast_resource(_, Sharing, _)),
+                ( Sharing = so_public
+                ; Sharing = so_public_opaque
+                ),
                 Name = q_name_append(ModuleName, NQName)
             ),
             Resources0, Resources),

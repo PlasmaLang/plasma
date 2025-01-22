@@ -706,9 +706,11 @@ resource_is_private(Core, ResId) =
 resource_is_private_2(r_io) = is_not_private.
 resource_is_private_2(r_other(RName, _, Sharing, Imported, _))
         = Private :-
-    ( Sharing = s_public,
+    ( Sharing = so_public,
         Private = is_not_private
-    ; Sharing = s_private,
+    ; Sharing = so_public_opaque,
+        Private = is_not_private
+    ; Sharing = so_private,
         ( Imported = i_imported,
             Private = is_not_private
         ; Imported = i_local,
