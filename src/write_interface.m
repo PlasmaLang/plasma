@@ -67,12 +67,12 @@ pretty_interface(Core) = Pretty :-
     list(pretty).
 
 pretty_resource_interface(Core, _ - R) =
-    [resource_decl_pretty(Core, R), p_nl_double].
+    [resource_interface_pretty(Core, R), p_nl_double].
 
 :- func pretty_type_interface(core, pair(type_id, user_type)) = list(pretty).
 
 pretty_type_interface(Core, _ - Type) = Pretty :-
-    Pretty = [type_decl_pretty(Core, Type), p_nl_double].
+    Pretty = [type_interface_pretty(Core, Type), p_nl_double].
 
 :- func pretty_func_interface(core, pair(func_id, function)) = list(pretty).
 
