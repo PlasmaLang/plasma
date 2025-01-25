@@ -538,7 +538,7 @@ parse_func_type(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-    % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
+    % ResourceDefinition := 'resource' QualifiedIdent 'from' QualifiedIdent
     %
 :- pred parse_resource(parsing.parser(N, token_type),
     parse_res({N, ast_resource}), tokens, tokens).
