@@ -334,7 +334,7 @@ import_foldl2(Pred, [N - XRes | Xs], !A, !B) :-
                 ett_types           :: list({q_name, arity})
             )
     ;       et_interface(
-                eti_resources       :: list({q_name, ast_resource, R}),
+                eti_resources       :: list({q_name, maybe(ast_resource), R}),
                 eti_types           :: list({q_name, ast_type(q_name), T}),
                 eti_functions       :: list(q_named(ast_function_decl))
             ).
@@ -415,8 +415,8 @@ read_import(Verbose, Core, ImportType, ImportInfo, ModuleName - Result,
     ).
 
 :- pred filter_entries(ast_interface_entry::in,
-    list(q_named(ast_resource))::in,
-    list(q_named(ast_resource))::out,
+    list(q_named(maybe(ast_resource)))::in,
+    list(q_named(maybe(ast_resource)))::out,
     list(q_named(ast_type(q_name)))::in,
     list(q_named(ast_type(q_name)))::out,
     list(q_named(ast_function_decl))::in,
@@ -592,7 +592,7 @@ process_interface_import(Env, ModuleName, ImportAST, Result, !Core) :-
     ).
 
 :- pred read_import_import(q_name::in, env::in,
-    list({q_name, ast_resource, resource_id})::in,
+    list({q_name, maybe(ast_resource), resource_id})::in,
     list({q_name, ast_type(q_name), type_id})::in,
     list(q_named(ast_function_decl))::in,
     assoc_list(nq_name, import_entry)::out, errors(compile_error)::out,
@@ -615,8 +615,8 @@ read_import_import(ModuleName, Env, Resources, Types, Funcs, NamePairs,
 
 %-----------------------------------------------------------------------%
 
-:- pred gather_resource({q_name, ast_resource, _}::in,
-    {q_name, ast_resource, resource_id}::out,
+:- pred gather_resource({q_name, T, _}::in,
+    {q_name, T, resource_id}::out,
     env::in, env::out, core::in, core::out) is det.
 
 gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
@@ -627,13 +627,14 @@ gather_resource({Name, Res, _}, {Name, Res, ResId}, !Env, !Core) :-
         compile_error($file, $pred, "Resource already defined")
     ).
 
-:- func resource_get_resources({_, ast_resource, _}) = set(q_name).
+:- func resource_get_resources({_, maybe(ast_resource), _}) = set(q_name).
 
-resource_get_resources({_, ast_resource(Name, _, _), _}) =
+resource_get_resources({_, yes(ast_resource(Name, _, _)), _}) =
     make_singleton_set(Name).
+resource_get_resources({_, no, _}) = set.init.
 
 :- pred do_import_resource(q_name::in, env::in,
-    {q_name, ast_resource, resource_id}::in,
+    {q_name, maybe(ast_resource), resource_id}::in,
     pair(nq_name, import_entry)::out, errors(compile_error)::out,
     core::in, core::out) is det.
 
@@ -647,15 +648,17 @@ do_import_resource(ModuleName, Env, {Name, Res0, ResId}, NamePair,
             "Imported module exports symbols of other module")
     ),
 
-    Res0 = ast_resource(FromName, _, Context),
-
     NamePair = NQName - ie_resource(ResId),
 
-    ( if env_search_resource(Env, FromName, FromRes) then
-        core_set_resource(ResId,
-            r_other(Name, FromRes, so_private, i_imported, Context), !Core)
-    else
-        add_error(Context, ce_resource_unknown(FromName), !Errors)
+    ( Res0 = yes(ast_resource(FromName, _, Context)),
+        ( if env_search_resource(Env, FromName, FromRes) then
+            core_set_resource(ResId,
+                r_other(Name, FromRes, so_private, i_imported, Context), !Core)
+        else
+            add_error(Context, ce_resource_unknown(FromName), !Errors)
+        )
+    ; Res0 = no,
+        core_set_resource(ResId, r_abstract(Name), !Core)
     ).
 
 %-----------------------------------------------------------------------%

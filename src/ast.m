@@ -44,7 +44,12 @@
     ;       ast_pragma(ast_pragma).
 
 :- type ast_interface_entry
-    --->    asti_resource(q_name, ast_resource)
+    --->    asti_resource(
+                q_name,
+
+                % Opaque resources won't have a definition.
+                maybe(ast_resource)
+            )
     ;       asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
 

@@ -552,18 +552,57 @@ parse_resource(ParseName, Result, !Tokens) :-
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
     ParseName(NameResult, !Tokens),
-    match_token(from, FromMatch, !Tokens),
-    parse_q_name(FromIdentResult, !Tokens),
+    parse_resource_from(FromResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
         NameResult = ok(Name),
-        FromMatch = ok(_),
-        FromIdentResult = ok(FromIdent)
+        FromResult = ok(FromIdent)
     then
         Result = ok({Name, ast_resource(FromIdent, Sharing, Context)})
     else
-        Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
-            FromIdentResult)
+        Result = combine_errors_3(ResourceMatch, NameResult, FromResult)
+    ).
+
+    % Parse a resource from an interface file.
+    %
+    % ResourceInterface := 'resource' QualifiedIdent ('from' QualifiedIdent)?
+    %
+:- pred parse_resource_interface(parse_res({q_name, maybe(ast_resource)})::out,
+    tokens::in, tokens::out) is det.
+
+parse_resource_interface(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(resource, ResourceMatch, !Tokens),
+    parse_q_name(NameResult, !Tokens),
+    ( if
+        ResourceMatch = ok(_),
+        NameResult = ok(Name)
+    then
+        optional(parse_resource_from, ok(FromResult), !Tokens),
+        ( FromResult = yes(FromName),
+            Result = ok({Name, yes(ast_resource(FromName, so_private, Context))})
+        ; FromResult = no,
+            Result = ok({Name, no})
+        )
+    else
+        Result = combine_errors_2(ResourceMatch, NameResult)
+    ).
+
+    % Parse the body of a resource definition.
+    %
+:- pred parse_resource_from(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
+
+parse_resource_from(Result, !Tokens) :-
+    match_token(from, FromMatch, !Tokens),
+    parse_q_name(IdentResult, !Tokens),
+    ( if
+        FromMatch = ok(_),
+        IdentResult = ok(Name)
+    then
+        Result = ok(Name)
+    else
+        Result = combine_errors_2(FromMatch, IdentResult)
     ).
 
     % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
@@ -1679,7 +1718,7 @@ parse_plasma_interface(ParseEntry, !.Tokens, Result) :-
 
 parse_interface_entry(Result, !Tokens) :-
     or([parse_map(func({N, T}) = asti_resource(N, T),
-            parse_resource(parse_q_name)),
+            parse_resource_interface),
         parse_map(func({N, T}) = asti_type(N, T),
             parse_type(parse_q_name)),
         parse_map(func({N, D}) = asti_function(N, D),
