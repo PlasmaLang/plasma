@@ -1600,7 +1600,7 @@ parse_var_pattern(Result, !Tokens) :-
 maybe_parse_func_export(Sharing, IsEntrypoint, !Tokens) :-
     optional(match_token(entrypoint), ok(MaybeEntrypoint), !Tokens),
     ( MaybeEntrypoint = yes(_),
-        Sharing = s_public,
+        Sharing = s_private,
         IsEntrypoint = is_entrypoint
     ; MaybeEntrypoint = no,
         parse_export(Sharing, !Tokens),

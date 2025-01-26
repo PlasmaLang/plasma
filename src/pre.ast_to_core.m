@@ -356,8 +356,6 @@ gather_funcs(nq_named(Name, Func), !Core, !Env, !Errors) :-
 
             core_set_function(FuncId, Function, !Core),
             ( IsEntrypoint = is_entrypoint,
-                expect(unify(Sharing, s_public), $file, $pred,
-                    "entrypoints are always public"),
                 func_get_type_signature(Function, Params, Returns, _),
                 ListTypeId = env_operators(!.Env) ^ o_list_type,
                 ( if
