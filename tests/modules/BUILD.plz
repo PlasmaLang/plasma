@@ -1,0 +1,11 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+[entrypoint_2]
+type = program
+modules = [Entrypoint2a, Entrypoint2b]
+
+[entrypoint_3]
+type = program
+modules = [Entrypoint3a, Entrypoint3b]
+
