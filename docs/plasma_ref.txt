@@ -662,8 +662,12 @@ resource and is already defined, along with it's child resource such as
 === Functions
 
 ----
-FuncDefinition := 'export'? 'func' ident '(' ( Param ( ',' Param )* )? ')'
+FuncDefinition := FuncExport 'func' ident '(' ( Param ( ',' Param )* )? ')'
                       Uses* RetTypes? Block
+
+FuncExport := 'export' 'entrypoint'?
+            | 'entrypoint' 'export'?
+            |
 
 Param := ident ':' TypeExpr
        | '_' : TypeExpr

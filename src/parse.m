@@ -1598,13 +1598,20 @@ parse_var_pattern(Result, !Tokens) :-
     tokens::in, tokens::out) is det.
 
 maybe_parse_func_export(Sharing, IsEntrypoint, !Tokens) :-
+    parse_export(Sharing0, !Tokens),
     optional(match_token(entrypoint), ok(MaybeEntrypoint), !Tokens),
     ( MaybeEntrypoint = yes(_),
-        Sharing = s_public,
+        ( Sharing0 = s_private,
+            % the export keyword might have come after entrypoint, so check
+            % again.
+            parse_export(Sharing, !Tokens)
+        ; Sharing0 = s_public,
+            Sharing = s_public
+        ),
         IsEntrypoint = is_entrypoint
     ; MaybeEntrypoint = no,
-        parse_export(Sharing, !Tokens),
-        IsEntrypoint = not_entrypoint
+        IsEntrypoint = not_entrypoint,
+        Sharing = Sharing0
     ).
 
 :- pred parse_export_opaque(sharing_opaque::out,
