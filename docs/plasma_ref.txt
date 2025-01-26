@@ -2,7 +2,7 @@ Plasma Language Reference
 =========================
 :Author: Paul Bone
 :Email: paul@plasmalang.org
-:Date: April 2023
+:Date: January 2025
 :Copyright: Copyright (C) Plasma Team
 :License: CC BY-SA 4.0
 :toc:
