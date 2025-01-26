@@ -1,0 +1,9 @@
+# This is free and unencumbered software released into the public domain.
+# See ../LICENSE.unlicense
+
+# PLZTEST type compile_failure 
+
+[opaque_resource_2]
+type = program
+modules = [OpaqueResource2, OpaqueResource]
+

@@ -44,7 +44,12 @@
     ;       ast_pragma(ast_pragma).
 
 :- type ast_interface_entry
-    --->    asti_resource(q_name, ast_resource)
+    --->    asti_resource(
+                q_name,
+
+                % Opaque resources won't have a definition.
+                maybe(ast_resource)
+            )
     ;       asti_type(q_name, ast_type(q_name))
     ;       asti_function(q_name, ast_function_decl).
 
@@ -63,7 +68,7 @@
     --->    ast_type(
                 at_params           :: list(string),
                 at_costructors      :: list(at_constructor(Name)),
-                at_export           :: sharing_type,
+                at_export           :: sharing_opaque,
                 at_context          :: context
             )
             % An abstractly-imported type.
@@ -77,7 +82,7 @@
 :- type ast_resource
     --->    ast_resource(
                 ar_from             :: q_name,
-                ar_sharing          :: sharing,
+                ar_sharing          :: sharing_opaque,
                 ar_context          :: context
             ).
 

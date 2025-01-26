@@ -372,7 +372,7 @@ parse_import(Result, !Tokens) :-
 :- mode parse_type(in(parsing.parser), out, in, out) is det.
 
 parse_type(ParseName, Result, !Tokens) :-
-    optional(parse_export_type, ok(MaybeSharing), !Tokens),
+    parse_export_opaque(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(type_, MatchType, !Tokens),
     ParseName(NameResult, !Tokens),
@@ -380,11 +380,6 @@ parse_type(ParseName, Result, !Tokens) :-
         MatchType = ok(_),
         NameResult = ok(Name)
     then
-        ( MaybeSharing = no,
-            Sharing = st_private
-        ; MaybeSharing = yes(Sharing)
-        ),
-
         match_token(slash, MatchSlash, !Tokens),
         ( MatchSlash = ok(_),
             % Abstract type
@@ -419,22 +414,6 @@ parse_type(ParseName, Result, !Tokens) :-
         )
     else
         Result = combine_errors_2(MatchType, NameResult)
-    ).
-
-:- pred parse_export_type(parse_res(sharing_type)::out,
-    tokens::in, tokens::out) is det.
-
-parse_export_type(Result, !Tokens) :-
-    match_token(export, ExportResult, !Tokens),
-    ( ExportResult = ok(_),
-        optional(match_token(opaque), ok(Abstract), !Tokens),
-        ( Abstract = yes(_),
-            Result = ok(st_public_opaque)
-        ; Abstract = no,
-            Result = ok(st_public)
-        )
-    ; ExportResult = error(C, G, E),
-        Result = error(C, G, E)
     ).
 
 :- pred parse_type_constructor(parsing.parser(N, token_type),
@@ -559,32 +538,71 @@ parse_func_type(Result, !Tokens) :-
         Result = error(C, G, E)
     ).
 
-    % ResourceDefinition := 'resource' UpperIdent 'from' QualifiedIdent
+    % ResourceDefinition := 'resource' QualifiedIdent 'from' QualifiedIdent
     %
 :- pred parse_resource(parsing.parser(N, token_type),
     parse_res({N, ast_resource}), tokens, tokens).
 :- mode parse_resource(in(parsing.parser), out, in, out) is det.
 
 parse_resource(ParseName, Result, !Tokens) :-
-    maybe_parse_export(Sharing, !Tokens),
+    parse_export_opaque(Sharing, !Tokens),
     get_context(!.Tokens, Context),
     match_token(resource, ResourceMatch, !Tokens),
     % Not really an any ident, but this should make errors easier to
     % understand.  A user will get a "resource uknown" if they use the wrong
     % case rather than a syntax error.
     ParseName(NameResult, !Tokens),
-    match_token(from, FromMatch, !Tokens),
-    parse_q_name(FromIdentResult, !Tokens),
+    parse_resource_from(FromResult, !Tokens),
     ( if
         ResourceMatch = ok(_),
         NameResult = ok(Name),
-        FromMatch = ok(_),
-        FromIdentResult = ok(FromIdent)
+        FromResult = ok(FromIdent)
     then
         Result = ok({Name, ast_resource(FromIdent, Sharing, Context)})
     else
-        Result = combine_errors_4(ResourceMatch, NameResult, FromMatch,
-            FromIdentResult)
+        Result = combine_errors_3(ResourceMatch, NameResult, FromResult)
+    ).
+
+    % Parse a resource from an interface file.
+    %
+    % ResourceInterface := 'resource' QualifiedIdent ('from' QualifiedIdent)?
+    %
+:- pred parse_resource_interface(parse_res({q_name, maybe(ast_resource)})::out,
+    tokens::in, tokens::out) is det.
+
+parse_resource_interface(Result, !Tokens) :-
+    get_context(!.Tokens, Context),
+    match_token(resource, ResourceMatch, !Tokens),
+    parse_q_name(NameResult, !Tokens),
+    ( if
+        ResourceMatch = ok(_),
+        NameResult = ok(Name)
+    then
+        optional(parse_resource_from, ok(FromResult), !Tokens),
+        ( FromResult = yes(FromName),
+            Result = ok({Name, yes(ast_resource(FromName, so_private, Context))})
+        ; FromResult = no,
+            Result = ok({Name, no})
+        )
+    else
+        Result = combine_errors_2(ResourceMatch, NameResult)
+    ).
+
+    % Parse the body of a resource definition.
+    %
+:- pred parse_resource_from(parse_res(q_name)::out, tokens::in, tokens::out)
+    is det.
+
+parse_resource_from(Result, !Tokens) :-
+    match_token(from, FromMatch, !Tokens),
+    parse_q_name(IdentResult, !Tokens),
+    ( if
+        FromMatch = ok(_),
+        IdentResult = ok(Name)
+    then
+        Result = ok(Name)
+    else
+        Result = combine_errors_2(FromMatch, IdentResult)
     ).
 
     % FuncDefinition := 'func' Name '(' ( Param ( ',' Param )* )? ')'
@@ -1585,13 +1603,29 @@ maybe_parse_func_export(Sharing, IsEntrypoint, !Tokens) :-
         Sharing = s_public,
         IsEntrypoint = is_entrypoint
     ; MaybeEntrypoint = no,
-        maybe_parse_export(Sharing, !Tokens),
+        parse_export(Sharing, !Tokens),
         IsEntrypoint = not_entrypoint
     ).
 
-:- pred maybe_parse_export(sharing::out, tokens::in, tokens::out) is det.
+:- pred parse_export_opaque(sharing_opaque::out,
+    tokens::in, tokens::out) is det.
 
-maybe_parse_export(Sharing, !Tokens) :-
+parse_export_opaque(Result, !Tokens) :-
+    optional(match_token(export), ok(Export), !Tokens),
+    ( Export = yes(_),
+        optional(match_token(opaque), ok(Opaque), !Tokens),
+        ( Opaque = yes(_),
+            Result = so_public_opaque
+        ; Opaque = no,
+            Result = so_public
+        )
+    ; Export = no,
+        Result = so_private
+    ).
+
+:- pred parse_export(sharing::out, tokens::in, tokens::out) is det.
+
+parse_export(Sharing, !Tokens) :-
     optional(match_token(export), ok(MaybeExport), !Tokens),
     ( MaybeExport = yes(_),
         Sharing = s_public
@@ -1684,7 +1718,7 @@ parse_plasma_interface(ParseEntry, !.Tokens, Result) :-
 
 parse_interface_entry(Result, !Tokens) :-
     or([parse_map(func({N, T}) = asti_resource(N, T),
-            parse_resource(parse_q_name)),
+            parse_resource_interface),
         parse_map(func({N, T}) = asti_type(N, T),
             parse_type(parse_q_name)),
         parse_map(func({N, D}) = asti_function(N, D),

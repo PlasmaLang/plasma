@@ -37,7 +37,7 @@
     % we probably should parameterise it and other pretty-printer functions
     % here.
     %
-:- func type_decl_pretty(core, user_type) = pretty.
+:- func type_interface_pretty(core, user_type) = pretty.
 
     % Print the argument parts of a function type.  You can either put
     % "func" in front of this or the name of the variable at a call site.
@@ -61,7 +61,7 @@
 
     % Pretty print a resource definition.
     %
-:- func resource_decl_pretty(core, resource) = pretty.
+:- func resource_interface_pretty(core, resource) = pretty.
 
 :- func constructor_name_pretty(core, set(ctor_id)) = pretty.
 
@@ -88,11 +88,11 @@ core_pretty(Core) = pretty(default_options, 0, Pretty) :-
 
 %-----------------------------------------------------------------------%
 
-type_decl_pretty(Core, Type) = p_expr(Pretty) :-
+type_interface_pretty(Core, Type) = p_expr(Pretty) :-
     Sharing = utype_get_sharing(Type),
-    ( Sharing = st_private,
+    ( Sharing = so_private,
         unexpected($file, $pred, "st_private")
-    ; Sharing = st_public,
+    ; Sharing = so_public,
         MaybeParams = utype_get_params(Type),
         ( MaybeParams = yes(Params)
         ; MaybeParams = no,
@@ -112,7 +112,7 @@ type_decl_pretty(Core, Type) = p_expr(Pretty) :-
             unexpected($file, $pred, "Public type without constructors")
         ),
         Pretty = PrettyHead ++ PrettyBody
-    ; Sharing = st_public_opaque,
+    ; Sharing = so_public_opaque,
         Pretty = [p_str("type "),
             q_name_pretty(utype_get_name(Type)),
             p_str("/"),
@@ -405,11 +405,18 @@ func_pretty_template(Name, Args, Returns, Uses, Observes) = Pretty :-
 resource_pretty(Core, ResId) =
     p_str(resource_to_string(core_get_resource(Core, ResId))).
 
-resource_decl_pretty(_, r_io) = unexpected($file, $pred, "IO").
-resource_decl_pretty(Core, r_other(Name, From, _, _, _)) =
-    p_expr([p_str("resource"), p_spc, q_name_pretty(Name),
-        p_spc, p_str("from"), p_spc, resource_pretty(Core, From)]).
-resource_decl_pretty(_, r_abstract(Name)) =
+resource_interface_pretty(_, r_io) = unexpected($file, $pred, "IO").
+resource_interface_pretty(Core, r_other(Name, From, Sharing, _, _)) = Pretty :-
+    ( Sharing = so_public,
+        Pretty = p_expr([p_str("resource"), p_spc, q_name_pretty(Name),
+            p_spc, p_str("from"), p_spc, resource_pretty(Core, From)])
+    ; Sharing = so_public_opaque,
+        Pretty = p_expr([p_str("resource"), p_spc, q_name_pretty(Name)])
+    ; Sharing = so_private,
+        Pretty = p_empty
+    ).
+
+resource_interface_pretty(_, r_abstract(Name)) =
     p_expr([p_str("resource"), p_spc, q_name_pretty(Name)]).
 
 %-----------------------------------------------------------------------%

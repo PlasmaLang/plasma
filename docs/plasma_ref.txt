@@ -649,7 +649,7 @@ a time.
 == Resources
 
 ----
-ResourceDefinition := 'export'? 'resource' Ident 'from' QualifiedIdent
+ResourceDefinition := ('export' 'opaque'?)? 'resource' Ident 'from' QualifiedIdent
 ----
 
 This defines a new resource.  The resource has the given name and is a

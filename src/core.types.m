@@ -61,7 +61,7 @@
 
 :- type user_type.
 
-:- func type_init(q_name, list(string), list(ctor_id), sharing_type,
+:- func type_init(q_name, list(string), list(ctor_id), sharing_opaque,
     imported, context) = user_type.
 
 :- func type_init_abstract(q_name, arity, context) = user_type.
@@ -72,7 +72,7 @@
 
 :- func utype_get_ctors(user_type) = maybe(list(ctor_id)).
 
-:- func utype_get_sharing(user_type) = sharing_type.
+:- func utype_get_sharing(user_type) = sharing_opaque.
 
 :- func utype_get_imported(user_type) = imported.
 
@@ -162,7 +162,7 @@ type_get_resources(type_ref(_, Args)) = set.union_list(
                 t_symbol        :: q_name,
                 t_params        :: list(string),
                 t_ctors         :: list(ctor_id),
-                t_sharing       :: sharing_type,
+                t_sharing       :: sharing_opaque,
                 t_imported      :: imported,
                 t_context       :: context
             )
@@ -191,7 +191,7 @@ utype_get_ctors(Type) =
     ).
 
 utype_get_sharing(user_type(_, _, _, Sharing, _, _)) = Sharing.
-utype_get_sharing(abstract_type(_, _, _)) = st_private.
+utype_get_sharing(abstract_type(_, _, _)) = so_private.
 
 utype_get_imported(user_type(_, _, _, _, Imported, _)) = Imported.
 utype_get_imported(abstract_type(_, _, _)) = i_imported.

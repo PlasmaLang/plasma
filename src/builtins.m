@@ -212,7 +212,7 @@ setup_core_types(MaybeType, !Map, !Core) :-
     MaybeName = nq_name_det("Maybe"),
     core_set_type(MaybeType,
         type_init(q_name_append(builtin_module_name, MaybeName),
-            [MaybeParamName], [NoneId, SomeId], st_private, i_imported,
+            [MaybeParamName], [NoneId, SomeId], so_private, i_imported,
             builtin_context),
         !Core),
     root_name(MaybeName, bi_type(MaybeType, arity(1)), !Map).
@@ -291,7 +291,7 @@ setup_bool_builtins(BoolId, TrueId, FalseId, AndId, OrId, NotId, !Map, !Core) :-
     BoolName = nq_name_det("Bool"),
     core_set_type(BoolId,
         type_init(q_name_append(builtin_module_name, BoolName), [],
-            [FalseId, TrueId], st_private, i_imported, builtin_context),
+            [FalseId, TrueId], so_private, i_imported, builtin_context),
         !Core),
     root_name(BoolName, bi_type(BoolId, arity(0)), !Map),
 
@@ -472,7 +472,7 @@ setup_list_builtins(ListId, NilId, ConsId, !Map, !Core) :-
 
     core_set_type(ListId,
         type_init(q_name_append_str(builtin_module_name, "List"), [T],
-            [NilId, ConsId], st_private, i_imported, builtin_context),
+            [NilId, ConsId], so_private, i_imported, builtin_context),
         !Core),
 
     root_name(nq_name_det("List"), bi_type(ListId, arity(1)), !Map).
@@ -515,7 +515,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     IOResultName = nq_name_det("IOResult"),
     core_set_type(IOResultType,
         type_init(q_name_append(builtin_module_name, IOResultName),
-            [OkParamName], [OkId, EOFId], st_private, i_imported, builtin_context),
+            [OkParamName], [OkId, EOFId], so_private, i_imported, builtin_context),
         !Core),
     root_name(IOResultName, bi_type(IOResultType, arity(1)), !Map),
 
@@ -558,7 +558,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     EnvironmentName = nq_name_det("Environment"),
     EnvironmentQName = q_name_append(builtin_module_name, EnvironmentName),
     register_builtin_resource(EnvironmentName,
-        r_other(EnvironmentQName, RIO, s_private, i_imported, builtin_context),
+        r_other(EnvironmentQName, RIO, so_private, i_imported, builtin_context),
         REnv, !Map, !Core),
     SetenvName = q_name_append_str(builtin_module_name, "setenv"),
     register_builtin_func_root(nq_name_det("setenv"),
@@ -571,7 +571,7 @@ setup_misc_builtins(BoolType, BoolTrue, BoolFalse, !Map, !Core) :-
     TimeName = nq_name_det("Time"),
     TimeQName = q_name_append(builtin_module_name, TimeName),
     register_builtin_resource(TimeName,
-        r_other(TimeQName, RIO, s_private, i_imported, builtin_context),
+        r_other(TimeQName, RIO, so_private, i_imported, builtin_context),
         RTime, !Map, !Core),
     GettimeofdayName = q_name_append_str(builtin_module_name, "gettimeofday"),
     register_builtin_func_builtin(nq_name_det("gettimeofday"),
@@ -615,7 +615,7 @@ setup_string_builtins(BoolType, MaybeType, StringConcat, !Map, !Core) :-
     core_set_type(CodepointCategoryId,
         type_init(q_name_append(builtin_module_name,
                 CodepointCategoryTypeName), [],
-            [WhitespaceId, OtherId], st_private, i_imported, builtin_context),
+            [WhitespaceId, OtherId], so_private, i_imported, builtin_context),
         !Core),
     root_name(CodepointCategoryTypeName,
         bi_type(CodepointCategoryId, arity(0)), !Map),
