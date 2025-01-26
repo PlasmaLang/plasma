@@ -87,7 +87,7 @@ import_whitelist_file_no_directroy = "include_whitelist.txt".
 version(Name, !IO) :-
     io.format("%s, %s\n", [s(Name), s(version_string)], !IO),
     io.write_string("https://plasmalang.org\n", !IO),
-    io.write_string("Copyright (C) 2015-2023 The Plasma Team\n", !IO),
+    io.write_string("Copyright (C) 2015-2025 The Plasma Team\n", !IO),
     io.write_string("Distributed under the MIT License\n", !IO).
 
 %-----------------------------------------------------------------------%

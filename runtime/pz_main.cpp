@@ -160,6 +160,6 @@ static void version(void)
 {
     printf("Plasma Runtime, " PLASMA_VERSION_STRING "\n");
     printf("https://plasmalang.org\n");
-    printf("Copyright (C) 2015-2023 The Plasma Team\n");
+    printf("Copyright (C) 2015-2025 The Plasma Team\n");
     printf("Distributed under the MIT License\n");
 }
