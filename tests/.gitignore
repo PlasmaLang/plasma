@@ -1,5 +1,7 @@
 _build
 *.out
 *.outs
+*.pi
 *.pz
+*.pzo
 *.dir

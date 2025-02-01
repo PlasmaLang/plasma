@@ -4,15 +4,10 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_09a
+module DynLink02B 
 
 export
 func getMessage() -> String {
     return "universe!"
-}
-
-export
-func printMessage(message : String) uses IO {
-    print!(message ++ "\n")
 }
 

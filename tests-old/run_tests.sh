@@ -47,8 +47,7 @@ if [ -n "$STALE_BUILD_DIRS" ]; then
     rm -r $STALE_BUILD_DIRS
 fi
 
-DIRS="modules
-      modules-invalid"
+DIRS="modules-invalid"
 
 for DIR in $DIRS; do
     for EXPFILE in $DIR/*.exp; do

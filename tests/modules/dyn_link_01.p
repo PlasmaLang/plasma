@@ -4,15 +4,15 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_09
+module DynLink01 
 
 // The import declaration works, it causes the interface file to be read.
-import Module_09a
+import DynLink01A as A 
 
 entrypoint
 func main() uses IO -> Int {
     // The calls to the imported functions work.
-    Module_09a.printMessage!("Hello " ++ Module_09a.getMessage())
+    A.printMessage!("Hello " ++ A.getMessage())
 
     return 0
 }

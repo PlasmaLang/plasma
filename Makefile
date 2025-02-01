@@ -244,8 +244,11 @@ clean : localclean
 	$(MAKE) -C tests-old/modules clean
 	$(MAKE) -C tests-old/modules-invalid clean
 	find tests -name *.pz -o \
+			   -name *.pzo -o \
+			   -name *.pi -o \
 			   -name *.out -o \
-			   -name *.outs \
+			   -name *.outs -o \
+			   -name *.so \
 		| xargs -r rm
 	find tests -name _build -o \
 			   -name \*.dir \
@@ -260,8 +263,6 @@ realclean : localclean
 	$(MAKE) -C tests-old/pzt realclean
 	$(MAKE) -C tests-old/modules realclean
 	$(MAKE) -C tests-old/modules-invalid realclean
-	find tests -name *.so \
-		| xargs -r rm
 	rm -f src/tags 
 	rm -f src/plzasm src/plzbuild src/plzc src/plzdisasm src/plzgeninit \
 		src/plzlnk

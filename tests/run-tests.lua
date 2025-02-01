@@ -55,6 +55,15 @@ function list_append(l1, l2)
   return l
 end
 
+function all(t, f)
+  for _, v in ipairs(t) do
+    if not f(v) then
+      return false
+    end
+  end
+  return true
+end
+
 function string_split(str)
   local l = {}
   for token in str:gmatch("%S+") do
@@ -324,7 +333,7 @@ end
 --  type:    either "plzbuild" or "run"
 --  dir:     String, the working directory for the test
 --  output:  String, the file name to write the test output to.
---  depends: nil, anther test that this test needs before it can run.
+--  depends: List of tests that this test needs before it can run.
 --
 -- plzbuild tests:
 --  These tests will run "plzbuild" in a directory, they check that is
@@ -347,9 +356,25 @@ gen_all_tests =
     local dirs = {}
     function maybe_add_build_dir(dir)
       if (not dirs[dir]) then
+        dirs[dir] = {}
+       
+        local make_file = string.format("%s/Makefile", dir)
+        if (lfs.attributes(make_file)) then
+          local test = {
+            name = "make",
+            type = "make",
+            dir = dir,
+            desc = string.format("%s/Makefile", dir),
+            output = "make.out",
+            config = {},
+          }
+          table.insert(dirs[dir], test)
+          coroutine.yield(test)
+        end
+
         local build_file = string.format("%s/BUILD.plz", dir)
         if (lfs.attributes(build_file)) then
-          test = {
+          local test = {
             name = "BUILD.plz",
             type = "plzbuild",
             dir = dir,
@@ -357,11 +382,8 @@ gen_all_tests =
             output = "plzbuild.out",
             config = {},
           }
-          dirs[dir] = test
+          table.insert(dirs[dir], test)
           coroutine.yield(test)
-        else
-          -- We test for this below and need it to be distinct from nil.
-          dirs[dir] = "none"
         end
       end
     end
@@ -382,6 +404,7 @@ gen_all_tests =
 
       local build_file = name_if_exists(dir, file, ".build")
       local source_file = name_if_exists(dir, file, ".p")
+      local shell_file = name_if_exists(dir, file, ".sh")
       local test_file = name_if_exists(dir, file, ".test")
       local foreign_file = name_if_exists(dir, file, ".cpp")
 
@@ -398,6 +421,8 @@ gen_all_tests =
         config = test_configuration(build_file)
       elseif source_file then
         config = test_configuration(source_file)
+      elseif shell_file then
+        config = test_configuration(shell_file)
       elseif test_file then
         config = test_configuration(test_file)
       else
@@ -412,6 +437,7 @@ gen_all_tests =
         desc = desc,
         depends = dir_build,
         build_file = build_file and file:gsub(".exp", ".build"),
+        shell_file = shell_file and file:gsub(".exp", ".sh"),
         output = file:gsub(".exp", ".out"),
         expect = file,
         input = maybe_input,
@@ -533,7 +559,7 @@ end
 function test_step(test, stage, prev_result, func)
   local depends_result = true
   if test.depends then
-    depends_result = test.depends.result
+    depends_result = all(test.depends, function(x) return x.result end)
   end
   local result
   if test.config.build_type ~= nil and test.config.build_type ~= build_type then
@@ -637,6 +663,11 @@ function run_test(test)
         return execute_test_command(test, "build", plzbuild_bin,
           list_append(extra_args, build_args), nil, nil, nil, 0)
       end)
+  elseif test.type == "make" then
+    result = test_step(test, "build", result,
+      function()
+        return execute_test_command(test, "make", "make", {}, nil, nil, nil, 0)
+      end)
   elseif test.type == "run" then
     if (test.build_file) then
       result = test_step(test, "build", result,
@@ -658,13 +689,19 @@ function run_test(test)
         else
           exp_stdout = test.output
         end
-        local program_str = test.program
-        if (test.foreign_module) then
-          program_str = program_str .. ":" .. test.foreign_module
+        if test.shell_file then
+          return execute_test_command(test, "run", "./"..test.shell_file,
+            {}, test.input, exp_stdout, exp_stderr,
+            test.config.expect_return, test.config.is_todo)
+        else
+          local program_str = test.program
+          if (test.foreign_module) then
+            program_str = program_str .. ":" .. test.foreign_module
+          end
+          return execute_test_command(test, "run", plzrun_bin, {program_str},
+            test.input, exp_stdout, exp_stderr, test.config.expect_return,
+            test.config.is_todo)
         end
-        return execute_test_command(test, "run", plzrun_bin, {program_str},
-          test.input, exp_stdout, exp_stderr, test.config.expect_return,
-          test.config.is_todo)
       end)
     result = test_step(test, "diff", result,
       function()

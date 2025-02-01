@@ -4,7 +4,12 @@
  * See ../LICENSE.unlicense
  */
 
-module Module_10a
+module DynLink01A
+
+export
+func getMessage() -> String {
+    return "universe!"
+}
 
 export
 func printMessage(message : String) uses IO {
