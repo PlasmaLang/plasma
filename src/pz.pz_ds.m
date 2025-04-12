@@ -60,6 +60,10 @@
 
 :- pred pzc_id_from_num(pz::in, uint32::in, pzc_id::out) is semidet.
 
+    % String ID
+    %
+:- type pz_string_id.
+
 %-----------------------------------------------------------------------%
 
 :- type pz.
@@ -67,12 +71,12 @@
 %-----------------------------------------------------------------------%
 
     % init_pz(ModuleNames, FileType)
-    % init_pz(ModuleNames, FileType, NumImports, NumStructs, NumProcs, NumDatas,
-    %   NumClosures).
+    % init_pz(ModuleNames, FileType, NumStrings, NumImports, NumStructs,
+    %   NumProcs, NumDatas, NumClosures).
     %
 :- func init_pz(list(q_name), pz_file_type) = pz.
 :- func init_pz(list(q_name), pz_file_type, uint32, uint32, uint32, uint32,
-    uint32) = pz.
+    uint32, uint32) = pz.
 
 %-----------------------------------------------------------------------%
 
@@ -229,10 +233,18 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 
 %-----------------------------------------------------------------------%
 
+:- type pz_string_id
+    ---> pz_string_id(uint32).
+
+%-----------------------------------------------------------------------%
+
 :- type pz
     ---> pz(
         pz_module_names             :: list(q_name),
         pz_file_type                :: pz_file_type,
+
+        pz_strings_debug            :: map(pz_string_id, string),
+        pz_next_string_id           :: pz_string_id,
 
         pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
         pz_next_struct_id           :: pzs_id,
@@ -265,6 +277,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 %-----------------------------------------------------------------------%
 
 init_pz(ModuleNames, FileType) = pz(ModuleNames, FileType,
+    init, pz_string_id(0u32),
     init, pzs_id(0u32),
     init, pzi_id(0u32),
     init, pzp_id(0u32),
@@ -272,9 +285,10 @@ init_pz(ModuleNames, FileType) = pz(ModuleNames, FileType,
     init, pzc_id(0u32),
     no, init).
 
-init_pz(ModuleNames, FileType, NumImports, NumStructs, NumDatas, NumProcs,
-        NumClosures) =
+init_pz(ModuleNames, FileType, NumStrings, NumImports, NumStructs, NumDatas,
+        NumProcs, NumClosures) =
     pz( ModuleNames, FileType,
+        init, pz_string_id(NumStrings),
         init, pzs_id(NumStructs),
         init, pzi_id(NumImports),
         init, pzp_id(NumProcs),

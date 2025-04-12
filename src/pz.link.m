@@ -72,7 +72,7 @@ do_link(LinkKind, Inputs, Result) :-
         build_input_maps(Inputs, IdMap, ModNameMap, NumStructs, NumDatas,
             NumProcs, NumClosures),
 
-        !:PZ = init_pz(map(q_name, Names), FileType, 0u32, NumStructs,
+        !:PZ = init_pz(map(q_name, Names), FileType, 0u32, 0u32, NumStructs,
             NumDatas, NumProcs, NumClosures),
 
         % Build a map of exports. This will be used to determine what can be

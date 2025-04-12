@@ -249,7 +249,7 @@ read_pz_3(Input, FileType, Result, !IO) :-
         (
             MaybeNums = ok({ModuleNames, NumImports, NumStructs, NumDatas,
                 NumProcs, NumClosures, NumExports}),
-            PZ = init_pz(ModuleNames, FileType, NumImports, NumStructs,
+            PZ = init_pz(ModuleNames, FileType, 0u32, NumImports, NumStructs,
                 NumDatas, NumProcs, NumClosures),
             read_pz_sections([read_imports(Input, NumImports),
                               read_structs(Input, NumStructs),
