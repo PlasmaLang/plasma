@@ -39,7 +39,10 @@
 % TODO: Re-arrange data and value types to better match the on-disk format.
 
 :- type pz_struct
-    --->    pz_struct(list(pz_width)).
+    --->    pz_struct(
+                pzs_name        :: string,
+                pzs_fields      :: list(pz_width)
+            ).
 
     % A data type.
     %
@@ -100,14 +103,6 @@
     ;       pzv_data(pzd_id)
     ;       pzv_import(pzi_id)
     ;       pzv_closure(pzc_id).
-
-%-----------------------------------------------------------------------%
-
-:- type pz_named_struct
-    --->    pz_named_struct(
-                pzs_name        :: string,
-                pzs_struct      :: pz_struct
-            ).
 
 %-----------------------------------------------------------------------%
 

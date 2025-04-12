@@ -57,7 +57,7 @@ closure_add_field(DataValue, field_num(FieldNum), !CB) :-
 closure_finalize_data(CB, DataId, !PZ) :-
     Values = reverse(CB ^ cb_rev_values),
     Types = duplicate(length(Values), pzw_ptr),
-    pz_add_struct(CB ^ cb_struct, pz_struct(Types), !PZ),
+    pz_add_struct(CB ^ cb_struct, pz_struct(CB ^ cb_struct_name, Types), !PZ),
     pz_new_data_id(DataId, !PZ),
     pz_add_data(DataId, pz_data(type_struct(CB ^ cb_struct), Values), !PZ).
 

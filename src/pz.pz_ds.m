@@ -101,7 +101,7 @@
 
 %-----------------------------------------------------------------------%
 
-:- func pz_get_structs(pz) = assoc_list(pzs_id, pz_named_struct).
+:- func pz_get_structs(pz) = assoc_list(pzs_id, pz_struct).
 
 :- func pz_get_num_structs(pz) = uint32.
 
@@ -114,6 +114,8 @@
 :- pred pz_add_struct(pzs_id::in, pz_struct::in, pz::in, pz::out) is det.
 :- pred pz_add_struct(pzs_id::in, string::in, pz_struct::in, pz::in, pz::out)
     is det.
+
+:- pred pz_new_struct(pzs_id::out, pz_struct::in, pz::in, pz::out) is det.
 
 %-----------------------------------------------------------------------%
 
@@ -328,7 +330,7 @@ entry_is_exported(PZ, Entry) :-
 %-----------------------------------------------------------------------%
 
 pz_get_structs(PZ) = Structs :-
-    filter_map(pred((K - {N, yes(S)})::in, (K - pz_named_struct(N, S))::out)
+    filter_map(pred((K - {_N, yes(S)})::in, (K - S)::out)
             is semidet,
         to_assoc_list(PZ ^ pz_structs), Structs).
 
@@ -362,6 +364,12 @@ pz_add_struct(StructId, Name, Struct, !PZ) :-
     Structs0 = !.PZ ^ pz_structs,
     map.set(StructId, {Name, yes(Struct)}, Structs0, Structs),
     !PZ ^ pz_structs := Structs.
+
+pz_new_struct(StructId, Struct, !PZ) :-
+    StructId = !.PZ ^ pz_next_struct_id,
+    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1u32),
+    !PZ ^ pz_structs := det_insert(!.PZ ^ pz_structs, StructId,
+        {Struct ^ pzs_name, yes(Struct)}).
 
 %-----------------------------------------------------------------------%
 

@@ -190,10 +190,10 @@ make_proc_and_struct_ids(FuncId - Function, !LocnMap, !BuildModClosure, !PZ) :-
     Captured = func_get_captured_vars_types(Function),
     ( Captured = []
     ; Captured = [_ | _],
-        pz_new_struct_id(EnvStructId, "Closure of " ++ Name, !PZ),
-        vls_set_closure(FuncId, EnvStructId, !LocnMap),
-        EnvStruct = pz_struct([pzw_ptr | map(type_to_pz_width, Captured)]),
-        pz_add_struct(EnvStructId, EnvStruct, !PZ)
+        EnvStruct = pz_struct("Closure of " ++ Name,
+            [pzw_ptr | map(type_to_pz_width, Captured)]),
+        pz_new_struct(EnvStructId, EnvStruct, !PZ),
+        vls_set_closure(FuncId, EnvStructId, !LocnMap)
     ).
 
 :- type generate

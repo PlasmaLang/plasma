@@ -164,8 +164,7 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         )
     ; Type = asm_struct(Fields),
         ( if q_name_parts(QName, no, Name) then
-            pz_new_struct_id(SID, nq_name_to_string(Name), !PZ),
-            pz_add_struct(SID, pz_struct(Fields), !PZ),
+            pz_new_struct(SID, pz_struct(nq_name_to_string(Name), Fields), !PZ),
             ( if insert(nq_name_to_string(Name), SID, !StructMap) then
                 true
             else
@@ -212,7 +211,7 @@ build_items(SymbolMap, StructMap, CtxtStrData, asm_item(Name, Context, Type),
             DID = item_expect_data($file, $pred, ID),
             DType = build_data_type(StructMap, ASMDType, ASMValues),
             ( DType = type_struct(PZSId),
-                pz_lookup_struct(!.PZ, PZSId) = pz_struct(Widths),
+                Widths = pz_lookup_struct(!.PZ, PZSId) ^ pzs_fields,
                 ( if length(Widths) = length(ASMValues) `with_type` int then
                     true
                 else

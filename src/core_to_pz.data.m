@@ -257,6 +257,7 @@ maybe_gen_struct(Core, CtorId, TagInfo, !PZ) :-
     Fields = Ctor ^ c_fields,
     NumFields = length(Fields),
     ( if NumFields > 0 then
+        StructName = q_name_to_string(Ctor ^ c_name),
         (
             ( TagInfo = ti_constant(_, _)
             ; TagInfo = ti_constant_notag(_)
@@ -270,8 +271,8 @@ maybe_gen_struct(Core, CtorId, TagInfo, !PZ) :-
             )
         ),
         duplicate(NumFields + STagFields, pzw_ptr, StructFields),
-        Struct = pz_struct(StructFields),
-        pz_add_struct(StructId, Struct, !PZ)
+        pz_add_struct(StructId, pz_struct(StructName, StructFields),
+            !PZ)
     else
         true
     ).

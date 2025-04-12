@@ -361,7 +361,7 @@ read_struct(Input, _, Result, !IO) :-
         NumFields = det_uint32_to_int(NumFields0),
         read_n(read_width(Input), NumFields, MaybeWidths, !IO),
         ( MaybeWidths = ok(Widths),
-            Result = ok(pz_struct(Widths))
+            Result = ok(pz_struct("No name", Widths))
         ; MaybeWidths = error(Error),
             Result = error(Error)
         )
@@ -405,7 +405,7 @@ read_data(Input, PZ, Result, !IO) :-
                 ValuesResult = error(Error0)
             )
         ; Type = type_struct(StructId),
-            pz_struct(Widths) = pz_lookup_struct(PZ, StructId),
+            Widths = pz_lookup_struct(PZ, StructId) ^ pzs_fields,
             read_map(read_data_enc_value(PZ, Input), Widths, ValuesResult, !IO)
         ),
         ( ValuesResult = ok(Values),

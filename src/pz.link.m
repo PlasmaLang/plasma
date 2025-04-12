@@ -223,12 +223,12 @@ link_structs(IdMap, Input, InputNum, InputNum+1, !PZ) :-
     Structs = pz_get_structs(Input),
     foldl(link_structs_2(IdMap, InputNum), Structs, !PZ).
 
-:- pred link_structs_2(id_map::in, int::in, pair(pzs_id, pz_named_struct)::in,
+:- pred link_structs_2(id_map::in, int::in, pair(pzs_id, pz_struct)::in,
     pz::in, pz::out) is det.
 
-link_structs_2(IdMap, InputNum, SId0 - pz_named_struct(Name, Struct), !PZ) :-
+link_structs_2(IdMap, InputNum, SId0 - Struct, !PZ) :-
     SId = transform_struct_id(!.PZ, IdMap, InputNum, SId0),
-    pz_add_struct(SId, Name, Struct, !PZ).
+    pz_add_struct(SId, Struct, !PZ).
 
 :- pred link_datas(id_map::in, link_map::in, pz::in, int::in, int::out,
     pz::in, pz::out) is det.

@@ -71,9 +71,9 @@ import_pretty(IID - pz_import(Name, Type)) =
 
 %-----------------------------------------------------------------------%
 
-:- func struct_pretty(pair(pzs_id, pz_named_struct)) = cord(string).
+:- func struct_pretty(pair(pzs_id, pz_struct)) = cord(string).
 
-struct_pretty(SID - pz_named_struct(Name, pz_struct(Fields))) = String :-
+struct_pretty(SID - pz_struct(Name, Fields)) = String :-
     SIDNum = pzs_id_get_num(SID),
 
     String = from_list(["struct ", Name, "_", string(SIDNum), " = { "]) ++

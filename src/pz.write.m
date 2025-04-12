@@ -169,9 +169,9 @@ write_imported_proc(File, _ - pz_import(QName, Type), !IO) :-
 %-----------------------------------------------------------------------%
 
 :- pred write_struct(io.binary_output_stream::in,
-    pair(T, pz_named_struct)::in, io::di, io::uo) is det.
+    pair(T, pz_struct)::in, io::di, io::uo) is det.
 
-write_struct(File, _ - pz_named_struct(_, pz_struct(Widths)), !IO) :-
+write_struct(File, _ - pz_struct(_, Widths), !IO) :-
     write_binary_uint32_le(File, det_from_int(length(Widths)), !IO),
     foldl(write_width(File), Widths, !IO).
 
@@ -218,8 +218,9 @@ write_data_values(File, PZ, Type, Values, !IO) :-
         write_enc_for_values(File, Width, Values, !IO),
         foldl(write_value(File, Width), Values, !IO)
     ; Type = type_struct(PZSId),
-        pz_lookup_struct(PZ, PZSId) = pz_struct(Widths),
-        foldl_corresponding(write_enc_value(File), Widths, Values, !IO)
+        Struct = pz_lookup_struct(PZ, PZSId),
+        foldl_corresponding(write_enc_value(File), Struct ^ pzs_fields,
+            Values, !IO)
     ; Type = type_string(NumUnits),
         ( if length(Values, NumUnits) then
             true
