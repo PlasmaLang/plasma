@@ -76,13 +76,13 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
     % Make decisions about how data should be stored in memory.
     % This covers what tag values to use for each constructor and the IDs of
     % each structure.
-    pz_new_struct_id(EnvStructId, "Module struct", !PZ),
     verbose_output(Verbose, "Generating type layout (constructor tags)\n",
         !IO),
     gen_constructor_data(!.Core, BuiltinProcs, TypeTagMap, TypeCtorTagMap,
         !PZ),
 
     some [!ModuleClo, !LocnMap, !FilenameDataMap] (
+        pz_new_struct_id(EnvStructId, !PZ),
         !:ModuleClo = closure_builder_init(EnvStructId, "Module struct"),
         !:LocnMap = vls_init(EnvStructId),
         !:FilenameDataMap = map.init,
