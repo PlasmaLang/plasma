@@ -83,7 +83,7 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
         !PZ),
 
     some [!ModuleClo, !LocnMap, !FilenameDataMap] (
-        !:ModuleClo = closure_builder_init(EnvStructId),
+        !:ModuleClo = closure_builder_init(EnvStructId, "Module struct"),
         !:LocnMap = vls_init(EnvStructId),
         !:FilenameDataMap = map.init,
 

@@ -15,7 +15,7 @@
 
 :- type closure_builder.
 
-:- func closure_builder_init(pzs_id) = closure_builder.
+:- func closure_builder_init(pzs_id, string) = closure_builder.
 
 :- pred closure_add_field(pz_data_value::in, field_num::out,
     closure_builder::in, closure_builder::out) is det.
@@ -38,17 +38,19 @@
 :- type closure_builder
     --->    closure_builder(
                 cb_struct           :: pzs_id,
+                cb_struct_name      :: string,
                 cb_rev_values       :: list(pz_data_value),
                 cb_next_field_num   :: int
             ).
 
-closure_builder_init(Struct) = closure_builder(Struct, [], 1).
+closure_builder_init(Struct, Name) = closure_builder(Struct, Name, [], 1).
 
 %-----------------------------------------------------------------------%
 
-closure_add_field(DataValue, field_num(FieldNum),
-    closure_builder(Struct, DataValues,               FieldNum),
-    closure_builder(Struct, [DataValue | DataValues], FieldNum + 1)).
+closure_add_field(DataValue, field_num(FieldNum), !CB) :-
+    FieldNum = !.CB ^ cb_next_field_num,
+    !CB ^ cb_rev_values := [DataValue | !.CB ^ cb_rev_values],
+    !CB ^ cb_next_field_num := FieldNum + 1.
 
 %-----------------------------------------------------------------------%
 
