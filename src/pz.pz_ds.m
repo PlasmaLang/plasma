@@ -244,7 +244,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
         pz_strings_debug            :: map(pz_string_id, string),
         pz_next_string_id           :: pz_string_id,
 
-        pz_structs                  :: map(pzs_id, {string, maybe(pz_struct)}),
+        pz_structs                  :: map(pzs_id, pz_struct),
         pz_next_struct_id           :: pzs_id,
 
         pz_imports                  :: map(pzi_id, pz_import),
@@ -341,47 +341,29 @@ entry_is_exported(PZ, Entry) :-
 
 %-----------------------------------------------------------------------%
 
-pz_get_structs(PZ) = Structs :-
-    filter_map(pred((K - {_N, yes(S)})::in, (K - S)::out)
-            is semidet,
-        to_assoc_list(PZ ^ pz_structs), Structs).
+pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
 
 pz_get_num_structs(PZ) = pzs_id_get_num(PZ ^ pz_next_struct_id).
 
 pz_get_struct_name(PZ, StructId) = MaybeName :-
-    {_, MaybeStruct} = lookup(PZ ^ pz_structs, StructId),
-    ( MaybeStruct = yes(Struct),
-        MaybeName = yes(Struct ^ pzs_name)
-    ; MaybeStruct = no,
-        MaybeName = no
-    ).
+    Struct = lookup(PZ ^ pz_structs, StructId),
+    MaybeName = yes(Struct ^ pzs_name).
 
-pz_lookup_struct(PZ, PZSId) = Struct :-
-    {_, MaybeStruct} = map.lookup(PZ ^ pz_structs, PZSId),
-    ( MaybeStruct = no,
-        unexpected($file, $pred, "Struct not found")
-    ; MaybeStruct = yes(Struct)
-    ).
+pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
 
 pz_new_struct_id(StructId, !PZ) :-
     StructId = !.PZ ^ pz_next_struct_id,
-    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1u32),
-    !PZ ^ pz_structs := det_insert(!.PZ ^ pz_structs, StructId, {"", no}).
+    !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1u32).
 
 pz_add_struct(StructId, Struct, !PZ) :-
     Structs0 = !.PZ ^ pz_structs,
-    ( if search(Structs0, StructId, {N, _}) then
-        det_update(StructId, {N, yes(Struct)}, Structs0, Structs)
-    else
-        det_insert(StructId, {string(StructId), yes(Struct)}, Structs0, Structs)
-    ),
+    det_insert(StructId, Struct, Structs0, Structs),
     !PZ ^ pz_structs := Structs.
 
 pz_new_struct(StructId, Struct, !PZ) :-
     StructId = !.PZ ^ pz_next_struct_id,
     !PZ ^ pz_next_struct_id := pzs_id(StructId ^ pzs_id_num + 1u32),
-    !PZ ^ pz_structs := det_insert(!.PZ ^ pz_structs, StructId,
-        {Struct ^ pzs_name, yes(Struct)}).
+    !PZ ^ pz_structs := det_insert(!.PZ ^ pz_structs, StructId, Struct).
 
 %-----------------------------------------------------------------------%
 
