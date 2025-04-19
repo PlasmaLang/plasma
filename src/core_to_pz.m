@@ -91,9 +91,13 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
         verbose_output(Verbose, "Generating constants\n", !IO),
         gen_const_data(!.Core, !LocnMap, !ModuleClo, !FilenameDataMap, !PZ),
 
-        % Generate functions.
+        % Finalize the module closure.
+        verbose_output(Verbose, "Generating module closure\n", !IO),
         Funcs = core_all_functions(!.Core),
         foldl3(make_proc_and_struct_ids, Funcs, !LocnMap, !ModuleClo, !PZ),
+        closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
+
+        % Generate functions.
         DefinedFuncs = core_all_defined_functions(!.Core),
         verbose_output(Verbose,
             format("Generating %d functions\n", [i(length(DefinedFuncs))]),
@@ -102,17 +106,13 @@ core_to_pz(Verbose, CompileOpts, !.Core, !:PZ, TypeTagMap, TypeCtorTagMap,
                 !.FilenameDataMap, TypeTagMap, TypeCtorTagMap, EnvStructId),
             DefinedFuncs, !PZ),
 
-        % Finalize the module closure.
-        verbose_output(Verbose, "Generating module closure\n", !IO),
-        closure_finalize_data(!.ModuleClo, EnvDataId, !PZ),
-        ExportFuncs0 = core_all_exported_functions(!.Core),
-
         % Export and mark the entrypoint.
         verbose_output(Verbose, "Generating entrypoint and exports\n", !IO),
         Candidates = core_entry_candidates(!.Core),
         set.fold(create_entry_candidate(!.Core, !.LocnMap, EnvDataId),
             Candidates, !PZ),
         CandidateIDs = map(entry_get_func_id, Candidates),
+        ExportFuncs0 = core_all_exported_functions(!.Core),
         ExportFuncs = filter(
             pred(Id - _::in) is semidet :- not member(Id, CandidateIDs),
             ExportFuncs0),
