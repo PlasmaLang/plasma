@@ -12,7 +12,6 @@
 :- interface.
 
 :- import_module assoc_list.
-:- import_module map.
 :- import_module maybe.
 :- import_module set.
 
@@ -109,7 +108,7 @@
 
 :- func pz_get_num_structs(pz) = uint32.
 
-:- func pz_get_struct_names_map(pz) = map(pzs_id, string).
+:- func pz_get_struct_name(pz, pzs_id) = maybe(string).
 
 :- func pz_lookup_struct(pz, pzs_id) = pz_struct.
 
@@ -175,6 +174,7 @@
 %-----------------------------------------------------------------------%
 :- implementation.
 
+:- import_module map.
 :- import_module pair.
 :- import_module require.
 :- import_module uint32.
@@ -348,8 +348,13 @@ pz_get_structs(PZ) = Structs :-
 
 pz_get_num_structs(PZ) = pzs_id_get_num(PZ ^ pz_next_struct_id).
 
-pz_get_struct_names_map(PZ) = map_values(func(_, {N, _}) = N,
-    PZ ^ pz_structs).
+pz_get_struct_name(PZ, StructId) = MaybeName :-
+    {_, MaybeStruct} = lookup(PZ ^ pz_structs, StructId),
+    ( MaybeStruct = yes(Struct),
+        MaybeName = yes(Struct ^ pzs_name)
+    ; MaybeStruct = no,
+        MaybeName = no
+    ).
 
 pz_lookup_struct(PZ, PZSId) = Struct :-
     {_, MaybeStruct} = map.lookup(PZ ^ pz_structs, PZSId),

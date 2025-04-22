@@ -69,7 +69,7 @@ gen_func(CompileOpts, Core, LocnMap, BuiltinProcs, FilenameDataMap,
 
         some [!LocnMap] (
             !:LocnMap = LocnMap,
-            StructMap = pz_get_struct_names_map(!.PZ),
+            StructMap = pz_get_struct_name(!.PZ),
             ( Captured = [],
                 IsClosure = not_closure
             ; Captured = [_ | _],
@@ -187,7 +187,7 @@ fixup_stack_2(BottomItems, Items) =
                 cgi_func_is_closure     :: is_closure,
                 cgi_var_one_use         :: set(var),
                 cgi_mod_env_struct      :: pzs_id,
-                cgi_struct_names        :: map(pzs_id, string),
+                cgi_struct_names        :: func(pzs_id) = maybe(string),
                 cgi_filename_data       :: map(string, pzd_id)
             ).
 
@@ -1188,9 +1188,14 @@ gen_val_locn_access(CGInfo, Depth, LocnMap, vl_compute(Expr)) = Instrs :-
 gen_val_locn_access_next(_, vln_done) = init.
 gen_val_locn_access_next(CGInfo, vln_struct(StructId, Field, Width, Next)) =
         Instrs ++ gen_val_locn_access_next(CGInfo, Next) :-
-    StructName = lookup(CGInfo ^ cgi_struct_names, StructId),
+    MaybeStructName = (CGInfo ^ cgi_struct_names)(StructId),
+    ( MaybeStructName = yes(StructName),
+        Comment = pzio_comment(format("Lookup in %s", [s(StructName)]))
+    ; MaybeStructName = no,
+        Comment = pzio_comment("Lookup")
+    ),
     Instrs = from_list([
-        pzio_comment(format("Lookup in %s", [s(StructName)])),
+        Comment,
         pzio_instr(pzi_load(StructId, Field, Width)),
         pzio_instr(pzi_drop)]).
 
