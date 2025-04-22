@@ -40,7 +40,7 @@
 
 :- type pz_struct
     --->    pz_struct(
-                pzs_name        :: string,
+                pzs_name        :: pz_string_id,
                 pzs_fields      :: list(pz_width)
             ).
 

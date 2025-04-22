@@ -164,7 +164,8 @@ prepare_map_2(asm_item(QName, Context, Type), !SymMap, !StructMap, !PZ) :-
         )
     ; Type = asm_struct(Fields),
         ( if q_name_parts(QName, no, Name) then
-            pz_new_struct(SID, pz_struct(nq_name_to_string(Name), Fields), !PZ),
+            pz_memo_string(StringID, nq_name_to_string(Name), !PZ),
+            pz_new_struct(SID, pz_struct(StringID, Fields), !PZ),
             ( if insert(nq_name_to_string(Name), SID, !StructMap) then
                 true
             else

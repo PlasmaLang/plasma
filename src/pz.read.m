@@ -361,7 +361,7 @@ read_struct(Input, _, Result, !IO) :-
         NumFields = det_uint32_to_int(NumFields0),
         read_n(read_width(Input), NumFields, MaybeWidths, !IO),
         ( MaybeWidths = ok(Widths),
-            Result = ok(pz_struct("No name", Widths))
+            Result = ok(pz_struct(no_string, Widths))
         ; MaybeWidths = error(Error),
             Result = error(Error)
         )

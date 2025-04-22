@@ -45,7 +45,7 @@ pz_pretty(PZ) =
     ModuleDeclsPretty = from_list(map(module_decl_pretty,
         pz_get_module_names(PZ))),
     ImportsPretty = from_list(map(import_pretty, pz_get_imports(PZ))),
-    StructsPretty = from_list(map(struct_pretty, pz_get_structs(PZ))),
+    StructsPretty = from_list(map(struct_pretty(PZ), pz_get_structs(PZ))),
     DataPretty = from_list(map(data_pretty, pz_get_data_items(PZ))),
     ProcsPretty = from_list(map(proc_pretty(PZ), pz_get_procs(PZ))),
     ClosuresPretty = from_list(map(closure_pretty(PZ),
@@ -71,11 +71,15 @@ import_pretty(IID - pz_import(Name, Type)) =
 
 %-----------------------------------------------------------------------%
 
-:- func struct_pretty(pair(pzs_id, pz_struct)) = cord(string).
+:- func struct_pretty(pz, pair(pzs_id, pz_struct)) = cord(string).
 
-struct_pretty(SID - pz_struct(Name, Fields)) = String :-
+struct_pretty(PZ, SID - pz_struct(NameId, Fields)) = String :-
     SIDNum = pzs_id_get_num(SID),
-
+    ( if pz_search_string(PZ, NameId, Name0) then
+        Name = Name0
+    else
+        Name = "s"
+    ),
     String = from_list(["struct ", Name, "_", string(SIDNum), " = { "]) ++
         join(comma ++ spc, map(width_pretty, Fields)) ++ singleton(" }\n").
 

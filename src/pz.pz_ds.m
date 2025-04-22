@@ -63,6 +63,8 @@
     %
 :- type pz_string_id.
 
+:- func no_string = pz_string_id.
+
 %-----------------------------------------------------------------------%
 
 :- type pz.
@@ -101,6 +103,13 @@
     pz::in, pz::out) is det.
 
 :- func pz_get_entry_candidates(pz) = set(pz_entrypoint).
+
+%-----------------------------------------------------------------------%
+
+:- pred pz_memo_string(pz_string_id::out, string::in, pz::in, pz::out)
+    is det.
+
+:- pred pz_search_string(pz::in, pz_string_id::in, string::out) is semidet.
 
 %-----------------------------------------------------------------------%
 
@@ -232,7 +241,9 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 %-----------------------------------------------------------------------%
 
 :- type pz_string_id
-    ---> pz_string_id(uint32).
+    ---> pz_string_id(pz_string_id_num :: uint32).
+
+no_string = pz_string_id(0u32).
 
 %-----------------------------------------------------------------------%
 
@@ -241,7 +252,8 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
         pz_module_names             :: list(q_name),
         pz_file_type                :: pz_file_type,
 
-        pz_strings_debug            :: map(pz_string_id, string),
+        pz_strings                  :: map(pz_string_id, string),
+        pz_strings_rev              :: map(string, pz_string_id),
         pz_next_string_id           :: pz_string_id,
 
         pz_structs                  :: map(pzs_id, pz_struct),
@@ -275,7 +287,7 @@ pzc_id_from_num(PZ, Num, pzc_id(Num)) :-
 %-----------------------------------------------------------------------%
 
 init_pz(ModuleNames, FileType) = pz(ModuleNames, FileType,
-    init, pz_string_id(0u32),
+    init, init, pz_string_id(1u32),
     init, pzs_id(0u32),
     init, pzi_id(0u32),
     init, pzp_id(0u32),
@@ -286,7 +298,7 @@ init_pz(ModuleNames, FileType) = pz(ModuleNames, FileType,
 init_pz(ModuleNames, FileType, NumStrings, NumImports, NumStructs, NumDatas,
         NumProcs, NumClosures) =
     pz( ModuleNames, FileType,
-        init, pz_string_id(NumStrings),
+        init, init, pz_string_id(NumStrings + 1u32),
         init, pzs_id(NumStructs),
         init, pzi_id(NumImports),
         init, pzp_id(NumProcs),
@@ -341,13 +353,35 @@ entry_is_exported(PZ, Entry) :-
 
 %-----------------------------------------------------------------------%
 
+pz_memo_string(StringId, String, !PZ) :-
+    ( if search(!.PZ ^ pz_strings_rev, String, StringId0) then
+        StringId = StringId0
+    else
+        StringId = !.PZ ^ pz_next_string_id,
+        det_insert(StringId, String, !.PZ ^ pz_strings, Strings),
+        det_insert(String, StringId, !.PZ ^ pz_strings_rev, StringsRev),
+        !PZ ^ pz_next_string_id :=
+            pz_string_id(StringId ^ pz_string_id_num + 1u32),
+        !PZ ^ pz_strings := Strings,
+        !PZ ^ pz_strings_rev := StringsRev
+    ).
+
+pz_search_string(PZ, StringId, String) :-
+    search(PZ ^ pz_strings, StringId, String).
+
+%-----------------------------------------------------------------------%
+
 pz_get_structs(PZ) = to_assoc_list(PZ ^ pz_structs).
 
 pz_get_num_structs(PZ) = pzs_id_get_num(PZ ^ pz_next_struct_id).
 
 pz_get_struct_name(PZ, StructId) = MaybeName :-
     Struct = lookup(PZ ^ pz_structs, StructId),
-    MaybeName = yes(Struct ^ pzs_name).
+    ( if pz_search_string(PZ, Struct ^ pzs_name, Name) then
+        MaybeName = yes(Name)
+    else
+        MaybeName = no
+    ).
 
 pz_lookup_struct(PZ, PZSId) = map.lookup(PZ ^ pz_structs, PZSId).
 
