@@ -105,7 +105,7 @@ class Optional
 
     void set(T && val) {
         clear();
-        raw() = std::move(val);
+        new (m_data) T(std::move(val));
         m_present = true;
     }
 
